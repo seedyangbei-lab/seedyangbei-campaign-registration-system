@@ -17,8 +17,11 @@ const LINE_CALLBACK_URL = process.env.NEXT_PUBLIC_LINE_CALLBACK_URL || 'https://
 
 function getLineLoginUrl(returnUrl: string) {
   const params = new URLSearchParams({
-    response_type: 'code', client_id: LINE_CHANNEL_ID,
-    redirect_uri: LINE_CALLBACK_URL, state: encodeURIComponent(returnUrl), scope: 'profile openid email',
+    response_type: 'code',
+    client_id: LINE_CHANNEL_ID,
+    redirect_uri: LINE_CALLBACK_URL,
+    state: returnUrl,
+    scope: 'profile openid email',
   })
   return `https://access.line.me/oauth2/v2.1/authorize?${params}`
 }
