@@ -97,9 +97,10 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
         return
       }
     } catch {}
-    window.location.href = getLineLoginUrl(`/register?courses=${ids}`)
+    const registerUrl = `${window.location.origin}/register?courses=${ids}`
+    window.location.href = getLineLoginUrl(registerUrl)
   }
-
+  
   const getLineUrl = (lineId?: string) => {
     if (!lineId) return null
     if (lineId.startsWith('http')) {
