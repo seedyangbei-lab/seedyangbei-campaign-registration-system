@@ -7,7 +7,7 @@ interface Course {
   id: string; title: string; description: string; date: string
   time_start: string; time_end: string; location: string; max_seats: number
   poster_url?: string; notes?: string; suitable_age?: string
-  course_line_group_url?: string
+  line_group_url?: string
   instructors?: { id: string; name: string; phone?: string; line_id?: string } | null
   course_categories?: { id: string; name: string; color: string } | null
 }
