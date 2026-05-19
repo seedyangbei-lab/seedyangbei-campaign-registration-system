@@ -9,7 +9,8 @@ export default async function HomePage() {
   const [{ data: settings }, { data: courses }, { data: categories }] = await Promise.all([
     supabase.from('site_settings').select('key, value'),
     supabase.from('courses')
-     .select('*, instructors(id, name, phone, line_id), course_categories(id, name, color)')
+      .select('*, instructors(id, name, phone, line_id), course_categories(id, name, color)')
+      .eq('is_active', true)
       .gte('date', new Date().toISOString().split('T')[0])
       .order('date', { ascending: true }),
     supabase.from('course_categories').select('*').order('created_at'),
