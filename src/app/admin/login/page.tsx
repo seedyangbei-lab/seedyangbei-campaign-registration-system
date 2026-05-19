@@ -29,6 +29,11 @@ export default function AdminLoginPage() {
         </div>
         <form onSubmit={handleLogin} className="bg-white rounded-2xl border border-stone-200 p-6 space-y-4 shadow-sm">
           <div>
+            <label className="block text-stone-600 text-sm font-medium mb-2">管理帳號</label>
+            <input type="text" value={account} onChange={e => setAccount(e.target.value)} placeholder="請輸入管理帳號"
+              className="w-full border border-stone-300 rounded-xl px-4 py-3 text-stone-800 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400" />
+          </div>
+          <div>
             <label className="block text-stone-600 text-sm font-medium mb-2">管理密碼</label>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="請輸入管理密碼"
               className="w-full border border-stone-300 rounded-xl px-4 py-3 text-stone-800 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400" />
