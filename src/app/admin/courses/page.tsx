@@ -180,8 +180,13 @@ export default function CoursesPage() {
       instructor_id: form.instructor_id || null, category_id: form.category_id || null,
       notes: form.notes || null, suitable_age: form.suitable_age || '全年齡',
     }
-    if (editTarget) await supabase.from('courses').update(payload).eq('id', editTarget.id)
-    else await supabase.from('courses').insert({ ...payload, is_active: true })
+   if (editTarget) {
+      const { error } = await supabase.from('courses').update(payload).eq('id', editTarget.id)
+      if (error) { alert('更新失敗：' + error.message); setLoading(false); return }
+    } else {
+      const { error } = await supabase.from('courses').insert({ ...payload, is_active: true })
+      if (error) { alert('新增失敗：' + error.message); setLoading(false); return }
+    }
     setShowModal(false); await fetchAll(); setLoading(false)
   }
 
