@@ -9,13 +9,14 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleLogin = (e: React.FormEvent) => {
+ const handleLogin = (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true)
-    const secret = process.env.NEXT_PUBLIC_ADMIN_SECRET || 'yangbei2024admin'
-    if (password === secret) { localStorage.setItem('admin_auth', 'true'); router.push('/admin') }
-    else { setError('密碼錯誤，請重新輸入'); setLoading(false) }
+    if (account === 'seed.yangbei2026' && password === 'seed2026') {
+      localStorage.setItem('admin_auth', 'true'); router.push('/admin')
+    } else {
+      setError('帳號或密碼錯誤，請重新輸入'); setLoading(false)
+    }
   }
-
   return (
     <main className="min-h-screen bg-stone-50 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
