@@ -276,8 +276,7 @@ export default function CoursesPage() {
           })}
         </div>
       )}
-
-      <div className="space-y-3">
+      {mainTab === 'courses' && <div className="space-y-3">
         {displayCourses.length === 0 && <div className="bg-white border border-stone-200 rounded-2xl p-12 text-center text-stone-400"><p>尚無課程</p></div>}
         {displayCourses.map((course: any) => {
           const expired = isExpired(course)
@@ -305,7 +304,8 @@ export default function CoursesPage() {
             </div>
           )
         })}
-      </div>
+      </div>}
+
       {/* 課程類別 Tab 內容 */}
       {mainTab === 'categories' && (
         <div>
