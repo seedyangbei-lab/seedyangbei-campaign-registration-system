@@ -169,8 +169,8 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
           const dateStr = `${d.getMonth()+1}/${d.getDate()}（${weekdays[d.getDay()]}）`
           const isSelected = selected.includes(course.id)
           const expired = isExpired(course)
-          const lineUrl = course.course_line_group_url || getLineUrl(course.instructors?.line_id)
-
+          const lineUrl = course.line_group_url || getLineUrl(course.instructors?.line_id)
+      
           return (
             <div key={course.id}
               onClick={() => !expired && toggle(course.id)}
