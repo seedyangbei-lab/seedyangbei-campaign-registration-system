@@ -20,7 +20,7 @@ function getLineLoginUrl(returnUrl: string) {
     response_type: 'code',
     client_id: LINE_CHANNEL_ID,
     redirect_uri: LINE_CALLBACK_URL,
-    state: returnUrl,
+    state: encodeURIComponent(returnUrl),
     scope: 'profile openid email',
   })
   return `https://access.line.me/oauth2/v2.1/authorize?${params}`
