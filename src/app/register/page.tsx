@@ -11,6 +11,7 @@ function RegisterForm() {
   const router = useRouter()
   const [ready, setReady] = useState(false)
   const [courseIds, setCourseIds] = useState<string[]>([])
+  const [hasNoCourses, setHasNoCourses] = useState(false)
   const [errorParam, setErrorParam] = useState<string | null>(null)
 
   const [courses, setCourses] = useState<any[]>([])
