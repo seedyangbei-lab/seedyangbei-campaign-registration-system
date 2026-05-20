@@ -47,7 +47,20 @@ function RegisterForm() {
       return
     }
     let user: any = null
-    if (lineUserParam) {
+    // lineUserParam 從 window.location.search 讀，確保最新值
+    const freshLineUserParam = new URLSearchParams(window.location.search).get('line_user')
+    if (freshLineUserParam) {
+      try {
+        user = JSON.parse(decodeURIComponent(freshLineUserParam))
+        localStorage.setItem('line_user', JSON.stringify(user))
+      } catch {}
+    }
+    if (!user) {
+      try {
+        const stored = localStorage.getItem('line_user')
+        if (stored) user = JSON.parse(stored)
+      } catch {}
+    }
       try {
         user = JSON.parse(decodeURIComponent(lineUserParam))
         localStorage.setItem('line_user', JSON.stringify(user))
@@ -68,10 +81,9 @@ function RegisterForm() {
 
     if (errorParam === 'line_denied') setError('LINE 登入已取消')
     if (errorParam === 'line_failed') setError('LINE 登入失敗，請稍後再試')
-
     supabase.from('courses').select('id, title, date, time_start, time_end, location')
       .in('id', courseIds).then(({ data }) => setCourses(data || []))
-  }, [])
+    }, [ready])
 
   const prefillUserData = async (lineUserId: string) => {
     setPrefilling(true)
