@@ -178,6 +178,12 @@ function RegisterForm() {
       </div>
     )
 
+  if (!ready) return (
+    <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+      <div className="w-10 h-10 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
+    </div>
+  )
+
   return (
     <main className="min-h-screen bg-stone-50 py-10 px-4">
     
