@@ -84,18 +84,16 @@ export async function GET(request: NextRequest) {
     }
 
     if (!existingUser) {
-      const { error: insertError } = await supabase.from('line_members').insert({
+     const { error: insertError } = await supabase.from('line_members').insert({
         line_user_id: lineUserId,
         display_name: displayName,
         picture_url: pictureUrl,
-        email: email || null,
       })
       if (insertError) console.error('Supabase insert error:', JSON.stringify(insertError))
     } else {
-      const { error: updateError } = await supabase.from('line_members').update({
+     const { error: updateError } = await supabase.from('line_members').update({
         display_name: displayName,
         picture_url: pictureUrl,
-        last_login: new Date().toISOString(),
       }).eq('line_user_id', lineUserId)
       if (updateError) console.error('Supabase update error:', JSON.stringify(updateError))
     }
