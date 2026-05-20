@@ -9,22 +9,9 @@ const BUILDINGS = ['A棟','B棟','C棟','D棟']
 
 function RegisterForm() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [ready, setReady] = useState(false)
-
-  // 從 URL 直接讀，不依賴 searchParams 的 hydration 時序
   const [courseIds, setCourseIds] = useState<string[]>([])
-  const [lineUserParam, setLineUserParam] = useState<string | null>(null)
   const [errorParam, setErrorParam] = useState<string | null>(null)
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const ids = params.get('courses')?.split(',').filter(Boolean) || []
-    setCourseIds(ids)
-    setLineUserParam(params.get('line_user'))
-    setErrorParam(params.get('error'))
-    setReady(true)
-  }, [])
 
   const [courses, setCourses] = useState<any[]>([])
   const [lineUser, setLineUser] = useState<any>(null)
@@ -41,26 +28,20 @@ function RegisterForm() {
   const supabase = createClient()
 
   useEffect(() => {
-    if (!ready) return
-    if (courseIds.length === 0) {
-      router.push('/')
+    const params = new URLSearchParams(window.location.search)
+    const ids = params.get('courses')?.split(',').filter(Boolean) || []
+    const lineUserParam = params.get('line_user')
+    const errParam = params.get('error')
+    setCourseIds(ids)
+    setErrorParam(errParam)
+
+    if (ids.length === 0) {
+      setReady(true)
       return
     }
+
     let user: any = null
-    // lineUserParam 從 window.location.search 讀，確保最新值
-    const freshLineUserParam = new URLSearchParams(window.location.search).get('line_user')
-    if (freshLineUserParam) {
-      try {
-        user = JSON.parse(decodeURIComponent(freshLineUserParam))
-        localStorage.setItem('line_user', JSON.stringify(user))
-      } catch {}
-    }
-    if (!user) {
-      try {
-        const stored = localStorage.getItem('line_user')
-        if (stored) user = JSON.parse(stored)
-      } catch {}
-    }
+    if (lineUserParam) {
       try {
         user = JSON.parse(decodeURIComponent(lineUserParam))
         localStorage.setItem('line_user', JSON.stringify(user))
@@ -79,11 +60,14 @@ function RegisterForm() {
       prefillUserData(user.lineUserId)
     }
 
-    if (errorParam === 'line_denied') setError('LINE 登入已取消')
-    if (errorParam === 'line_failed') setError('LINE 登入失敗，請稍後再試')
+    if (errParam === 'line_denied') setError('LINE 登入已取消')
+    if (errParam === 'line_failed') setError('LINE 登入失敗，請稍後再試')
+
     supabase.from('courses').select('id, title, date, time_start, time_end, location')
-      .in('id', courseIds).then(({ data }) => setCourses(data || []))
-    }, [ready])
+      .in('id', ids).then(({ data }) => setCourses(data || []))
+
+    setReady(true)
+  }, [])
 
   const prefillUserData = async (lineUserId: string) => {
     setPrefilling(true)
@@ -177,10 +161,16 @@ function RegisterForm() {
     } finally { setLoading(false) }
   }
   if (!ready) return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
-        <div className="w-10 h-10 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
-      </div>
-    )
+    <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+      <div className="w-10 h-10 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
+    </div>
+  )
+
+  if (courseIds.length === 0) {
+    router.push('/')
+    return null
+  }
+  
   return (
     <main className="min-h-screen bg-stone-50 py-10 px-4">
       <div className="max-w-lg mx-auto">
