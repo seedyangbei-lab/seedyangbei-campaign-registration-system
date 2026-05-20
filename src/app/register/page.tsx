@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 
 const AGE_GROUPS = ['18歲以下','18~25歲','26~35歲','36~45歲','46~55歲','56~65歲','65歲以上']
@@ -9,11 +9,11 @@ const BUILDINGS = ['A棟','B棟','C棟','D棟']
 
 function RegisterForm() {
   const router = useRouter()
-  const [ready, setReady] = useState(false)
-  const [courseIds, setCourseIds] = useState<string[]>([])
-  const [hasNoCourses, setHasNoCourses] = useState(false)
-  const [errorParam, setErrorParam] = useState<string | null>(null)
+  const supabase = createClient()
 
+  const [initialized, setInitialized] = useState(false)
+  const [shouldRedirect, setShouldRedirect] = useState(false)
+  const [courseIds, setCourseIds] = useState<string[]>([])
   const [courses, setCourses] = useState<any[]>([])
   const [lineUser, setLineUser] = useState<any>(null)
   const [loading, setLoading] = useState(false)
@@ -26,20 +26,20 @@ function RegisterForm() {
   const [floor, setFloor] = useState('')
   const [subUnit, setSubUnit] = useState('')
   const [form, setForm] = useState({ name: '', phone: '', age_group: '', other_community: '', questions: '' })
-  const supabase = createClient()
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const ids = params.get('courses')?.split(',').filter(Boolean) || []
     const lineUserParam = params.get('line_user')
     const errParam = params.get('error')
-    setCourseIds(ids)
-    setErrorParam(errParam)
-    
+
     if (ids.length === 0) {
-      router.push('/')
+      setShouldRedirect(true)
+      setInitialized(true)
       return
     }
+
+    setCourseIds(ids)
 
     let user: any = null
     if (lineUserParam) {
@@ -57,18 +57,24 @@ function RegisterForm() {
 
     if (user) {
       setLineUser(user)
-      setForm(f => ({ ...f, name: f.name || user.displayName || '' }))
+      setForm(f => ({ ...f, name: user.displayName || '' }))
       prefillUserData(user.lineUserId)
     }
 
     if (errParam === 'line_denied') setError('LINE 登入已取消')
     if (errParam === 'line_failed') setError('LINE 登入失敗，請稍後再試')
 
-    supabase.from('courses').select('id, title, date, time_start, time_end, location')
-      .in('id', ids).then(({ data }) => setCourses(data || []))
+    supabase.from('courses')
+      .select('id, title, date, time_start, time_end, location')
+      .in('id', ids)
+      .then(({ data }) => setCourses(data || []))
 
-    setReady(true)
+    setInitialized(true)
   }, [])
+
+  useEffect(() => {
+    if (shouldRedirect) router.push('/')
+  }, [shouldRedirect])
 
   const prefillUserData = async (lineUserId: string) => {
     setPrefilling(true)
@@ -162,12 +168,14 @@ function RegisterForm() {
     } finally { setLoading(false) }
   }
 
-  if (!ready) return (
+  if (!initialized) return (
     <div className="min-h-screen bg-stone-50 flex items-center justify-center">
       <div className="w-10 h-10 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
     </div>
   )
-  
+
+  if (shouldRedirect) return null
+
   return (
     <main className="min-h-screen bg-stone-50 py-10 px-4">
       <div className="max-w-lg mx-auto">
@@ -182,7 +190,8 @@ function RegisterForm() {
 
         {lineUser ? (
           <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-5 flex items-center gap-3">
-            {lineUser.pictureUrl ? <img src={lineUser.pictureUrl} alt="" className="w-10 h-10 rounded-full flex-shrink-0" />
+            {lineUser.pictureUrl
+              ? <img src={lineUser.pictureUrl} alt="" className="w-10 h-10 rounded-full flex-shrink-0" />
               : <div className="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center flex-shrink-0"><span className="text-green-700 font-bold">{lineUser.displayName?.[0]}</span></div>}
             <div className="flex-1">
               <p className="text-sm font-semibold text-green-700">已用 LINE 登入</p>
