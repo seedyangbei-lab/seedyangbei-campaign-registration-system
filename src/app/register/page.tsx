@@ -33,6 +33,10 @@ function RegisterForm() {
     const lineUserParam = params.get('line_user')
     const errParam = params.get('error')
 
+    console.log('[Register] URL:', window.location.href)
+    console.log('[Register] ids:', ids)
+    console.log('[Register] lineUserParam:', lineUserParam ? '有值' : '無')
+
     if (ids.length === 0) {
       setShouldRedirect(true)
       setInitialized(true)
