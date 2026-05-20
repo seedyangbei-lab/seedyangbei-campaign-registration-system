@@ -86,11 +86,15 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
         if (!stored) return
         const lineUser = JSON.parse(stored)
         const lineUserId: string = lineUser.lineUserId || lineUser.userId || lineUser.sub || lineUser.id
+        console.log('[my-reg] lineUser object:', JSON.stringify(lineUser))
+        console.log('[my-reg] lineUserId:', lineUserId)
         if (!lineUserId) return
 
         const res = await fetch(`/api/my-registrations?line_user_id=${encodeURIComponent(lineUserId)}`)
+        console.log('[my-reg] API status:', res.status)
         if (!res.ok) return
         const data: { course_id: string }[] = await res.json()
+        console.log('[my-reg] API result:', data)
         setRegisteredIds(new Set(data.map(r => r.course_id)))
       } catch {}
     }
