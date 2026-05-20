@@ -14,8 +14,7 @@ export async function GET(request: NextRequest) {
   // 從 NEXT_PUBLIC_ 或 server-side 環境變數都嘗試讀取
   const channelId = process.env.LINE_CHANNEL_ID || process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2010077816'
   const channelSecret = process.env.LINE_CHANNEL_SECRET || ''
-  const callbackUrl = process.env.LINE_CALLBACK_URL || process.env.NEXT_PUBLIC_LINE_CALLBACK_URL || 'https://campaign-registry.vercel.app/api/auth/line/callback'
-
+  const callbackUrl = process.env.LINE_CALLBACK_URL || process.env.NEXT_PUBLIC_LINE_CALLBACK_URL || 'https://yangbei-campaign.vercel.app/api/auth/line/callback'
   try {
     // Step 1: Exchange code for token
     const tokenRes = await fetch('https://api.line.me/oauth2/v2.1/token', {
