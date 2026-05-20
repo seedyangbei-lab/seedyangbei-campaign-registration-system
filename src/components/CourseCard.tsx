@@ -13,7 +13,7 @@ interface Course {
 }
 
 const LINE_CHANNEL_ID = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2010077816'
-const LINE_CALLBACK_URL = process.env.NEXT_PUBLIC_LINE_CALLBACK_URL || 'https://campaign-registry.vercel.app/api/auth/line/callback'
+const LINE_CALLBACK_URL = process.env.NEXT_PUBLIC_LINE_CALLBACK_URL || 'https://yangbei-campaign.vercel.app/api/auth/line/callback'
 
 function getLineLoginUrl(returnUrl: string) {
   const params = new URLSearchParams({
