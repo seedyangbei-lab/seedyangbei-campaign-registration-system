@@ -10,9 +10,21 @@ const BUILDINGS = ['A棟','B棟','C棟','D棟']
 function RegisterForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const courseIds = searchParams.get('courses')?.split(',').filter(Boolean) || []
-  const lineUserParam = searchParams.get('line_user')
-  const errorParam = searchParams.get('error')
+  const [ready, setReady] = useState(false)
+
+  // 從 URL 直接讀，不依賴 searchParams 的 hydration 時序
+  const [courseIds, setCourseIds] = useState<string[]>([])
+  const [lineUserParam, setLineUserParam] = useState<string | null>(null)
+  const [errorParam, setErrorParam] = useState<string | null>(null)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const ids = params.get('courses')?.split(',').filter(Boolean) || []
+    setCourseIds(ids)
+    setLineUserParam(params.get('line_user'))
+    setErrorParam(params.get('error'))
+    setReady(true)
+  }, [])
 
   const [courses, setCourses] = useState<any[]>([])
   const [lineUser, setLineUser] = useState<any>(null)
@@ -29,12 +41,11 @@ function RegisterForm() {
   const supabase = createClient()
 
   useEffect(() => {
+    if (!ready) return
     if (courseIds.length === 0) {
-      // 給 searchParams 一點時間初始化，避免 hydration 前誤判為空
-      const timeout = setTimeout(() => router.push('/'), 500)
-      return () => clearTimeout(timeout)
+      router.push('/')
+      return
     }
-
     let user: any = null
     if (lineUserParam) {
       try {
@@ -155,10 +166,18 @@ function RegisterForm() {
   }
 
   return (
-    <main className="min-h-screen bg-stone-50 py-10 px-4">
-      <div className="max-w-lg mx-auto">
-        <div className="mb-6">
-          <button onClick={() => router.back()} className="inline-flex items-center gap-1.5 text-stone-400 text-sm hover:text-stone-600">
+        if (!ready) return (
+        <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+          <div className="w-10 h-10 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
+        </div>
+      )
+    
+      return (
+        <main className="min-h-screen bg-stone-50 py-10 px-4">
+          <div className="max-w-lg mx-auto">
+            <div className="mb-6">
+              <button onClick={() => router.back()}
+            className="inline-flex items-center gap-1.5 text-stone-400 text-sm hover:text-stone-600">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
             返回
           </button>
