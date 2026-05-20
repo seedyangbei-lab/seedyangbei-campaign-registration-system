@@ -311,6 +311,7 @@ export default function AdminDashboard() {
             </button>
           </div>
        )}
+      </div>
 
       {/* 軟刪除確認 */}
       {confirmDelete && (
@@ -344,26 +345,74 @@ export default function AdminDashboard() {
         </div>
       )}
 
+     
+
       {/* 永久刪除確認 */}
+
       {confirmPermanent && (
+
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+
             <div className="flex items-center gap-3">
+
               <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+
               </div>
+
               <div>
+
                 <h3 className="font-bold text-stone-800">永久刪除此筆紀錄？</h3>
+
                 <p className="text-stone-400 text-xs mt-0.5">此操作無法復原，資料將從資料庫中永久移除</p>
+
               </div>
+
             </div>
+
             <div className="flex gap-3">
+
               <button
+
                 onClick={async () => {
+
                   setDeleting(true)
+
                   await supabase.from('registrations').delete().eq('id', confirmPermanent)
+
                   setConfirmPermanent(null)
+
                   await fetchAll(); setDeleting(false)
+
                 }}
+
                 disabled={deleting}
-                className="flex-1 bg-red-
+
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors"
+
+              >
+
+                {deleting ? '刪除中...' : '永久刪除'}
+
+              </button>
+
+              <button onClick={() => setConfirmPermanent(null)} className="px-5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-xl text-sm transition-colors">取消</button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+      </div>
+
+    </div>
+
+  )
+
+}
