@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+ｄimport { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
 
 export async function GET(request: NextRequest) {
@@ -108,7 +108,12 @@ export async function GET(request: NextRequest) {
       email,
     }))
 
-    const redirectUrl = state || `${new URL(request.url).origin}/register`
+    let redirectUrl = state || `${new URL(request.url).origin}/register`
+    // state 可能被 LINE double-encoded，先嘗試 decode
+    try {
+      const decoded = decodeURIComponent(redirectUrl)
+      if (decoded.startsWith('http')) redirectUrl = decoded
+    } catch {}
     const separator = redirectUrl.includes('?') ? '&' : '?'
     return NextResponse.redirect(
       new URL(`${redirectUrl}${separator}line_user=${userInfo}`, request.url)
