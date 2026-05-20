@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface Category { id: string; name: string; color: string }
 interface Course {
@@ -77,6 +77,25 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
   const [activeCategory, setActiveCategory] = useState('all')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [qrTarget, setQrTarget] = useState<string | null>(null)
+  const [registeredIds, setRegisteredIds] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    const fetchRegistered = async () => {
+      try {
+        const stored = localStorage.getItem('line_user')
+        if (!stored) return
+        const lineUser = JSON.parse(stored)
+        const lineUserId: string = lineUser.userId || lineUser.sub || lineUser.id
+        if (!lineUserId) return
+
+        const res = await fetch(`/api/my-registrations?line_user_id=${encodeURIComponent(lineUserId)}`)
+        if (!res.ok) return
+        const data: { course_id: string }[] = await res.json()
+        setRegisteredIds(new Set(data.map(r => r.course_id)))
+      } catch {}
+    }
+    fetchRegistered()
+  }, [])
 
   const isMobile = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
   const toggle = (id: string) => setSelected(prev =>
@@ -175,13 +194,16 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
           const dateStr = `${d.getMonth()+1}/${d.getDate()}（${weekdays[d.getDay()]}）`
           const isSelected = selected.includes(course.id)
           const expired = isExpired(course)
+          const alreadyRegistered = registeredIds.has(course.id)
+          const isDisabled = expired || alreadyRegistered
           const lineUrl = course.line_group_url || getLineUrl(course.instructors?.line_id)
       
           return (
             <div key={course.id}
-              onClick={() => !expired && toggle(course.id)}
+             onClick={() => !isDisabled && toggle(course.id)}
               className={`relative bg-white rounded-2xl border-2 transition-all overflow-hidden flex flex-col ${
-                expired ? 'opacity-60 cursor-not-allowed border-[#dbdbdb]'
+                alreadyRegistered ? 'opacity-70 cursor-not-allowed border-green-200 bg-green-50/30'
+                : expired ? 'opacity-60 cursor-not-allowed border-[#dbdbdb]'
                 : isSelected ? 'border-orange-400 shadow-lg shadow-orange-100 cursor-pointer'
                 : 'border-[#dbdbdb] hover:border-stone-300 hover:shadow-md cursor-pointer'
               }`}>
@@ -195,17 +217,27 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
                       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d1c0a8" strokeWidth="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                     </div>
                   )}
-                  {expired && (
+                  {alreadyRegistered && (
+                    <div className="absolute inset-0 bg-green-900/50 flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">已報名</span>
+                    </div>
+                  )}
+                  {!alreadyRegistered && expired && (
                     <div className="absolute inset-0 bg-stone-900/60 flex items-center justify-center">
                       <span className="text-white text-xs font-bold">報名截止</span>
                     </div>
                   )}
+                  
                 </div>
 
                 <div className="flex-1 flex flex-col gap-2 py-2 min-w-0" style={{ minHeight: '199px' }}>
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-bold text-base text-black leading-snug">{course.title}</p>
-                    {!expired && (
+                    {alreadyRegistered ? (
+                      <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 bg-green-500">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                      </div>
+                    ) : !expired && (
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${isSelected ? 'bg-orange-500 border-orange-500' : 'border-stone-300 bg-white'}`}>
                         {isSelected && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
                       </div>
