@@ -20,7 +20,7 @@ function getLineLoginUrl(returnUrl: string) {
     response_type: 'code',
     client_id: LINE_CHANNEL_ID,
     redirect_uri: LINE_CALLBACK_URL,
-    state: encodeURIComponent(returnUrl),
+    state: returnUrl,
     scope: 'profile openid email',
   })
   return `https://access.line.me/oauth2/v2.1/authorize?${params}`
@@ -100,7 +100,9 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
         return
       }
     } catch {}
-    const registerUrl = `${window.location.origin}/register?courses=${ids}`
+    // 用 sessionStorage 暫存 courses，避免 LINE state encode 問題
+    sessionStorage.setItem('pending_courses', ids)
+    const registerUrl = `${window.location.origin}/register`
     window.location.href = getLineLoginUrl(registerUrl)
   }
   
