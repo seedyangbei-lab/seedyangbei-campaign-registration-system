@@ -85,7 +85,7 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
         const stored = localStorage.getItem('line_user')
         if (!stored) return
         const lineUser = JSON.parse(stored)
-        const lineUserId: string = lineUser.userId || lineUser.sub || lineUser.id
+        const lineUserId: string = lineUser.lineUserId || lineUser.userId || lineUser.sub || lineUser.id
         if (!lineUserId) return
 
         const res = await fetch(`/api/my-registrations?line_user_id=${encodeURIComponent(lineUserId)}`)
