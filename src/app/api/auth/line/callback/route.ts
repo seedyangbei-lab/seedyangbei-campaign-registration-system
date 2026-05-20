@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
       email,
     }))
 
-    const redirectUrl = state ? decodeURIComponent(state) : '/register'
+    const redirectUrl = state || `${new URL(request.url).origin}/register`
     const separator = redirectUrl.includes('?') ? '&' : '?'
     return NextResponse.redirect(
       new URL(`${redirectUrl}${separator}line_user=${userInfo}`, request.url)
