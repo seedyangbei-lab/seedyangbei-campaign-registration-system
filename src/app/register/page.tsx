@@ -184,13 +184,17 @@ function RegisterForm() {
     </div>
   )
 
+if (!ready) return (
+    <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+      <div className="w-10 h-10 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
+    </div>
+  )
+
   return (
     <main className="min-h-screen bg-stone-50 py-10 px-4">
-    
-          <div className="max-w-lg mx-auto">
-            <div className="mb-6">
-              <button onClick={() => router.back()}
-            className="inline-flex items-center gap-1.5 text-stone-400 text-sm hover:text-stone-600">
+      <div className="max-w-lg mx-auto">
+        <div className="mb-6">
+          <button onClick={() => router.back()} className="inline-flex items-center gap-1.5 text-stone-400 text-sm hover:text-stone-600">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
             返回
           </button>
