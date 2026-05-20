@@ -34,9 +34,9 @@ function RegisterForm() {
     const errParam = params.get('error')
     setCourseIds(ids)
     setErrorParam(errParam)
-
+    
     if (ids.length === 0) {
-      setReady(true)
+      router.push('/')
       return
     }
 
@@ -160,16 +160,12 @@ function RegisterForm() {
       setError(err.message || '報名失敗，請稍後再試')
     } finally { setLoading(false) }
   }
+
   if (!ready) return (
     <div className="min-h-screen bg-stone-50 flex items-center justify-center">
       <div className="w-10 h-10 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
     </div>
   )
-
-  if (courseIds.length === 0) {
-    router.push('/')
-    return null
-  }
   
   return (
     <main className="min-h-screen bg-stone-50 py-10 px-4">
