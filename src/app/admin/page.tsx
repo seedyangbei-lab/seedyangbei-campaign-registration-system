@@ -8,6 +8,7 @@ const PAGE_SIZE_OPTIONS = [10, 20]
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ activeCourses: 0, totalRegistrations: 0, uniqueRegistrants: 0 })
   const [registrations, setRegistrations] = useState<any[]>([])
+  const [cancelledRegs, setCancelledRegs] = useState<any[]>([])
   const [courses, setCourses] = useState<any[]>([])
   const [filterCourse, setFilterCourse] = useState('')
   const [filterMonth, setFilterMonth] = useState('')
@@ -16,21 +17,32 @@ export default function AdminDashboard() {
   const [pageSize, setPageSize] = useState(10)
   const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(true)
+  const [manageMode, setManageMode] = useState(false)
+  const [showCancelled, setShowCancelled] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmPermanent, setConfirmPermanent] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const supabase = createClient()
 
   useEffect(() => { fetchAll() }, [])
 
   const fetchAll = async () => {
     setLoading(true)
-    const [
+   const [
       { count: activeCourses },
       { data: regs },
+      { data: cancelledRegs },
       { data: courseList },
     ] = await Promise.all([
       supabase.from('courses').select('*', { count: 'exact', head: true }).eq('is_active', true),
       supabase.from('registrations')
         .select('*, users(name, room_number, phone, age_group), courses(id, title, date)')
         .eq('status', 'confirmed')
+        .order('registered_at', { ascending: false }),
+      supabase.from('registrations')
+        .select('*, users(name, room_number, phone, age_group), courses(id, title, date)')
+        .eq('status', 'cancelled')
         .order('registered_at', { ascending: false }),
       supabase.from('courses').select('id, title, date').order('date', { ascending: false }),
     ])
@@ -45,6 +57,7 @@ export default function AdminDashboard() {
       uniqueRegistrants: uniqueUserIds.size,
     })
     setRegistrations(allRegs)
+    setCancelledRegs(cancelledRegs || [])
     setCourses(courseList || [])
     setLoading(false)
   }
@@ -120,7 +133,15 @@ export default function AdminDashboard() {
         {/* 篩選列 */}
         <div className="px-6 py-4 border-b border-stone-100">
           <div className="flex flex-col md:flex-row md:items-center gap-3">
-            <h3 className="text-stone-700 font-semibold flex-shrink-0">報名記錄</h3>
+          <div className="flex items-center gap-3 flex-shrink-0">
+          <h3 className="text-stone-700 font-semibold">報名記錄</h3>
+          <button
+            onClick={() => { setShowCancelled(v => !v); setManageMode(false); setSelectedIds(new Set()) }}
+            className={`text-xs px-2 py-1 rounded-lg transition-colors ${showCancelled ? 'bg-stone-200 text-stone-700' : 'text-stone-400 hover:text-stone-600'}`}
+          >
+            {showCancelled ? '隱藏已取消' : '顯示已取消'}
+          </button>
+        </div>
             <div className="flex flex-wrap gap-2 md:ml-auto">
               {/* 課程篩選 */}
               <select value={filterCourse} onChange={handleFilterChange(setFilterCourse)}
@@ -159,10 +180,32 @@ export default function AdminDashboard() {
                 className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
                 {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>每頁 {n} 筆</option>)}
               </select>
+
+              {!showCancelled && (
+                <button
+                  onClick={() => { setManageMode(v => !v); setSelectedIds(new Set()); setConfirmDelete(false) }}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${manageMode ? 'bg-stone-200 text-stone-700' : 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-200'}`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                  {manageMode ? '取消管理' : '刪除報名'}
+                </button>
+              )}
             </div>
           </div>
-          <p className="text-xs text-stone-400 mt-2">共 {filtered.length} 筆記錄，顯示第 {currentPage} 頁（共 {totalPages || 1} 頁）</p>
-        </div>
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-xs text-stone-400">
+              {showCancelled ? `共 ${cancelledRegs.length} 筆已取消記錄` : `共 ${filtered.length} 筆記錄，顯示第 ${currentPage} 頁（共 ${totalPages || 1} 頁）`}
+            </p>
+            {manageMode && selectedIds.size > 0 && (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="flex items-center gap-1.5 text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg transition-colors font-medium"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                取消 {selectedIds.size} 筆報名
+              </button>
+            )}
+          </div>        </div>
 
         {/* 表格 */}
         {loading ? (
@@ -180,9 +223,35 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
-                {paginated.map((reg, i) => (
-                  <tr key={reg.id} className="hover:bg-stone-50 transition-colors">
-                    <td className="px-4 py-3 text-stone-400 text-xs">{(currentPage - 1) * pageSize + i + 1}</td>
+                {(showCancelled ? cancelledRegs : paginated).map((reg, i) => (
+                  <tr key={reg.id} className={`transition-colors ${manageMode ? 'cursor-pointer' : ''} ${selectedIds.has(reg.id) ? 'bg-red-50' : 'hover:bg-stone-50'}`}
+                    onClick={() => {
+                      if (!manageMode) return
+                      setSelectedIds(prev => {
+                        const next = new Set(prev)
+                        next.has(reg.id) ? next.delete(reg.id) : next.add(reg.id)
+                        return next
+                      })
+                    }}>
+                    <td className="px-4 py-3 text-stone-400 text-xs">
+                      {manageMode ? (
+                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${selectedIds.has(reg.id) ? 'bg-red-500 border-red-500' : 'border-stone-300'}`}>
+                          {selectedIds.has(reg.id) && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                        </div>
+                      ) : showCancelled ? (
+                        <div className="flex items-center gap-2">
+                          <span>{i + 1}</span>
+                          <button
+                            onClick={e => { e.stopPropagation(); setConfirmPermanent(reg.id) }}
+                            className="text-xs text-red-400 hover:text-red-600 transition-colors"
+                            title="永久刪除"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                          </button>
+                        </div>
+                      ) : (currentPage - 1) * pageSize + i + 1}
+                    </td>
+              
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -241,8 +310,60 @@ export default function AdminDashboard() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           </div>
-        )}
-      </div>
-    </div>
-  )
-}
+       )}
+
+      {/* 軟刪除確認 */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div>
+                <h3 className="font-bold text-stone-800">確認取消報名？</h3>
+                <p className="text-stone-400 text-xs mt-0.5">將取消 {selectedIds.size} 筆報名記錄，可在「已取消」中復原</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={async () => {
+                  setDeleting(true)
+                  await supabase.from('registrations').update({ status: 'cancelled' }).in('id', Array.from(selectedIds))
+                  setConfirmDelete(false); setManageMode(false); setSelectedIds(new Set())
+                  await fetchAll(); setDeleting(false)
+                }}
+                disabled={deleting}
+                className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors"
+              >
+                {deleting ? '處理中...' : '確認取消報名'}
+              </button>
+              <button onClick={() => setConfirmDelete(false)} className="px-5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-xl text-sm transition-colors">返回</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 永久刪除確認 */}
+      {confirmPermanent && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+              </div>
+              <div>
+                <h3 className="font-bold text-stone-800">永久刪除此筆紀錄？</h3>
+                <p className="text-stone-400 text-xs mt-0.5">此操作無法復原，資料將從資料庫中永久移除</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={async () => {
+                  setDeleting(true)
+                  await supabase.from('registrations').delete().eq('id', confirmPermanent)
+                  setConfirmPermanent(null)
+                  await fetchAll(); setDeleting(false)
+                }}
+                disabled={deleting}
+                className="flex-1 bg-red-
