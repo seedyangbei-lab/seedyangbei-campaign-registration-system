@@ -29,7 +29,11 @@ function RegisterForm() {
   const supabase = createClient()
 
   useEffect(() => {
-    if (courseIds.length === 0) { router.push('/'); return }
+    if (courseIds.length === 0) {
+      // 給 searchParams 一點時間初始化，避免 hydration 前誤判為空
+      const timeout = setTimeout(() => router.push('/'), 500)
+      return () => clearTimeout(timeout)
+    }
 
     let user: any = null
     if (lineUserParam) {
