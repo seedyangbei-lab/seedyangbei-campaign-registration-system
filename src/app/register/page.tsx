@@ -29,7 +29,11 @@ function RegisterForm() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const ids = params.get('courses')?.split(',').filter(Boolean) || []
+    // 優先從 URL 讀，fallback 從 sessionStorage 讀（LINE 登入後回來的情況）
+    const urlIds = params.get('courses')?.split(',').filter(Boolean) || []
+    const sessionIds = sessionStorage.getItem('pending_courses')?.split(',').filter(Boolean) || []
+    const ids = urlIds.length > 0 ? urlIds : sessionIds
+    if (ids.length > 0) sessionStorage.removeItem('pending_courses')
     const lineUserParam = params.get('line_user')
     const errParam = params.get('error')
 
