@@ -78,11 +78,15 @@ function ColorPicker({ value, onChange, label }: { value: string; onChange: (v: 
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
+ useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
-    if (open) document.addEventListener('mousedown', handler)
+    if (open) {
+      // 延遲綁定，避免開啟時的 click 事件立即觸發關閉
+      const t = setTimeout(() => document.addEventListener('mousedown', handler), 50)
+      return () => { clearTimeout(t); document.removeEventListener('mousedown', handler) }
+    }
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
@@ -247,7 +251,7 @@ function DownloadPage({ data }: { data: PageData }) {
             <p style={{ margin: 0, fontSize: 11, color: '#9ca3af' }}>（數量有限，額滿為止）</p>
           </div>
           {/* QR Code */}
-          <div style={{ position: 'absolute', top: BRAND_H + 290, left: 22, right: 22, display: 'flex', gap: 8 }}>
+          <div style={{ position: 'absolute', top: BRAND_H + 210, left: 22, right: 22, display: 'flex', gap: 8 }}>
             {[
               { label:'活動報名', color: e.accentColor, img: QR_API(SITE_URL,200), sub:'↑ 線上報名' },
               { label:'種子社區大學', color:'#06C755', img: e.communityQr, sub:'加入社群' },
@@ -277,19 +281,20 @@ function DownloadPage({ data }: { data: PageData }) {
       ) : (
         // 直式左欄（頂部橫條）：左：標題，右：QR + 聯繫
         <>
-          <div style={{ position: 'absolute', top: BRAND_H + 18, left: 24 }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', background: e.accentColor, borderRadius: 6, padding: '3px 10px', marginBottom: 8 }}>
+          <div style={{ position: 'absolute', top: BRAND_H, left: 0, right: 0, height: LEFT_H, display: 'flex', alignItems: 'center', padding: '0 24px', gap: 24 }}>
+          <div style={{ textAlign: 'center', flex: '0 0 auto' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', background: e.accentColor, borderRadius: 6, padding: '3px 10px', marginBottom: 6 }}>
               <span style={{ color:'white', fontSize:11, fontWeight:800, letterSpacing:'0.1em', lineHeight:1 }}>{year} 年活動</span>
             </div>
-            <p style={{ margin: '0 0 3px', fontSize: 24, fontWeight: 900, color: '#18120a', lineHeight: 1.25 }}>{e.titleLine1}</p>
-            <p style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 900, color: e.accentColor, lineHeight: 1.25 }}>{e.titleLine2}</p>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-              <span style={{ fontSize: 44, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
-              <span style={{ fontSize: 16, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
+            <p style={{ margin: '0 0 2px', fontSize: 20, fontWeight: 900, color: '#18120a', lineHeight: 1.2, textAlign:'center' }}>{e.titleLine1}</p>
+            <p style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 900, color: e.accentColor, lineHeight: 1.2, textAlign:'center' }}>{e.titleLine2}</p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, justifyContent:'center' }}>
+              <span style={{ fontSize: 40, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
             </div>
           </div>
           {/* 右側：QR + 聯繫 */}
-          <div style={{ position: 'absolute', top: BRAND_H + 14, right: 24, width: 260 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
               {[
                 { label:'活動報名', color: e.accentColor, img: QR_API(SITE_URL,200), sub:'線上報名' },
@@ -313,6 +318,7 @@ function DownloadPage({ data }: { data: PageData }) {
                 <span style={{ fontSize:11, color:'#374151', lineHeight:1.5 }}>{item}</span>
               </div>
             ))}
+          </div>
           </div>
         </>
       )}
@@ -401,10 +407,10 @@ function DownloadPage({ data }: { data: PageData }) {
       <div style={{ position:'absolute', top:TABLE_TOP, left:isLandscape?LEFT_W:0, width:TABLE_W, height:TABLE_H, background:rightBg, zIndex:-1 }} />
 
       {/* 底部夥伴列 */}
-     <div style={{ position:'absolute', bottom:0, left:0, right:0, height:FOOTER_H, background:e.footerBgColor, borderTop:`2px solid ${e.accentColor}50`, display:'flex', alignItems:'center' }}>
+      <div style={{ position:'absolute', bottom:0, left:0, right:0, height:FOOTER_H, background:e.footerBgColor, borderTop:`2px solid ${e.accentColor}50`, display:'flex', alignItems:'center' }}>
         {partners.map((p, i) => (
-          <>
-            <div key={i} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, height:'100%' }}>
+          <React.Fragment key={i}>
+            <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, height:'100%' }}>
               {p.img && <img src={p.img} alt="" crossOrigin="anonymous" style={{ height:24, width:'auto', objectFit:'contain' }} />}
               <span style={{ color:e.footerTextColor, fontSize:13, fontWeight:500 }}>{p.name}</span>
             </div>
@@ -415,12 +421,14 @@ function DownloadPage({ data }: { data: PageData }) {
                 <div style={{ width:1, height:10, background:`rgba(255,255,255,0.25)` }} />
               </div>
             )}
-          </>
+          </React.Fragment>
         ))}
       </div>
     </div>
   )
 }
+
+// ─── 預覽版
 
 // ─── 預覽版（CSS flex，視覺優先）────────────────────────────────────
 function PreviewPage({
@@ -610,8 +618,8 @@ function PreviewPage({
         {/* 底部 */}
        <div style={{ background:e.footerBgColor, height:52, display:'flex', alignItems:'center', borderTop:`2px solid ${e.accentColor}50`, flexShrink:0 }}>
           {partners.map((p,i) => (
-            <>
-              <div key={i} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, height:'100%' }}>
+            <React.Fragment key={i}>
+              <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, height:'100%' }}>
                 {p.img && <img src={p.img} alt="" crossOrigin="anonymous" style={{ height:24, width:'auto', objectFit:'contain' }} />}
                 <span style={{ color:e.footerTextColor, fontSize:13, fontWeight:500 }}>{p.name}</span>
               </div>
@@ -622,7 +630,7 @@ function PreviewPage({
                   <div style={{ width:1, height:10, background:`rgba(255,255,255,0.25)` }} />
                 </div>
               )}
-            </>
+            </React.Fragment>
           ))}
         </div>
       </div>
@@ -630,6 +638,7 @@ function PreviewPage({
   )
 }
 
+// ─── 主元件
 // ─── 主元件 ──────────────────────────────────────────────────────────
 export default function CourseScheduleExporter({ courses, scheduleSettings: ss }: Props) {
   const [step, setStep] = useState<'idle'|'config'|'editor'>('idle')
