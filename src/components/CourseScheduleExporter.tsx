@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 
 interface Course {
@@ -750,7 +750,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
 
   const reset = () => { setStep('idle'); setCurrentPage(0) }
 
-  const PanelContent = () => (
+  function PanelContent(): React.ReactElement {
+    return (
     <div className="p-4 space-y-5">
       <div>
         <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">標題文字</p>
@@ -947,7 +948,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       </div>
     </div>
   )
-
+  }
   if (step === 'idle') return (
     <button onClick={() => setStep('config')}
       className="flex items-center gap-2 bg-white border border-stone-200 hover:bg-stone-50 text-stone-700 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
