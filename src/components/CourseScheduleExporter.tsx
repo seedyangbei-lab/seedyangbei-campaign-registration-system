@@ -171,12 +171,9 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
           background: '#fdf8f2',
         }}
       >
-        {/* 底圖 */}
-        {editor.bgImage && (
-          <img src={editor.bgImage} alt=""
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: editor.bgOpacity, pointerEvents: 'none', zIndex: 0 }} />
-        )}
-
+       {/* 底圖：永遠滿版，透明度可調 */}
+        <img src={editor.bgImage || 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'} alt=""
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: editor.bgImage ? editor.bgOpacity : 0, pointerEvents: 'none', zIndex: 0 }} />
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', flex: 1 }}>
           {/* 頂部品牌列 */}
           <div style={{ background: editor.headerColor, padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -190,9 +187,16 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
 
           {/* 主體 */}
           <div style={{ display: 'flex', flex: 1 }}>
-            {/* 左側（橫式才有） */}
-            {isLandscape && (
-              <div style={{ width: 300, background: editor.leftBgColor, padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: 0, flexShrink: 0 }}>
+           {/* 左側（橫式才有）*/}
+          {isLandscape && (
+            <div style={{
+              width: 300, flexShrink: 0, padding: '28px 24px',
+              display: 'flex', flexDirection: 'column', gap: 0,
+              background: editor.leftBgColor,
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              borderRight: '1.5px solid rgba(249,115,22,0.25)',
+            }}>
                 {/* 主標題 */}
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ fontSize: 26, fontWeight: 900, color: '#1c1917', lineHeight: 1.3, margin: 0 }}>{editor.titleLine1}</p>
@@ -210,15 +214,15 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
                 {/* QR Code 並排 */}
                 <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
                   {/* 報名 QR */}
-                  <div style={{ flex: 1, background: 'white', borderRadius: 10, border: '1px solid #fed7aa', padding: '10px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <div style={{ flex: 1, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', borderRadius: 12, border: '1px solid rgba(254,215,170,0.8)', padding: '10px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                     <div style={{ background: editor.headerColor, borderRadius: 12, padding: '4px 10px' }}>
                       <span style={{ color: 'white', fontSize: 11, fontWeight: 700 }}>活動報名</span>
                     </div>
                     <img src={QR_API(SITE_URL, 200)} alt="報名QR" style={{ width: 90, height: 90 }} crossOrigin="anonymous" />
                     <p style={{ fontSize: 10, color: '#78716c', margin: 0, textAlign: 'center' }}>↑ 點我線上報名</p>
                   </div>
-                  {/* 社群 QR */}
-                  <div style={{ flex: 1, background: 'white', borderRadius: 10, border: '1px solid #fed7aa', padding: '10px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                {/* 社群 QR */}
+                  <div style={{ flex: 1, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', borderRadius: 12, border: '1px solid rgba(254,215,170,0.8)', padding: '10px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                     <div style={{ background: '#06C755', borderRadius: 12, padding: '4px 10px' }}>
                       <span style={{ color: 'white', fontSize: 11, fontWeight: 700 }}>種子社區大學</span>
                     </div>
@@ -245,7 +249,12 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
             )}
 
             {/* 右側課表 */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div style={{
+              flex: 1, display: 'flex', flexDirection: 'column',
+              background: 'rgba(255,255,255,0.72)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+            }}>
               {/* 直式標題 */}
               {!isLandscape && (
                 <div style={{ background: editor.leftBgColor, padding: '20px 28px', textAlign: 'center' }}>
@@ -283,8 +292,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
                     gridTemplateColumns: isLandscape
                       ? '90px 110px 1fr 150px 130px 110px 80px'
                       : '90px 110px 1fr 150px 120px 100px',
-                    background: i % 2 === 0 ? '#ffffff' : '#fff7ed',
-                    borderBottom: '1px solid #fed7aa',
+                    background: i % 2 === 0 ? 'rgba(255,255,255,0.80)' : 'rgba(255,247,237,0.85)',
+                    borderBottom: '1px solid rgba(254,215,170,0.6)',
                     padding: '0 8px',
                     minHeight: 90,
                   }}>
@@ -340,14 +349,14 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
               })}
 
               {/* 空列補足（視覺一致） */}
-              {Array.from({ length: Math.max(0, rowsPerPage - pageCourses.length) }).map((_, i) => (
+             {Array.from({ length: Math.max(0, rowsPerPage - pageCourses.length) }).map((_, i) => (
                 <div key={`empty-${i}`} style={{
                   display: 'grid',
                   gridTemplateColumns: isLandscape
                     ? '90px 110px 1fr 150px 130px 110px 80px'
                     : '90px 110px 1fr 150px 120px 100px',
-                  background: (pageCourses.length + i) % 2 === 0 ? '#ffffff' : '#fff7ed',
-                  borderBottom: '1px solid #fed7aa',
+                  background: (pageCourses.length + i) % 2 === 0 ? 'rgba(255,255,255,0.80)' : 'rgba(255,247,237,0.85)',
+                  borderBottom: '1px solid rgba(254,215,170,0.6)',
                   minHeight: 90,
                 }}>
                   {[...Array(isLandscape ? 7 : 6)].map((_, ci) => <div key={ci} />)}
@@ -356,17 +365,17 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
             </div>
           </div>
 
-          {/* 底部夥伴列 */}
-          <div style={{ background: editor.footerBgColor, padding: '18px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-around' }}>
-            {[
-              { img: editor.logo1, name: editor.logo1Name },
-              { img: editor.logo2, name: editor.logo2Name },
-              { img: editor.logo3, name: editor.logo3Name },
-            ].map((p, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                {p.img && <img src={p.img} alt="" style={{ height: 36, width: 'auto', objectFit: 'contain' }} crossOrigin="anonymous" />}
-                <span style={{ color: editor.footerTextColor, fontSize: 16, fontWeight: 500 }}>{p.name}</span>
-              </div>
+         {/* 底部夥伴列 */}
+          <div style={{ background: editor.footerBgColor, padding: '10px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-around', minHeight: 52 }}>
+           {[
+                { img: editor.logo1, name: editor.logo1Name },
+                { img: editor.logo2, name: editor.logo2Name },
+                { img: editor.logo3, name: editor.logo3Name },
+              ].map((p, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {p.img && <img src={p.img} alt="" style={{ height: 28, width: 'auto', objectFit: 'contain' }} crossOrigin="anonymous" />}
+                  <span style={{ color: editor.footerTextColor, fontSize: 14, fontWeight: 500 }}>{p.name}</span>
+                </div>
             ))}
           </div>
         </div>
@@ -546,17 +555,16 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
                 {editor.bgImage ? '已上傳，點擊替換' : '上傳底圖'}
                 <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload('bgImage')} />
               </label>
-              {editor.bgImage && (
-                <div className="mt-2">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs text-stone-500">透明度 {Math.round(editor.bgOpacity * 100)}%</label>
-                    <button onClick={() => set('bgImage', '')} className="text-xs text-red-400 hover:text-red-600">移除</button>
-                  </div>
-                  <input type="range" min="0" max="1" step="0.05" value={editor.bgOpacity}
-                    onChange={e => set('bgOpacity', parseFloat(e.target.value))}
-                    className="w-full" />
+             <div className="mt-2">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs text-stone-500">底圖透明度 {Math.round(editor.bgOpacity * 100)}%</label>
+                  {editor.bgImage && <button onClick={() => set('bgImage', '')} className="text-xs text-red-400 hover:text-red-600">移除</button>}
                 </div>
-              )}
+                <input type="range" min="0" max="1" step="0.05" value={editor.bgOpacity}
+                  onChange={e => set('bgOpacity', parseFloat(e.target.value))}
+                  className="w-full" />
+                <p className="text-xs text-stone-400 mt-1">數值越高底圖越明顯，左右欄毛玻璃效果會自動透出底圖</p>
+              </div>
             </section>
 
             {/* QR Code */}
