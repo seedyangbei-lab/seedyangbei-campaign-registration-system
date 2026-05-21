@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import CourseScheduleExporter from '@/components/CourseScheduleExporter'
 
 interface Instructor { id: string; name: string }
 interface Category { id: string; name: string; color: string }
@@ -116,6 +117,7 @@ export default function CoursesPage() {
   const [courses, setCourses] = useState<any[]>([])
   const [instructors, setInstructors] = useState<Instructor[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [scheduleSettings, setScheduleSettings] = useState<any>({})
   const [showCatModal, setShowCatModal] = useState(false)
   const [editCat, setEditCat] = useState<Category | null>(null)
   const [catForm, setCatForm] = useState({ name: '', color: '#e11d48' })
@@ -134,12 +136,17 @@ export default function CoursesPage() {
   const supabase = createClient()
 
   const fetchAll = async () => {
-    const [{ data: c }, { data: i }, { data: cat }] = await Promise.all([
+  const [{ data: c }, { data: i }, { data: cat }, { data: siteSettings }] = await Promise.all([
       supabase.from('courses').select('*, instructors(name), course_categories(name, color)').order('date', { ascending: false }),
       supabase.from('instructors').select('id, name').eq('is_active', true),
       supabase.from('course_categories').select('*').order('created_at'),
+      supabase.from('site_settings').select('key, value'),
     ])
     setCourses((c as any) || []); setInstructors(i || []); setCategories(cat || [])
+    if (siteSettings) {
+      const map = Object.fromEntries(siteSettings.map((s: any) => [s.key, s.value || '']))
+      setScheduleSettings(map)
+    }
   }
   useEffect(() => { fetchAll() }, [])
 
@@ -218,11 +225,14 @@ export default function CoursesPage() {
     <div className="p-6 md:p-8">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-stone-800 text-2xl font-bold">課程管理</h2>
-        {mainTab === 'courses' ? (
+       {mainTab === 'courses' ? (
+          <div className="flex items-center gap-2">
+            <CourseScheduleExporter courses={courses} scheduleSettings={scheduleSettings} />
           <button onClick={openAdd} className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             新增課程
           </button>
+          </div>
         ) : (
           <button onClick={() => { setEditCat(null); setCatForm({ name: '', color: '#e11d48' }); setShowCatModal(true) }}
             className="flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors">
