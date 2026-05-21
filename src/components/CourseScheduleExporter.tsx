@@ -654,7 +654,6 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
   const [showMobilePanel, setShowMobilePanel] = useState(false)
   const downloadRefL = useRef<HTMLDivElement>(null)
   const downloadRefP = useRef<HTMLDivElement>(null)
-  const { createRoot } = require('react-dom/client')
   const supabase = createClient()
 
   const set = useCallback((key: keyof EditorState, val: any) =>
