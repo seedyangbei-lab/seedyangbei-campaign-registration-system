@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
+import { HexColorPicker } from 'react-colorful'
 
 interface Course {
   id: string; title: string; date: string
@@ -72,6 +73,49 @@ const DEFAULT_EDITOR: EditorState = {
   titleLine2: '跨世代共居種子計畫',
 }
 
+// ── 自訂色盤（支援拖曳）────────────────────────────────────────────
+function ColorPicker({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    if (open) document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-stone-600">{label}</span>
+      <div className="relative flex items-center gap-2" ref={ref}>
+        <button
+          onClick={() => setOpen(v => !v)}
+          style={{ width: 32, height: 32, borderRadius: 8, background: value, border: '2px solid #e7e5e4', cursor: 'pointer', flexShrink: 0 }}
+        />
+        <span className="text-xs text-stone-400 font-mono w-16">{value}</span>
+        {open && (
+          <div style={{ position: 'absolute', right: 0, top: 40, zIndex: 9999, background: 'white', borderRadius: 12, padding: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.18)', border: '1px solid #e7e5e4' }}>
+            <HexColorPicker color={value} onChange={onChange} style={{ width: 200 }} />
+            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 11, color: '#78716c' }}>HEX</span>
+              <input
+                value={value}
+                onChange={e => {
+                  const v = e.target.value
+                  if (/^#[0-9a-fA-F]{0,6}$/.test(v)) onChange(v)
+                }}
+                style={{ flex: 1, border: '1px solid #e7e5e4', borderRadius: 6, padding: '4px 8px', fontSize: 12, fontFamily: 'monospace' }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function getSvgPattern(type: PatternType, color: string, opacity: number): string {
   if (type === 'none') return ''
   const c = encodeURIComponent(color)
@@ -110,7 +154,7 @@ function DownloadPage({ data }: { data: PageData }) {
   const BRAND_H = 44
   const FOOTER_H = 52
   const LEFT_W = isLandscape ? 290 : W
-  const LEFT_H = isLandscape ? H - BRAND_H - FOOTER_H : 170
+  const LEFT_H = isLandscape ? H - BRAND_H - FOOTER_H : 200
   const TABLE_TOP = isLandscape ? BRAND_H : BRAND_H + LEFT_H
   const TABLE_W = isLandscape ? W - LEFT_W : W
   const TABLE_H = H - TABLE_TOP - FOOTER_H
@@ -365,7 +409,11 @@ function DownloadPage({ data }: { data: PageData }) {
               <span style={{ color:e.footerTextColor, fontSize:13, fontWeight:500 }}>{p.name}</span>
             </div>
             {i < partners.length-1 && (
-              <div style={{ width:1, height:28, background:`rgba(255,255,255,0.2)`, flexShrink:0 }} />
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3, flexShrink:0 }}>
+                <div style={{ width:1, height:10, background:`rgba(255,255,255,0.25)` }} />
+                <div style={{ width:5, height:5, borderRadius:'50%', background:`rgba(255,255,255,0.35)` }} />
+                <div style={{ width:1, height:10, background:`rgba(255,255,255,0.25)` }} />
+              </div>
             )}
           </>
         ))}
@@ -449,7 +497,7 @@ function PreviewPage({
         {/* 主體 */}
         <div style={{ flex:1, display:'flex', flexDirection:isL?'row':'column', minHeight:0 }}>
           {/* 左欄 */}
-          <div style={{ width:isL?290:'100%', flexShrink:0, position:'relative', overflow:'hidden', background:leftBg, ...(isL ? { display:'flex', flexDirection:'column' } : { height:170 }) }}>
+          <div style={{ width:isL?290:'100%', flexShrink:0, position:'relative', overflow:'hidden', background:leftBg, ...(isL ? { display:'flex', flexDirection:'column' } : { height:200 }) }}>
             {gradBg && <div style={{ position:'absolute', inset:0, background:gradBg, zIndex:0 }} />}
             {patternBg && <div style={{ position:'absolute', inset:0, backgroundImage:patternBg, backgroundRepeat:'repeat', zIndex:1 }} />}
             {isL && <div style={{ position:'absolute', right:0, top:0, bottom:0, width:3, background:`linear-gradient(to bottom,${e.accentColor}00,${e.accentColor}60,${e.accentColor}00)`, zIndex:2 }} />}
@@ -568,7 +616,11 @@ function PreviewPage({
                 <span style={{ color:e.footerTextColor, fontSize:13, fontWeight:500 }}>{p.name}</span>
               </div>
               {i < partners.length-1 && (
-                <div style={{ width:1, height:28, background:`rgba(255,255,255,0.2)`, flexShrink:0 }} />
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3, flexShrink:0 }}>
+                  <div style={{ width:1, height:10, background:`rgba(255,255,255,0.25)` }} />
+                  <div style={{ width:5, height:5, borderRadius:'50%', background:`rgba(255,255,255,0.35)` }} />
+                  <div style={{ width:1, height:10, background:`rgba(255,255,255,0.25)` }} />
+                </div>
               )}
             </>
           ))}
@@ -593,6 +645,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
   const [showMobilePanel, setShowMobilePanel] = useState(false)
   const downloadRefL = useRef<HTMLDivElement>(null)
   const downloadRefP = useRef<HTMLDivElement>(null)
+  const { createRoot } = require('react-dom/client')
   const supabase = createClient()
 
   const set = useCallback((key: keyof EditorState, val: any) =>
@@ -698,7 +751,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
   }
 
   // 下載：使用隱藏的 DownloadPage DOM 截圖
- const downloadVariant = async (orient: Orientation) => {
+  const downloadVariant = async (orient: Orientation) => {
     const { year, month } = toROC(selectedMonth + '-01')
     const label = orient === 'landscape' ? '橫式' : '直式'
     const h2c = (await import('html2canvas')).default
@@ -707,24 +760,52 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
     const ref = orient === 'landscape' ? downloadRefL : downloadRefP
     const urls: string[] = []
 
+    const el = ref.current
+    if (!el) return
+
+    // 暫時移到 body 最上層，讓 html2canvas 能正確讀取
+    const originalParent = el.parentElement
+    const originalNextSibling = el.nextSibling
+    const originalStyle = el.getAttribute('style') || ''
+
+    document.body.appendChild(el)
+    el.style.position = 'absolute'
+    el.style.left = '-9999px'
+    el.style.top = '0'
+    el.style.zIndex = '-1'
+    el.style.width = `${W}px`
+    el.style.height = `${H}px`
+    el.style.overflow = 'hidden'
+    el.style.pointerEvents = 'none'
+
     for (let pg = 0; pg < totalPages; pg++) {
       setCurrentPage(pg)
-      await new Promise(r => setTimeout(r, 250))
-      const el = ref.current
-      if (!el) continue
+      await new Promise(r => setTimeout(r, 300))
+
       const canvas = await h2c(el, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#fdf4ea',
         logging: false,
-        imageTimeout: 12000,
+        imageTimeout: 15000,
         width: W,
         height: H,
+        x: 0,
+        y: 0,
         scrollX: 0,
         scrollY: 0,
+        windowWidth: W,
+        windowHeight: H,
       })
       urls.push(canvas.toDataURL('image/png'))
+    }
+
+    // 移回原位
+    el.setAttribute('style', originalStyle)
+    if (originalParent) {
+      if (originalNextSibling) originalParent.insertBefore(el, originalNextSibling)
+      else originalParent.appendChild(el)
     }
 
     urls.forEach((url, i) => {
@@ -765,6 +846,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
           ))}
         </div>
       </div>
+
       <div>
         <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">顏色</p>
         <div className="space-y-2.5">
@@ -776,18 +858,12 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
             { key:'footerBgColor', label:'底部背景' },
             { key:'footerTextColor', label:'底部文字' },
           ].map(f => (
-            <div key={f.key} className="flex items-center justify-between">
-              <span className="text-sm text-stone-600">{f.label}</span>
-              <div className="flex items-center gap-2">
-                <input type="color" value={(editor as any)[f.key]}
-                  onChange={e => set(f.key as keyof EditorState, e.target.value)}
-                  style={{ width:36, height:36, padding:2, borderRadius:8, border:'1px solid #e7e5e4', cursor:'pointer', background:'none' }} />
-                <span className="text-xs text-stone-400 font-mono w-16">{(editor as any)[f.key]}</span>
-              </div>
-            </div>
+            <ColorPicker key={f.key} label={f.label} value={(editor as any)[f.key]}
+              onChange={v => set(f.key as keyof EditorState, v)} />
           ))}
         </div>
       </div>
+        
       <div>
         <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">欄位透明度</p>
         {[
@@ -844,17 +920,9 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
                 </button>
               ))}
             </div>
-           <div className="flex gap-3">
-              <div className="flex-1">
-                <label className="block text-xs text-stone-400 mb-1">起始色</label>
-                <input type="color" value={editor.gradientFrom} onChange={e => set('gradientFrom', e.target.value)}
-                  style={{ width:'100%', height:36, padding:2, borderRadius:8, border:'1px solid #e7e5e4', cursor:'pointer', background:'none', display:'block' }} />
-              </div>
-              <div className="flex-1">
-                <label className="block text-xs text-stone-400 mb-1">結束色</label>
-                <input type="color" value={editor.gradientTo} onChange={e => set('gradientTo', e.target.value)}
-                  style={{ width:'100%', height:36, padding:2, borderRadius:8, border:'1px solid #e7e5e4', cursor:'pointer', background:'none', display:'block' }} />
-              </div>
+           <div className="space-y-1">
+              <ColorPicker label="起始色" value={editor.gradientFrom} onChange={v => set('gradientFrom', v)} />
+              <ColorPicker label="結束色" value={editor.gradientTo} onChange={v => set('gradientTo', v)} />
             </div>
             <div>
               <div className="flex justify-between mb-1">
