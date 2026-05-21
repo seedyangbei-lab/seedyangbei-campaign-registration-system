@@ -408,7 +408,7 @@ function PreviewPage({
   const gridCols = colDefs.map(c => c.w).join(' ')
 
   const contactItems = [
-    e.phone ? `洽詢：${e.phone}` : '',
+    e.phone ? `如有任何問題，請撥打洽詢專線：${e.phone}` : '',
     e.contact || '',
     e.hours ? `時間：${e.hours}` : '',
   ].filter(Boolean)
