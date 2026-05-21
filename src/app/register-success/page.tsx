@@ -6,9 +6,7 @@ import Link from 'next/link'
 
 function SuccessContent() {
   const searchParams = useSearchParams()
-  const lineUser = searchParams.get('line_user')
-
-  const profileUrl = lineUser ? `/profile?line_user=${lineUser}` : '/'
+  const profileUrl = '/profile'
 
   return (
     <main className="min-h-screen bg-stone-50 flex items-center justify-center px-4">
