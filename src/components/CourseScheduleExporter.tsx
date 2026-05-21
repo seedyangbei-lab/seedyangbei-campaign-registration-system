@@ -109,7 +109,7 @@ function LeftPanel({
   editor, year, rocMonth, isLandscape,
 }: { editor: EditorState; year: number; rocMonth: number; isLandscape: boolean }) {
   const contactItems = [
-    editor.phone ? `洽詢：${editor.phone}` : '',
+    editor.phone ? `如有任何問題，請撥打洽詢專線：：${editor.phone}` : '',
     editor.contact || '',
     editor.hours ? `時間：${editor.hours}` : '',
   ].filter(Boolean)
