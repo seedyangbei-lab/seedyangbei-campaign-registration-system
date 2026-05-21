@@ -191,11 +191,11 @@ function DownloadPage({ data }: { data: PageData }) {
             <span style={{ color: 'white', fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', lineHeight: 1 }}>{year} 年活動</span>
           </div>
           {/* 主標題 */}
-          <div style={{ position: 'absolute', top: BRAND_H + 50, left: 22, right: 22 }}>
-            <p style={{ margin: 0, fontSize: 26, fontWeight: 900, color: '#18120a', lineHeight: 1.25 }}>{e.titleLine1}</p>
-            <p style={{ margin: '4px 0 10px', fontSize: 22, fontWeight: 900, color: e.accentColor, lineHeight: 1.25 }}>{e.titleLine2}</p>
+         <div style={{ position: 'absolute', top: BRAND_H + 46, left: 22, right: 22 }}>
+            <p style={{ margin: 0, fontSize: 30, fontWeight: 900, color: '#18120a', lineHeight: 1.25 }}>{e.titleLine1}</p>
+            <p style={{ margin: '4px 0 10px', fontSize: 26, fontWeight: 900, color: e.accentColor, lineHeight: 1.25 }}>{e.titleLine2}</p>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
-              <span style={{ fontSize: 60, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
+              <span style={{ fontSize: 64, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
               <span style={{ fontSize: 18, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
             </div>
             <div style={{ height: 1, background: `${e.accentColor}25`, marginBottom: 10 }} />
@@ -357,12 +357,17 @@ function DownloadPage({ data }: { data: PageData }) {
       <div style={{ position:'absolute', top:TABLE_TOP, left:isLandscape?LEFT_W:0, width:TABLE_W, height:TABLE_H, background:rightBg, zIndex:-1 }} />
 
       {/* 底部夥伴列 */}
-      <div style={{ position:'absolute', bottom:0, left:0, right:0, height:FOOTER_H, background:e.footerBgColor, borderTop:`2px solid ${e.accentColor}50`, display:'flex', alignItems:'center' }}>
+     <div style={{ position:'absolute', bottom:0, left:0, right:0, height:FOOTER_H, background:e.footerBgColor, borderTop:`2px solid ${e.accentColor}50`, display:'flex', alignItems:'center' }}>
         {partners.map((p, i) => (
-          <div key={i} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, borderRight: i < partners.length-1 ? `1px solid rgba(255,255,255,0.12)` : 'none', height:'100%' }}>
-            {p.img && <img src={p.img} alt="" crossOrigin="anonymous" style={{ height:24, width:'auto', objectFit:'contain' }} />}
-            <span style={{ color:e.footerTextColor, fontSize:13, fontWeight:500 }}>{p.name}</span>
-          </div>
+          <>
+            <div key={i} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, height:'100%' }}>
+              {p.img && <img src={p.img} alt="" crossOrigin="anonymous" style={{ height:24, width:'auto', objectFit:'contain' }} />}
+              <span style={{ color:e.footerTextColor, fontSize:13, fontWeight:500 }}>{p.name}</span>
+            </div>
+            {i < partners.length-1 && (
+              <div style={{ width:1, height:28, background:`rgba(255,255,255,0.2)`, flexShrink:0 }} />
+            )}
+          </>
         ))}
       </div>
     </div>
@@ -455,12 +460,13 @@ function PreviewPage({
                 <div style={{ display:'inline-flex', alignItems:'center', background:e.accentColor, borderRadius:6, padding:'3px 10px', marginBottom:isL?10:6 }}>
                   <span style={{ color:'white', fontSize:10, fontWeight:800, letterSpacing:'0.1em', lineHeight:1 }}>{year} 年活動</span>
                 </div>
-                <p style={{ margin:'0 0 3px', fontSize:isL?24:20, fontWeight:900, color:'#18120a', lineHeight:1.25 }}>{e.titleLine1}</p>
-                <p style={{ margin:isL?'0 0 10px':'0 0 4px', fontSize:isL?22:18, fontWeight:900, color:e.accentColor, lineHeight:1.25 }}>{e.titleLine2}</p>
+                <p style={{ margin:'0 0 3px', fontSize:isL?30:22, fontWeight:900, color:'#18120a', lineHeight:1.25 }}>{e.titleLine1}</p>
+                <p style={{ margin:isL?'0 0 10px':'0 0 4px', fontSize:isL?26:20, fontWeight:900, color:e.accentColor, lineHeight:1.25 }}>{e.titleLine2}</p>
                 <div style={{ display:'flex', alignItems:'baseline', gap:4, marginBottom:isL?14:0 }}>
-                  <span style={{ fontSize:isL?58:40, fontWeight:900, color:e.accentColor, lineHeight:1 }}>{rocMonth}</span>
-                  <span style={{ fontSize:isL?17:14, fontWeight:700, color:'#6b7280' }}>月份活動表</span>
+                  <span style={{ fontSize:isL?64:44, fontWeight:900, color:e.accentColor, lineHeight:1 }}>{rocMonth}</span>
+                  <span style={{ fontSize:isL?18:15, fontWeight:700, color:'#6b7280' }}>月份活動表</span>
                 </div>
+                
                 {isL && <>
                   <div style={{ height:1, background:`${e.accentColor}25`, marginBottom:10 }} />
                   <p style={{ margin:'0 0 3px', fontSize:12, color:'#6b7280', lineHeight:1.6 }}>各項活動皆歡迎居民們踴躍報名！</p>
@@ -488,7 +494,7 @@ function PreviewPage({
                     <QrBox label="活動報名" color={e.accentColor} imgSrc={QR_API(SITE_URL,200)} sub="↑ 線上報名" />
                     <QrBox label="種子社區大學" color="#06C755" imgSrc={e.communityQr} sub="加入社群" />
                   </div>
-                  <div style={{ display:'flex', flexDirection:'column', gap:6, marginTop:'auto' }}>
+                  <div style={{ display:'flex', flexDirection:'column', gap:6, marginTop:12 }}>
                     {contactItems.map((item,i) => (
                       <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:8 }}>
                         <div style={{ width:6, height:6, borderRadius:'50%', background:'#06C755', marginTop:4, flexShrink:0 }} />
@@ -554,12 +560,17 @@ function PreviewPage({
           </div>
         </div>
         {/* 底部 */}
-        <div style={{ background:e.footerBgColor, height:52, display:'flex', alignItems:'center', borderTop:`2px solid ${e.accentColor}50`, flexShrink:0 }}>
+       <div style={{ background:e.footerBgColor, height:52, display:'flex', alignItems:'center', borderTop:`2px solid ${e.accentColor}50`, flexShrink:0 }}>
           {partners.map((p,i) => (
-            <div key={i} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, height:'100%', borderRight:i<partners.length-1?`1px solid rgba(255,255,255,0.12)`:'none' }}>
-              {p.img && <img src={p.img} alt="" crossOrigin="anonymous" style={{ height:24, width:'auto', objectFit:'contain' }} />}
-              <span style={{ color:e.footerTextColor, fontSize:13, fontWeight:500 }}>{p.name}</span>
-            </div>
+            <>
+              <div key={i} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, height:'100%' }}>
+                {p.img && <img src={p.img} alt="" crossOrigin="anonymous" style={{ height:24, width:'auto', objectFit:'contain' }} />}
+                <span style={{ color:e.footerTextColor, fontSize:13, fontWeight:500 }}>{p.name}</span>
+              </div>
+              {i < partners.length-1 && (
+                <div style={{ width:1, height:28, background:`rgba(255,255,255,0.2)`, flexShrink:0 }} />
+              )}
+            </>
           ))}
         </div>
       </div>
@@ -580,7 +591,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
   const [savedOk, setSavedOk] = useState(false)
   const [editor, setEditor] = useState<EditorState>(DEFAULT_EDITOR)
   const [showMobilePanel, setShowMobilePanel] = useState(false)
-  const downloadRef = useRef<HTMLDivElement>(null)
+  const downloadRefL = useRef<HTMLDivElement>(null)
+  const downloadRefP = useRef<HTMLDivElement>(null)
   const supabase = createClient()
 
   const set = useCallback((key: keyof EditorState, val: any) =>
@@ -686,31 +698,31 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
   }
 
   // 下載：使用隱藏的 DownloadPage DOM 截圖
-  const downloadVariant = async (orient: Orientation) => {
+ const downloadVariant = async (orient: Orientation) => {
     const { year, month } = toROC(selectedMonth + '-01')
     const label = orient === 'landscape' ? '橫式' : '直式'
     const h2c = (await import('html2canvas')).default
+    const W = orient === 'landscape' ? A4L_W : A4P_W
+    const H = orient === 'landscape' ? A4L_H : A4P_H
+    const ref = orient === 'landscape' ? downloadRefL : downloadRefP
     const urls: string[] = []
 
-    for (let p = 0; p < totalPages; p++) {
-      // 更新隱藏 DOM 的頁碼
-      setCurrentPage(p)
-      // 等待 React 更新隱藏 DOM
-      await new Promise(r => setTimeout(r, 200))
-      const el = downloadRef.current
+    for (let pg = 0; pg < totalPages; pg++) {
+      setCurrentPage(pg)
+      await new Promise(r => setTimeout(r, 250))
+      const el = ref.current
       if (!el) continue
-      // 找到對應方向的子元素
-      const pageEl = el.querySelector(`[data-orient="${orient}"]`) as HTMLElement
-      if (!pageEl) continue
-      const canvas = await h2c(pageEl, {
+      const canvas = await h2c(el, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#fdf4ea',
         logging: false,
         imageTimeout: 12000,
-        width: orient === 'landscape' ? A4L_W : A4P_W,
-        height: orient === 'landscape' ? A4L_H : A4P_H,
+        width: W,
+        height: H,
+        scrollX: 0,
+        scrollY: 0,
       })
       urls.push(canvas.toDataURL('image/png'))
     }
@@ -768,8 +780,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
               <div className="flex items-center gap-2">
                 <input type="color" value={(editor as any)[f.key]}
                   onChange={e => set(f.key as keyof EditorState, e.target.value)}
-                  className="w-9 h-9 rounded-lg border border-stone-200 cursor-pointer"
-                  style={{ padding: 2 }} />
+                  style={{ width:36, height:36, padding:2, borderRadius:8, border:'1px solid #e7e5e4', cursor:'pointer', background:'none' }} />
                 <span className="text-xs text-stone-400 font-mono w-16">{(editor as any)[f.key]}</span>
               </div>
             </div>
@@ -835,13 +846,13 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
             <div className="flex gap-3">
               <div className="flex-1">
                 <label className="block text-xs text-stone-400 mb-1">起始色</label>
-                <input type="color" value={editor.gradientFrom} onChange={e => set('gradientFrom', e.target.value)}
-                  className="w-full h-9 rounded-lg border border-stone-200 cursor-pointer" style={{ padding:2 }} />
-              </div>
+               <input type="color" value={editor.gradientFrom} onChange={e => set('gradientFrom', e.target.value)}
+                  style={{ width:'100%', height:36, padding:2, borderRadius:8, border:'1px solid #e7e5e4', cursor:'pointer', background:'none', display:'block' }} />
               <div className="flex-1">
                 <label className="block text-xs text-stone-400 mb-1">結束色</label>
-                <input type="color" value={editor.gradientTo} onChange={e => set('gradientTo', e.target.value)}
-                  className="w-full h-9 rounded-lg border border-stone-200 cursor-pointer" style={{ padding:2 }} />
+              <input type="color" value={editor.gradientTo} onChange={e => set('gradientTo', e.target.value)}
+                  style={{ width:'100%', height:36, padding:2, borderRadius:8, border:'1px solid #e7e5e4', cursor:'pointer', background:'none', display:'block' }} />
+                className="w-full h-9 rounded-lg border border-stone-200 cursor-pointer" style={{ padding:2 }} />
               </div>
             </div>
             <div>
@@ -1082,26 +1093,25 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
         </div>
       </div>
 
-      {/* 隱藏下載 DOM（絕對定位版，html2canvas 專用） */}
-      <div ref={downloadRef} style={{ position:'fixed', left:'-99999px', top:0, pointerEvents:'none', zIndex:-1 }}>
-        {/* 橫式 */}
-        <div data-orient="landscape">
-          <DownloadPage data={{
-            pageCourses: monthCourses.slice(currentPage*rowsPerPage, (currentPage+1)*rowsPerPage),
-            rowsPerPage, isLandscape:true, year:toROC(selectedMonth+'-01').year,
-            rocMonth:toROC(selectedMonth+'-01').month,
-            pageIdx:currentPage, totalPages, editor,
-          }} />
-        </div>
-        {/* 直式 */}
-        <div data-orient="portrait" style={{ marginTop: 20 }}>
-          <DownloadPage data={{
-            pageCourses: monthCourses.slice(currentPage*rowsPerPage, (currentPage+1)*rowsPerPage),
-            rowsPerPage, isLandscape:false, year:toROC(selectedMonth+'-01').year,
-            rocMonth:toROC(selectedMonth+'-01').month,
-            pageIdx:currentPage, totalPages, editor,
-          }} />
-        </div>
+      {/* 隱藏下載 DOM — 橫式 */}
+      <div ref={downloadRefL} style={{ position:'fixed', left:'-99999px', top:0, pointerEvents:'none', zIndex:-1, width:A4L_W, height:A4L_H, overflow:'hidden' }}>
+        <DownloadPage data={{
+          pageCourses: monthCourses.slice(currentPage*rowsPerPage, (currentPage+1)*rowsPerPage),
+          rowsPerPage, isLandscape:true,
+          year: selectedMonth ? toROC(selectedMonth+'-01').year : 115,
+          rocMonth: selectedMonth ? toROC(selectedMonth+'-01').month : 1,
+          pageIdx:currentPage, totalPages, editor,
+        }} />
+      </div>
+      {/* 隱藏下載 DOM — 直式 */}
+      <div ref={downloadRefP} style={{ position:'fixed', left:'-99999px', top:A4L_H+40, pointerEvents:'none', zIndex:-1, width:A4P_W, height:A4P_H, overflow:'hidden' }}>
+        <DownloadPage data={{
+          pageCourses: monthCourses.slice(currentPage*rowsPerPage, (currentPage+1)*rowsPerPage),
+          rowsPerPage, isLandscape:false,
+          year: selectedMonth ? toROC(selectedMonth+'-01').year : 115,
+          rocMonth: selectedMonth ? toROC(selectedMonth+'-01').month : 1,
+          pageIdx:currentPage, totalPages, editor,
+        }} />
       </div>
 
       {/* 手機抽屜 */}
