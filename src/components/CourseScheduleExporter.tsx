@@ -49,8 +49,8 @@ interface EditorState {
 const DEFAULT_EDITOR: EditorState = {
   bgImage: '', bgOpacity: 0.25,
   accentColor: '#f97316',
-  leftBgColor: '#fff7ed', leftBgOpacity: 0.88,
-  rightBgColor: '#ffffff', rightBgOpacity: 0.82,
+  leftBgColor: '#fff7ed', leftBgOpacity: 0.92,
+  rightBgColor: '#ffffff', rightBgOpacity: 0.88,
   footerBgColor: '#18120a', footerTextColor: '#ffffff',
   communityQr: '',
   logo1: '', logo1Name: '新北市政府城鄉發展局',
@@ -80,33 +80,25 @@ function SchedulePage({
   const { year, month: rocMonth } = toROC(selectedMonth + '-01')
 
   // A4 直式：794 × 1123px（96dpi）
-  const W = isL ? 1200 : 794
-  const LEFT_W = 280
-
+  const W = isL ? 1123 : 794
+  const H = isL ? 794 : 1123
+  const LEFT_W = isL ? 260 : 0
+  
   const contactItems = [
     editor.phone ? `洽詢：${editor.phone}` : '',
     editor.contact || '',
     editor.hours ? `時間：${editor.hours}` : '',
   ].filter(Boolean)
 
-  const colDefs = isL
-    ? [
-        { label: '日期', w: '88px' },
-        { label: '時間', w: '108px' },
-        { label: '活動名稱', w: '1fr' },
-        { label: '授課講師', w: '148px' },
-        { label: '地點', w: '128px' },
-        { label: '對象', w: '100px' },
-        { label: '費用', w: '72px' },
-      ]
-    : [
-        { label: '日期', w: '80px' },
-        { label: '時間', w: '100px' },
-        { label: '活動名稱', w: '1fr' },
-        { label: '授課講師', w: '130px' },
-        { label: '地點', w: '110px' },
-        { label: '對象', w: '90px' },
-      ]
+  const colDefs = [
+    { label: '日期', w: isL ? '88px' : '76px' },
+    { label: '時間', w: isL ? '100px' : '90px' },
+    { label: '活動名稱', w: '1fr' },
+    { label: '授課講師', w: isL ? '140px' : '120px' },
+    { label: '地點', w: isL ? '120px' : '100px' },
+    { label: '對象', w: isL ? '96px' : '80px' },
+    { label: '費用', w: isL ? '68px' : '58px' },
+  ]
 
   const gridCols = colDefs.map(c => c.w).join(' ')
 
@@ -130,13 +122,12 @@ function SchedulePage({
       data-schedule-page
       style={{
         width: W,
+        height: H,
         fontFamily: '"Noto Sans TC","GenSenRounded2TW",sans-serif',
         position: 'relative',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        // A4 直式固定高度
-        ...(orientation === 'portrait' ? { minHeight: 1123 } : {}),
       }}
     >
       {/* 底圖層 */}
@@ -181,9 +172,8 @@ function SchedulePage({
 
         {/* 主體 */}
         <div style={{ display: 'flex', flex: 1 }}>
-
-          {/* 左側（橫式才有） */}
-          {isL && (
+        {/* 左側（橫直式都有） */}
+          {(
             <div style={{
               width: LEFT_W, flexShrink: 0,
               background: leftBg,
@@ -278,26 +268,7 @@ function SchedulePage({
             display: 'flex', flexDirection: 'column',
           }}>
 
-            {/* 直式專屬標題 */}
-            {!isL && (
-              <div style={{
-                background: hexToRgba(editor.leftBgColor, editor.leftBgOpacity),
-                padding: '18px 28px',
-                borderBottom: `2px solid ${editor.accentColor}20`,
-                height: PORTRAIT_TITLE_H,
-                display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                flexShrink: 0,
-              }}>
-                <p style={{ fontSize: 22, fontWeight: 900, color: '#18120a', margin: 0 }}>{editor.titleLine1}</p>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 2 }}>
-                  <span style={{ fontSize: 20, fontWeight: 900, color: editor.accentColor }}>{editor.titleLine2}</span>
-                  <span style={{ fontSize: 16, fontWeight: 700, color: '#6b7280', marginLeft: 8 }}>
-                    {year} 年 <span style={{ color: editor.accentColor }}>{rocMonth}</span> 月份活動表
-                  </span>
-                </div>
-              </div>
-            )}
-
+          
             {/* 表頭 */}
             <div style={{
               display: 'grid',
@@ -306,15 +277,16 @@ function SchedulePage({
               height: TABLE_HEADER_H,
               flexShrink: 0,
             }}>
-              {colDefs.map(col => (
+             {colDefs.map(col => (
                 <div key={col.label} style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: 'white', fontWeight: 700, fontSize: 15,
-                  padding: '0 6px',
+                  padding: '0 8px', textAlign: 'center',
                 }}>
                   {col.label}
                 </div>
               ))}
+              
             </div>
 
             {/* 課程列 + 空列（flex 撐滿） */}
@@ -354,7 +326,7 @@ function SchedulePage({
                     </div>
 
                     {/* 活動名稱 */}
-                    <div style={{ display: 'flex', alignItems: 'center', padding: '8px 12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 10px', textAlign: 'center' }}>
                       <span style={{ fontSize: 16, fontWeight: 700, color: '#18120a', lineHeight: 1.45 }}>
                         {course.title}
                       </span>
@@ -391,12 +363,10 @@ function SchedulePage({
                       <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.5 }}>{course.suitable_age || '全年齡'}</span>
                     </div>
 
-                    {/* 費用（橫式） */}
-                    {isL && (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px' }}>
-                        <span style={{ fontSize: 14, fontWeight: 800, color: editor.accentColor, lineHeight: 1 }}>免費</span>
-                      </div>
-                    )}
+                    {/* 費用 */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px' }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: editor.accentColor, lineHeight: 1 }}>免費</span>
+                    </div>
                   </div>
                 )
               })}
@@ -478,6 +448,15 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
   const initEditor = () => {
     setEditor(prev => ({
       ...prev,
+      bgImage: ss.schedule_bg_image || '',
+      bgOpacity: parseFloat(ss.schedule_bg_opacity || '') || 0.25,
+      accentColor: ss.schedule_accent_color || '#f97316',
+      leftBgColor: ss.schedule_left_bg_color || '#fff7ed',
+      leftBgOpacity: parseFloat(ss.schedule_left_bg_opacity || '') || 0.92,
+      rightBgColor: ss.schedule_right_bg_color || '#ffffff',
+      rightBgOpacity: parseFloat(ss.schedule_right_bg_opacity || '') || 0.88,
+      footerBgColor: ss.schedule_footer_bg || '#18120a',
+      footerTextColor: ss.schedule_footer_text || '#ffffff',
       communityQr: ss.schedule_community_qr || '',
       logo1: ss.schedule_logo_1 || '', logo1Name: ss.schedule_logo_1_name || '新北市政府城鄉發展局',
       logo2: ss.schedule_logo_2 || '', logo2Name: ss.schedule_logo_2_name || '跨世代共居種子計畫',
@@ -485,6 +464,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       phone: ss.schedule_phone || '',
       contact: ss.schedule_contact || '',
       hours: ss.schedule_hours || '',
+      titleLine1: ss.schedule_title_1 || '新店央北社會住宅',
+      titleLine2: ss.schedule_title_2 || '跨世代共居種子計畫',
     }))
   }
 
@@ -768,8 +749,10 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
             <div>
               <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">顏色</p>
               <div className="space-y-2">
-                {[
+               {[
                   { key: 'accentColor', label: '主題色（標頭 / 按鈕）' },
+                  { key: 'leftBgColor', label: '左欄底色' },
+                  { key: 'rightBgColor', label: '右欄底色' },
                   { key: 'footerBgColor', label: '底部背景' },
                   { key: 'footerTextColor', label: '底部文字' },
                 ].map(f => (
@@ -783,36 +766,26 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
               </div>
             </div>
 
-            {/* 左側欄透明度 */}
+            {/* 左右欄透明度 */}
             <div>
-              <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">左側欄背景</p>
-              <div className="flex items-center gap-2 mb-2">
-                <input type="color" value={editor.leftBgColor}
-                  onChange={e => set('leftBgColor', e.target.value)}
-                  className="w-8 h-8 rounded-lg border border-stone-200 cursor-pointer p-0.5 flex-shrink-0" />
-                <span className="text-xs text-stone-400">底色</span>
+              <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">欄位透明度</p>
+              <div className="space-y-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs text-stone-400">左欄 {Math.round(editor.leftBgOpacity * 100)}%</label>
+                  </div>
+                  <input type="range" min="0" max="1" step="0.05" value={editor.leftBgOpacity}
+                    onChange={e => set('leftBgOpacity', parseFloat(e.target.value))} className="w-full" />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs text-stone-400">右欄 {Math.round(editor.rightBgOpacity * 100)}%</label>
+                  </div>
+                  <input type="range" min="0" max="1" step="0.05" value={editor.rightBgOpacity}
+                    onChange={e => set('rightBgOpacity', parseFloat(e.target.value))} className="w-full" />
+                </div>
               </div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs text-stone-400">不透明度 {Math.round(editor.leftBgOpacity * 100)}%</label>
-              </div>
-              <input type="range" min="0" max="1" step="0.05" value={editor.leftBgOpacity}
-                onChange={e => set('leftBgOpacity', parseFloat(e.target.value))} className="w-full" />
-            </div>
-
-            {/* 右側欄透明度 */}
-            <div>
-              <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">右側欄背景</p>
-              <div className="flex items-center gap-2 mb-2">
-                <input type="color" value={editor.rightBgColor}
-                  onChange={e => set('rightBgColor', e.target.value)}
-                  className="w-8 h-8 rounded-lg border border-stone-200 cursor-pointer p-0.5 flex-shrink-0" />
-                <span className="text-xs text-stone-400">底色</span>
-              </div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs text-stone-400">不透明度 {Math.round(editor.rightBgOpacity * 100)}%</label>
-              </div>
-              <input type="range" min="0" max="1" step="0.05" value={editor.rightBgOpacity}
-                onChange={e => set('rightBgOpacity', parseFloat(e.target.value))} className="w-full" />
+              <p className="text-xs text-stone-400 mt-2">調低透明度讓底圖透出</p>
             </div>
 
             {/* 底圖 */}
@@ -909,15 +882,16 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
         <div className="flex-1 overflow-auto p-6 flex items-start justify-center bg-stone-100">
           <div className="flex flex-col items-center gap-3">
             <div ref={previewRef}>
-              <SchedulePage
-                monthCourses={monthCourses}
-                selectedMonth={selectedMonth}
-                rowsPerPage={rowsPerPage}
-                orientation={orientation}
-                editor={editor}
-                pageIdx={currentPage}
-                totalPages={totalPages}
-              />
+             <SchedulePage
+              monthCourses={monthCourses}
+              selectedMonth={selectedMonth}
+              rowsPerPage={rowsPerPage}
+              orientation={orientation}
+              editor={editor}
+              pageIdx={currentPage}
+              totalPages={totalPages}
+            />
+              
             </div>
             <p className="text-xs text-stone-400">
               {orientation === 'landscape' ? '橫式 1200px' : '直式 794×1123px (A4)'} · 下載時 @2x
@@ -928,7 +902,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
 
       {/* 下載選擇彈窗 */}
       {showDownloadModal && (
-        <div className="fixed inset-0 bg-black/40 z-60 flex items-center justify-center p-4"
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4" style={{ zIndex: 9999 }}
           onClick={e => { if (e.target === e.currentTarget) setShowDownloadModal(false) }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
             <h3 className="font-bold text-stone-800 text-lg">選擇下載格式</h3>
