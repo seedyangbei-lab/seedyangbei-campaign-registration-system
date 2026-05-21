@@ -750,9 +750,9 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
 
   const reset = () => { setStep('idle'); setCurrentPage(0) }
 
-  function PanelContent(): React.ReactElement {
+ function PanelContent(): React.ReactElement {
     return (
-    <div className="p-4 space-y-5">
+      <div className="p-4 space-y-5">
       <div>
         <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">標題文字</p>
         <div className="space-y-2">
@@ -844,16 +844,16 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
                 </button>
               ))}
             </div>
-            <div className="flex gap-3">
+           <div className="flex gap-3">
               <div className="flex-1">
                 <label className="block text-xs text-stone-400 mb-1">起始色</label>
-               <input type="color" value={editor.gradientFrom} onChange={e => set('gradientFrom', e.target.value)}
+                <input type="color" value={editor.gradientFrom} onChange={e => set('gradientFrom', e.target.value)}
                   style={{ width:'100%', height:36, padding:2, borderRadius:8, border:'1px solid #e7e5e4', cursor:'pointer', background:'none', display:'block' }} />
+              </div>
               <div className="flex-1">
                 <label className="block text-xs text-stone-400 mb-1">結束色</label>
-              <input type="color" value={editor.gradientTo} onChange={e => set('gradientTo', e.target.value)}
+                <input type="color" value={editor.gradientTo} onChange={e => set('gradientTo', e.target.value)}
                   style={{ width:'100%', height:36, padding:2, borderRadius:8, border:'1px solid #e7e5e4', cursor:'pointer', background:'none', display:'block' }} />
-                className="w-full h-9 rounded-lg border border-stone-200 cursor-pointer" style={{ padding:2 }} />
               </div>
             </div>
             <div>
@@ -947,8 +947,9 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
         </div>
       </div>
     </div>
-  )
+    )
   }
+
   if (step === 'idle') return (
     <button onClick={() => setStep('config')}
       className="flex items-center gap-2 bg-white border border-stone-200 hover:bg-stone-50 text-stone-700 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
