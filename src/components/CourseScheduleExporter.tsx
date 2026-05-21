@@ -85,7 +85,7 @@ function SchedulePage({
   const LEFT_W = isL ? 260 : 0
   
   const contactItems = [
-    editor.phone ? `洽詢：${editor.phone}` : '',
+    editor.phone ? `若有任何問題，請撥打洽詢專線：${editor.phone}` : '',
     editor.contact || '',
     editor.hours ? `時間：${editor.hours}` : '',
   ].filter(Boolean)
