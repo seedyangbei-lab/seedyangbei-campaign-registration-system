@@ -215,7 +215,7 @@ function DownloadPage({ data }: { data: PageData }) {
   const BRAND_H = 44
   const FOOTER_H = 52
   const LEFT_W = isLandscape ? 290 : W
-  const LEFT_H = isLandscape ? H - BRAND_H - FOOTER_H : 200
+  const LEFT_H = isLandscape ? H - BRAND_H - FOOTER_H : 240
   const TABLE_TOP = isLandscape ? BRAND_H : BRAND_H + LEFT_H
   const TABLE_W = isLandscape ? W - LEFT_W : W
   const TABLE_H = H - TABLE_TOP - FOOTER_H
@@ -288,7 +288,6 @@ function DownloadPage({ data }: { data: PageData }) {
             <span style={{ fontSize: e.monthFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
             <span style={{ fontSize: 18, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
           </div>
-          <div style={{ height: 1, background: `${e.accentColor}25`, marginBottom: 6 }} />
           <p style={{ margin: '0 0 2px', fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>各項活動皆歡迎居民們踴躍報名！</p>
           <p style={{ margin: 0, fontSize: 11, color: '#9ca3af' }}>（數量有限，額滿為止）</p>
           <div style={{ height: e.gapTitleToQr }} />
@@ -316,7 +315,7 @@ function DownloadPage({ data }: { data: PageData }) {
 
       {/* 左欄內容 - 直式 */}
       {!isLandscape && (
-        <div style={{ position: 'absolute', top: BRAND_H, left: 0, right: 0, display: 'flex', alignItems: 'center', padding: '28px 32px', gap: 24 }}>
+        <div style={{ position: 'absolute', top: BRAND_H, left: 0, right: 0, height: 240, display: 'flex', alignItems: 'center', padding: '16px 28px', gap: 20 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'inline-block', marginBottom: 6 }}>
               <span style={{ color: e.accentColor, fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', lineHeight: 1.4 }}>{year} 年活動</span>
@@ -366,7 +365,7 @@ function DownloadPage({ data }: { data: PageData }) {
         const { month: cm, day, weekday } = toROC(course.date)
         const rowY = TABLE_TOP + TABLE_HEADER_H + i * ROW_H
         return (
-          <div key={course.id} style={{ position: 'absolute', top: rowY, left: isLandscape ? LEFT_W : 0, width: TABLE_W, height: ROW_H, background: i%2===0 ? 'rgba(255,255,255,0.92)' : 'rgba(255,247,237,0.92)', borderBottom: `1px solid ${e.accentColor}18` }}>
+          <div key={course.id} style={{ position: 'absolute', top: rowY, left: isLandscape ? LEFT_W : 0, width: TABLE_W, height: ROW_H, background: i%2===0 ? '#ffffff' : '#fff7ed', borderBottom: `1px solid ${e.accentColor}18` }}>
             {colsWithX.map((col, ci) => {
               const padV = Math.floor((ROW_H - 26) / 2)
               const cs: React.CSSProperties = { position: 'absolute', left: col.x, width: col.w, height: ROW_H, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: `${padV}px 4px`, boxSizing: 'border-box' }
@@ -386,7 +385,7 @@ function DownloadPage({ data }: { data: PageData }) {
       {/* 空列 */}
       {Array.from({ length: emptyRows }).map((_, i) => {
         const rowY = TABLE_TOP + TABLE_HEADER_H + (pageCourses.length + i) * ROW_H
-        return <div key={`e${i}`} style={{ position: 'absolute', top: rowY, left: isLandscape ? LEFT_W : 0, width: TABLE_W, height: ROW_H, background: (pageCourses.length+i)%2===0 ? 'rgba(255,255,255,0.92)' : 'rgba(255,247,237,0.92)', borderBottom: `1px solid ${e.accentColor}18` }} />
+        return <div key={`e${i}`} style={{ position: 'absolute', top: rowY, left: isLandscape ? LEFT_W : 0, width: TABLE_W, height: ROW_H, background: (pageCourses.length+i)%2===0 ? '#ffffff' : '#fff7ed', borderBottom: `1px solid ${e.accentColor}18` }} />
       })}
 
       {/* 右欄底色 */}
@@ -478,7 +477,7 @@ function PreviewPage({
         {/* 主體 */}
         <div style={{ flex: 1, display: 'flex', flexDirection: isL ? 'row' : 'column', minHeight: 0 }}>
           {/* 左欄 */}
-          <div style={{ width: isL?290:'100%', flexShrink: 0, position: 'relative', overflow: 'hidden', background: leftBg, ...(isL ? { display: 'flex', flexDirection: 'column' } : {}) }}>
+          <div style={{ width: isL?290:'100%', flexShrink: 0, position: 'relative', overflow: 'hidden', background: leftBg, ...(isL ? { display: 'flex', flexDirection: 'column' } : { height: 240, flexShrink: 0 }) }}>
             {gradBg && <div style={{ position: 'absolute', inset: 0, background: gradBg, zIndex: 0 }} />}
             {patternBg && <div style={{ position: 'absolute', inset: 0, backgroundImage: patternBg, backgroundRepeat: 'repeat', zIndex: 1 }} />}
             {isL && <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 3, background: `linear-gradient(to bottom,${e.accentColor}00,${e.accentColor}60,${e.accentColor}00)`, zIndex: 2 }} />}
@@ -496,7 +495,6 @@ function PreviewPage({
                   <span style={{ fontSize: e.monthFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
                   <span style={{ fontSize: 18, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
                 </div>
-                <div style={{ height: 1, background: `${e.accentColor}25`, marginBottom: 6 }} />
                 <p style={{ margin: '0 0 2px', fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>各項活動皆歡迎居民們踴躍報名！</p>
                 <p style={{ margin: 0, fontSize: 11, color: '#9ca3af' }}>（數量有限，額滿為止）</p>
                 <div style={{ height: e.gapTitleToQr }} />
