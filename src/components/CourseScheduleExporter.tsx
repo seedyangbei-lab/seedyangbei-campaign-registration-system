@@ -95,20 +95,13 @@ function ColorPicker({ value, onChange, label }: { value: string; onChange: (v: 
 
   useEffect(() => {
     if (!open) return
-    const onDown = () => { isDragging.current = true }
-    const onUp = (e: PointerEvent) => {
-      // 短暫延遲讓 isDragging reset，再判斷是否關閉
-      setTimeout(() => {
-        isDragging.current = false
-        if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-      }, 50)
+    const handler = (e: MouseEvent) => {
+      if (isDragging.current) return
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
-    document.addEventListener('pointerdown', onDown)
-    document.addEventListener('pointerup', onUp)
-    return () => {
-      document.removeEventListener('pointerdown', onDown)
-      document.removeEventListener('pointerup', onUp)
-    }
+    // 用 click 而非 mousedown，確保拖曳結束後才判斷
+    const t = setTimeout(() => document.addEventListener('click', handler, true), 100)
+    return () => { clearTimeout(t); document.removeEventListener('click', handler, true) }
   }, [open])
 
   return (
@@ -123,8 +116,9 @@ function ColorPicker({ value, onChange, label }: { value: string; onChange: (v: 
         {open && (
           <div
             style={{ position: 'absolute', right: 0, top: 40, zIndex: 9999, background: 'white', borderRadius: 12, padding: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.18)', border: '1px solid #e7e5e4' }}
-            onPointerDown={e => e.stopPropagation()}
-            onPointerUp={e => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
+            onPointerDown={e => { isDragging.current = true; e.stopPropagation() }}
+            onPointerUp={() => { setTimeout(() => { isDragging.current = false }, 100) }}
           >
             <HexColorPicker color={value} onChange={onChange} style={{ width: 200 }} />
             <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -291,8 +285,8 @@ function DownloadPage({ data }: { data: PageData }) {
               { label:'種子社區大學', color:'#06C755', img: e.communityQr, sub:'加入社群' },
             ].map((qr,qi) => (
               <div key={qi} style={{ flex: 1, background: 'rgba(255,255,255,0.9)', borderRadius: 10, border: '1px solid rgba(0,0,0,0.06)', padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                <div style={{ background: qr.color, borderRadius: 20, padding: '3px 8px' }}>
-                  <span style={{ color:'white', fontSize:9, fontWeight:800, lineHeight:1 }}>{qr.label}</span>
+                <div style={{ background: qr.color, borderRadius: 20, padding: '3px 8px', textAlign:'center' }}>
+                  <span style={{ color:'white', fontSize:9, fontWeight:800, lineHeight:1.4, display:'block' }}>{qr.label}</span>
                 </div>
                 {qr.img
                   ? <img src={qr.img} alt="" crossOrigin="anonymous" style={{ width: qrSize, height: qrSize, objectFit:'contain' }} />
@@ -327,14 +321,15 @@ function DownloadPage({ data }: { data: PageData }) {
           </div>
           {/* 右：QR + 聯繫 */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-            <div style={{ display: 'flex', gap: 6 }}>
+            {contactItems.map((item, i) => <ContactLine key={i} item={item} dotSize={5} />)}
+            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
               {[
                 { label:'活動報名', color: e.accentColor, img: QR_API(SITE_URL,200), sub:'線上報名' },
                 { label:'種子社區大學', color:'#06C755', img: e.communityQr, sub:'加入社群' },
               ].map((qr,qi) => (
                 <div key={qi} style={{ flex:1, background:'rgba(255,255,255,0.9)', borderRadius:8, border:'1px solid rgba(0,0,0,0.06)', padding:'6px 4px', display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
-                  <div style={{ background:qr.color, borderRadius:16, padding:'2px 8px' }}>
-                    <span style={{ color:'white', fontSize:8, fontWeight:800, lineHeight:1 }}>{qr.label}</span>
+                  <div style={{ background:qr.color, borderRadius:16, padding:'2px 8px', textAlign:'center' }}>
+                    <span style={{ color:'white', fontSize:8, fontWeight:800, lineHeight:1.4, display:'block' }}>{qr.label}</span>
                   </div>
                   {qr.img
                     ? <img src={qr.img} alt="" crossOrigin="anonymous" style={{ width: qrSize, height: qrSize, objectFit:'contain' }} />
@@ -344,7 +339,6 @@ function DownloadPage({ data }: { data: PageData }) {
                 </div>
               ))}
             </div>
-            {contactItems.map((item, i) => <ContactLine key={i} item={item} dotSize={5} />)}
           </div>
         </div>
       )}
@@ -365,7 +359,8 @@ function DownloadPage({ data }: { data: PageData }) {
         return (
           <div key={course.id} style={{ position:'absolute', top:rowY, left:isLandscape?LEFT_W:0, width:TABLE_W, height:ROW_H, background:i%2===0?'rgba(255,255,255,0.92)':'rgba(255,247,237,0.92)', borderBottom:`1px solid ${e.accentColor}18` }}>
             {colsWithX.map((col, ci) => {
-              const cs: React.CSSProperties = { position:'absolute', left:col.x, width:col.w, height:ROW_H, display:'flex', alignItems:'center', justifyContent:'center', padding:'0 4px', boxSizing:'border-box' }
+              const padV = Math.floor((ROW_H - 26) / 2)
+              const cs: React.CSSProperties = { position:'absolute', left:col.x, width:col.w, height:ROW_H, display:'flex', alignItems:'center', justifyContent:'center', padding:`${padV}px 4px`, boxSizing:'border-box' }
               if (ci === 0) return <div key={ci} style={cs}><div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}><span style={{ fontSize:16, fontWeight:800, color:'#18120a', lineHeight:1 }}>{cm}/{day}</span><div style={{ width:26, height:26, borderRadius:'50%', background:e.accentColor, display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ color:'white', fontWeight:800, fontSize:12, lineHeight:1 }}>{weekday}</span></div></div></div>
               if (ci === 1) return <div key={ci} style={cs}><div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:1 }}><span style={{ fontSize:13, fontWeight:700, color:'#18120a', lineHeight:1 }}>{course.time_start?.slice(0,5)}</span><span style={{ fontSize:10, color:`${e.accentColor}80`, lineHeight:1.2 }}>|</span><span style={{ fontSize:13, fontWeight:700, color:'#18120a', lineHeight:1 }}>{course.time_end?.slice(0,5)}</span></div></div>
               if (ci === 2) return <div key={ci} style={{ ...cs, justifyContent:'center' }}><span style={{ fontSize:14, fontWeight:700, color:'#18120a', lineHeight:1.4, textAlign:'center', wordBreak:'break-word' }}>{course.title}</span></div>
@@ -1067,8 +1062,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       </div>
 
 <div className="flex flex-1" style={{ overflow: 'hidden', minHeight: 0 }}>
-      <div className="hidden md:block w-64 bg-white border-r border-stone-200 flex-shrink-0" style={{ overflowY: 'auto', minHeight: 0, flex: '0 0 256px', height: '100%' }}><PanelContent /></div>
-        <div className="flex-1 overflow-auto p-4 md:p-6 flex items-start justify-center bg-stone-100">
+  <div className="hidden md:block w-64 bg-white border-r border-stone-200" style={{ overflowY: 'auto', flex: '0 0 256px', alignSelf: 'stretch' }}><PanelContent /></div>
+  <div className="flex-1 overflow-auto p-4 md:p-6 flex items-start justify-center bg-stone-100">
           <div className="flex flex-col items-center gap-3">
             <div style={{ transformOrigin:'top left' }} className="scale-[0.28] sm:scale-[0.42] md:scale-[0.52] lg:scale-[0.65] xl:scale-75 2xl:scale-90 origin-top-left">
               <PreviewPage monthCourses={monthCourses} selectedMonth={selectedMonth} rowsPerPage={rowsPerPage}
