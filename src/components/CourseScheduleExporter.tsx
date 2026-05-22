@@ -729,7 +729,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       schedule_p_month_fs: String(editor.pMonthFontSize),
       schedule_p_qr_size: String(editor.pQrSize),
     }
-    }
+    
   
     await fetch('/api/admin/save-schedule-settings', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
