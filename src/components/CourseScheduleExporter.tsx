@@ -867,6 +867,14 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
   const [orientation, setOrientation] = useState<Orientation>('landscape')
   const [currentPage, setCurrentPage] = useState(0)
   const [downloading, setDownloading] = useState(false)
+  const [showDownloadModal, setShowDownloadModal] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [savedOk, setSavedOk] = useState(false)
+  const [editor, setEditor] = useState<EditorState>(DEFAULT_EDITOR)
+  const [showMobilePanel, setShowMobilePanel] = useState(false)
+  const downloadRefL = useRef<HTMLDivElement>(null)
+  const downloadRefP = useRef<HTMLDivElement>(null)
+  const previewRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
 
   const set = useCallback((key: keyof EditorState, val: any) =>
@@ -1498,8 +1506,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
           </button>
           <button
             onClick={() => {
-              const ref = orientation === 'landscape' ? downloadRefL : downloadRefP
-              const el = ref.current; if (!el) return
+              const el = null; if (!el) return
               const W = orientation === 'landscape' ? A4L_W : A4P_W
               const H = orientation === 'landscape' ? A4L_H : A4P_H
               const win = window.open('', '_blank', `width=${W},height=${H+80}`)
