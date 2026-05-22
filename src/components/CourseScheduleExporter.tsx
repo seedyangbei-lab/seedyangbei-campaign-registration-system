@@ -867,15 +867,6 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
   const [orientation, setOrientation] = useState<Orientation>('landscape')
   const [currentPage, setCurrentPage] = useState(0)
   const [downloading, setDownloading] = useState(false)
-  const [showDownloadModal, setShowDownloadModal] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [savedOk, setSavedOk] = useState(false)
-  const [downloadPage, setDownloadPage] = useState(0)
-  const [editor, setEditor] = useState<EditorState>(DEFAULT_EDITOR)
-  const [showMobilePanel, setShowMobilePanel] = useState(false)
-  const downloadRefL = useRef<HTMLDivElement>(null)
-  const downloadRefP = useRef<HTMLDivElement>(null)
-  const previewRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
 
   const set = useCallback((key: keyof EditorState, val: any) =>
@@ -989,48 +980,412 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
     setSaving(false); setSavedOk(true); setTimeout(() => setSavedOk(false), 2500)
   }
   
-    const downloadVariant = async (orient: Orientation) => {
-    const { year, month } = toROC(selectedMonth + '-01')
-    const label = orient === 'landscape' ? '橫式' : '直式'
-    const { toPng } = await import('html-to-image')
-    const W = orient === 'landscape' ? A4L_W : A4P_W
-    const H = orient === 'landscape' ? A4L_H : A4P_H
-    const ref = orient === 'landscape' ? downloadRefL : downloadRefP
-    const el = ref.current; if (!el) return
+  const loadImage = (src: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => resolve(img)
+      img.onerror = () => reject(new Error(`Failed to load image: ${src}`))
+      img.src = src
+    })
 
-    el.style.opacity = '1'
-    el.style.zIndex = '99999'
+  const wrapText = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] => {
+    const chars = text.split('')
+    const lines: string[] = []
+    let current = ''
+    for (const ch of chars) {
+      const test = current + ch
+      if (ctx.measureText(test).width > maxWidth && current) {
+        lines.push(current)
+        current = ch
+      } else {
+        current = test
+      }
+    }
+    if (current) lines.push(current)
+    return lines
+  }
 
-    const urls: string[] = []
-    for (let pg = 0; pg < totalPages; pg++) {
-      await new Promise<void>(resolve => {
-        setDownloadPage(pg)
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
-      })
-      await new Promise(r => setTimeout(r, 300))
-      const dataUrl = await toPng(el, {
-        width: W,
-        height: H,
-        pixelRatio: 2.5,
-        backgroundColor: '#fdf4ea',
-        skipFonts: false,
-        cacheBust: true,
-      })
-      urls.push(dataUrl)
+  const drawScheduleCanvas = async (
+    canvas: HTMLCanvasElement,
+    pageCourses: Course[],
+    isLandscape: boolean,
+    rocYear: number,
+    rocMonth: number,
+    pageIdx: number,
+    totalPgs: number,
+    e: EditorState
+  ) => {
+    await document.fonts.ready
+
+    const W = isLandscape ? A4L_W : A4P_W
+    const H = isLandscape ? A4L_H : A4P_H
+    const SCALE = 2.5
+    canvas.width = W * SCALE
+    canvas.height = H * SCALE
+    canvas.style.width = W + 'px'
+    canvas.style.height = H + 'px'
+    const ctx = canvas.getContext('2d')!
+    ctx.scale(SCALE, SCALE)
+
+    const BRAND_H = 44
+    const FOOTER_H = 52
+    const LEFT_W = isLandscape ? 290 : W
+    const LEFT_H = isLandscape ? H - BRAND_H - FOOTER_H : 240
+    const TABLE_TOP = isLandscape ? BRAND_H : BRAND_H + LEFT_H
+    const TABLE_W = isLandscape ? W - LEFT_W : W
+    const TABLE_H = H - TABLE_TOP - FOOTER_H
+    const TABLE_HEADER_H = 44
+    const ROW_H = Math.floor((TABLE_H - TABLE_HEADER_H) / (rowsPerPage))
+    const emptyRows = Math.max(0, rowsPerPage - pageCourses.length)
+
+    const font = (size: number, weight: number | string = 400) =>
+      `${weight} ${size}px "Noto Sans TC","GenSenRounded2TW",sans-serif`
+
+    const fillRoundRect = (x: number, y: number, w: number, h: number, r: number, color: string) => {
+      ctx.fillStyle = color
+      ctx.beginPath()
+      ctx.roundRect(x, y, w, h, r)
+      ctx.fill()
     }
 
-    el.style.opacity = '0'
-    el.style.zIndex = '-999'
-    setDownloadPage(0)
+    // ── 背景 ──
+    ctx.fillStyle = '#fdf4ea'
+    ctx.fillRect(0, 0, W, H)
 
-    urls.forEach((url, i) => {
+    if (e.bgImage) {
+      try {
+        const bgImg = await loadImage(e.bgImage)
+        ctx.save()
+        ctx.globalAlpha = e.bgOpacity
+        const ratio = Math.max(W / bgImg.width, H / bgImg.height)
+        const dw = bgImg.width * ratio
+        const dh = bgImg.height * ratio
+        const dx = (W - dw) * (e.bgPositionX / 100)
+        const dy = (H - dh) * (e.bgPositionY / 100)
+        ctx.drawImage(bgImg, dx, dy, dw, dh)
+        ctx.globalAlpha = 1
+        ctx.restore()
+      } catch {}
+    }
+
+    // ── 左欄背景 ──
+    const leftTop = BRAND_H
+    ctx.fillStyle = hexToRgba(e.leftBgColor, e.leftBgOpacity)
+    ctx.fillRect(0, leftTop, LEFT_W, LEFT_H)
+
+    if (e.gradientEnabled) {
+      const gd = e.gradientDir
+      let gx0 = 0, gy0 = leftTop, gx1 = 0, gy1 = leftTop + LEFT_H
+      if (gd === 'to-r') { gx1 = LEFT_W; gy1 = leftTop }
+      if (gd === 'to-br') { gx1 = LEFT_W; gy1 = leftTop + LEFT_H }
+      const grad = ctx.createLinearGradient(gx0, gy0, gx1, gy1)
+      grad.addColorStop(0, hexToRgba(e.gradientFrom, e.gradientOpacity))
+      grad.addColorStop(1, hexToRgba(e.gradientTo, e.gradientOpacity))
+      ctx.fillStyle = grad
+      ctx.fillRect(0, leftTop, LEFT_W, LEFT_H)
+    }
+
+    if (e.patternType !== 'none') {
+      const patCanvas = document.createElement('canvas')
+      const patSize = e.patternType === 'waves' ? 40 : 24
+      patCanvas.width = patSize; patCanvas.height = patSize
+      const pc = patCanvas.getContext('2d')!
+      pc.globalAlpha = e.patternOpacity
+      pc.strokeStyle = e.accentColor
+      pc.fillStyle = e.accentColor
+      pc.lineWidth = 1.2
+      if (e.patternType === 'dots') { pc.beginPath(); pc.arc(patSize/2, patSize/2, 2, 0, Math.PI*2); pc.fill() }
+      else if (e.patternType === 'lines') { pc.beginPath(); pc.moveTo(0,0); pc.lineTo(patSize,patSize); pc.stroke() }
+      else if (e.patternType === 'grid') { pc.beginPath(); pc.moveTo(0,0); pc.lineTo(patSize,0); pc.moveTo(0,0); pc.lineTo(0,patSize); pc.stroke() }
+      else if (e.patternType === 'waves') { pc.beginPath(); pc.moveTo(0,patSize/2); pc.quadraticCurveTo(10,0,20,patSize/2); pc.quadraticCurveTo(30,patSize,40,patSize/2); pc.stroke() }
+      else if (e.patternType === 'diamonds') { pc.beginPath(); pc.moveTo(patSize/2,2); pc.lineTo(patSize-2,patSize/2); pc.lineTo(patSize/2,patSize-2); pc.lineTo(2,patSize/2); pc.closePath(); pc.stroke() }
+      const pat = ctx.createPattern(patCanvas, 'repeat')
+      if (pat) { ctx.save(); ctx.fillStyle = pat; ctx.fillRect(0, leftTop, LEFT_W, LEFT_H); ctx.restore() }
+    }
+
+    // 左欄邊線
+    if (isLandscape) {
+      const grad2 = ctx.createLinearGradient(LEFT_W-1, leftTop, LEFT_W-1, leftTop+LEFT_H)
+      grad2.addColorStop(0, hexToRgba(e.accentColor, 0)); grad2.addColorStop(0.5, hexToRgba(e.accentColor, 0.6)); grad2.addColorStop(1, hexToRgba(e.accentColor, 0))
+      ctx.fillStyle = grad2; ctx.fillRect(LEFT_W-2, leftTop, 3, LEFT_H)
+    } else {
+      const grad2 = ctx.createLinearGradient(0, leftTop+LEFT_H-1, LEFT_W, leftTop+LEFT_H-1)
+      grad2.addColorStop(0, hexToRgba(e.accentColor, 0)); grad2.addColorStop(0.5, hexToRgba(e.accentColor, 0.6)); grad2.addColorStop(1, hexToRgba(e.accentColor, 0))
+      ctx.fillStyle = grad2; ctx.fillRect(0, leftTop+LEFT_H-2, LEFT_W, 3)
+    }
+
+    // ── 左欄文字（橫式） ──
+    const drawLeftContent = async () => {
+      const PAD_X = 22
+      const PAD_Y = isLandscape ? leftTop + 18 : leftTop + 28
+      let cy = PAD_Y
+
+      ctx.font = font(10, 800)
+      ctx.fillStyle = e.accentColor
+      ctx.fillText(`${rocYear} 年活動`, PAD_X, cy + 10)
+      cy += isLandscape ? 26 : 22
+
+      ctx.font = font(e.titleFontSize, 900)
+      ctx.fillStyle = '#18120a'
+      ctx.fillText(e.titleLine1, PAD_X, cy + e.titleFontSize * 0.8)
+      cy += e.titleFontSize + 6
+
+      ctx.font = font(e.subtitleFontSize, 900)
+      ctx.fillStyle = e.accentColor
+      ctx.fillText(e.titleLine2, PAD_X, cy + e.subtitleFontSize * 0.8)
+      cy += e.subtitleFontSize + 10
+
+      ctx.font = font(e.monthFontSize, 900)
+      ctx.fillStyle = e.accentColor
+      ctx.fillText(String(rocMonth), PAD_X, cy + e.monthFontSize * 0.85)
+      ctx.font = font(18, 700)
+      ctx.fillStyle = '#6b7280'
+      ctx.fillText('月份活動表', PAD_X + ctx.measureText(String(rocMonth)).width + 6, cy + e.monthFontSize * 0.85)
+      cy += e.monthFontSize + 10
+
+      if (isLandscape) {
+        ctx.font = font(12, 400)
+        ctx.fillStyle = '#6b7280'
+        ctx.fillText('各項活動皆歡迎居民們踴躍報名！', PAD_X, cy + 14)
+        cy += 18
+        ctx.font = font(11, 400)
+        ctx.fillStyle = '#9ca3af'
+        ctx.fillText('（數量有限，額滿為止）', PAD_X, cy + 13)
+        cy += 18
+      }
+
+      cy += e.gapTitleToQr
+
+      const qrSize = isLandscape ? 88 : 60
+      const qrBoxW = isLandscape ? (LEFT_W - PAD_X * 2 - 8) / 2 : qrSize + 16
+      const qrItems = [
+        { label: '活動報名', color: e.accentColor, src: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(SITE_URL)}`, sub: '線上報名' },
+        { label: '種子社區大學', color: '#06C755', src: e.communityQr, sub: '加入社群' },
+      ]
+
+      let qrX = PAD_X
+      for (const qr of qrItems) {
+        const bh = qrSize + 48
+        fillRoundRect(qrX, cy, qrBoxW, bh, 10, '#ffffff')
+        ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 1
+        ctx.beginPath(); ctx.roundRect(qrX, cy, qrBoxW, bh, 10); ctx.stroke()
+        ctx.font = font(9, 800); ctx.fillStyle = qr.color
+        ctx.textAlign = 'center'
+        ctx.fillText(qr.label, qrX + qrBoxW/2, cy + 16)
+        ctx.textAlign = 'left'
+        if (qr.src) {
+          try {
+            const qrImg = await loadImage(qr.src)
+            const qrOff = (qrBoxW - qrSize) / 2
+            ctx.drawImage(qrImg, qrX + qrOff, cy + 22, qrSize, qrSize)
+          } catch {}
+        } else {
+          ctx.fillStyle = '#f3f4f6'
+          ctx.fillRect(qrX + (qrBoxW-qrSize)/2, cy + 22, qrSize, qrSize)
+          ctx.font = font(9, 400); ctx.fillStyle = '#9ca3af'
+          ctx.textAlign = 'center'
+          ctx.fillText('未上傳', qrX + qrBoxW/2, cy + 22 + qrSize/2)
+          ctx.textAlign = 'left'
+        }
+        ctx.font = font(9, 400); ctx.fillStyle = '#6b7280'
+        ctx.textAlign = 'center'
+        ctx.fillText(qr.sub, qrX + qrBoxW/2, cy + 22 + qrSize + 14)
+        ctx.textAlign = 'left'
+        qrX += qrBoxW + 8
+      }
+      cy += qrSize + 52 + e.gapQrToContact
+
+      const contactItems = [
+        e.phone ? `洽詢專線：${e.phone}` : '',
+        e.contact || '',
+        e.hours ? `時間：${e.hours}` : '',
+      ].filter(Boolean)
+      for (const item of contactItems) {
+        ctx.fillStyle = '#06C755'
+        ctx.beginPath(); ctx.arc(PAD_X + 3, cy + 5, 3, 0, Math.PI*2); ctx.fill()
+        ctx.font = font(11, 400); ctx.fillStyle = '#374151'
+        const lines = wrapText(ctx, item, LEFT_W - PAD_X * 2 - 12)
+        for (const line of lines) {
+          ctx.fillText(line, PAD_X + 10, cy + 13)
+          cy += 16
+        }
+        cy += 2
+      }
+    }
+
+    await drawLeftContent()
+
+    // ── 右欄底色 ──
+    ctx.fillStyle = hexToRgba(e.rightBgColor, e.rightBgOpacity)
+    ctx.fillRect(isLandscape ? LEFT_W : 0, TABLE_TOP, TABLE_W, TABLE_H)
+
+    // ── 欄位定義 ──
+    const colDefs = isLandscape
+      ? [{ label:'日期', w:88 },{ label:'時間', w:104 },{ label:'活動名稱', w:240 },{ label:'授課講師', w:140 },{ label:'地點', w:130 },{ label:'對象', w:96 },{ label:'費用', w:68 }]
+      : [{ label:'日期', w:78 },{ label:'時間', w:90 },{ label:'活動名稱', w:196 },{ label:'授課講師', w:130 },{ label:'地點', w:120 },{ label:'對象', w:90 },{ label:'費用', w:90 }]
+    const totalColW = colDefs.reduce((s,c) => s+c.w, 0)
+    colDefs[2].w += TABLE_W - totalColW - 12
+    let colX = (isLandscape ? LEFT_W : 0) + 6
+    const colsWithX = colDefs.map(col => { const x = colX; colX += col.w; return { ...col, x } })
+
+    // ── 表頭 ──
+    ctx.fillStyle = e.accentColor
+    ctx.fillRect(isLandscape ? LEFT_W : 0, TABLE_TOP, TABLE_W, TABLE_HEADER_H)
+    ctx.font = font(14, 700); ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'
+    for (const col of colsWithX) {
+      ctx.fillText(col.label, col.x + col.w/2, TABLE_TOP + TABLE_HEADER_H/2 + 5)
+    }
+    ctx.textAlign = 'left'
+
+    // ── 課程列 ──
+    for (let i = 0; i < pageCourses.length + emptyRows; i++) {
+      const rowY = TABLE_TOP + TABLE_HEADER_H + i * ROW_H
+      ctx.fillStyle = i % 2 === 0 ? '#ffffff' : '#fff7ed'
+      ctx.fillRect(isLandscape ? LEFT_W : 0, rowY, TABLE_W, ROW_H)
+      ctx.strokeStyle = hexToRgba(e.accentColor, 0.1)
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(isLandscape ? LEFT_W : 0, rowY + ROW_H)
+      ctx.lineTo(isLandscape ? LEFT_W + TABLE_W : TABLE_W, rowY + ROW_H)
+      ctx.stroke()
+
+      if (i >= pageCourses.length) continue
+      const course = pageCourses[i]
+      const { month: cm, day, weekday } = toROC(course.date)
+      const cy = rowY + ROW_H / 2
+
+      for (let ci = 0; ci < colsWithX.length; ci++) {
+        const col = colsWithX[ci]
+        ctx.textAlign = 'center'
+
+        if (ci === 0) {
+          ctx.font = font(16, 800); ctx.fillStyle = '#18120a'
+          ctx.fillText(`${cm}/${day}`, col.x + col.w/2, cy - 2)
+          ctx.font = font(12, 800); ctx.fillStyle = e.accentColor
+          ctx.fillText(weekday, col.x + col.w/2, cy + 14)
+        } else if (ci === 1) {
+          ctx.font = font(13, 700); ctx.fillStyle = '#18120a'
+          ctx.fillText(course.time_start?.slice(0,5) || '', col.x + col.w/2, cy - 4)
+          ctx.font = font(10, 400); ctx.fillStyle = hexToRgba(e.accentColor, 0.5)
+          ctx.fillText('|', col.x + col.w/2, cy + 6)
+          ctx.font = font(13, 700); ctx.fillStyle = '#18120a'
+          ctx.fillText(course.time_end?.slice(0,5) || '', col.x + col.w/2, cy + 17)
+        } else if (ci === 2) {
+          ctx.font = font(14, 700); ctx.fillStyle = '#18120a'
+          ctx.textAlign = 'center'
+          const lines = wrapText(ctx, course.title, col.w - 12)
+          const lineH = 18
+          const startY = cy - ((lines.length - 1) * lineH) / 2
+          lines.slice(0, 2).forEach((line, li) => {
+            ctx.fillText(line, col.x + col.w/2, startY + li * lineH)
+          })
+        } else if (ci === 3) {
+          if (course.instructors?.name) {
+            ctx.font = font(12, 700); ctx.fillStyle = e.accentColor
+            ctx.fillText(course.instructors.name, col.x + col.w/2, cy + 5)
+          }
+        } else if (ci === 4) {
+          ctx.font = font(12, 400); ctx.fillStyle = '#374151'
+          const lines = wrapText(ctx, course.location, col.w - 8)
+          const lineH = 16
+          const startY = cy - ((lines.length - 1) * lineH) / 2
+          lines.slice(0, 2).forEach((line, li) => {
+            ctx.fillText(line, col.x + col.w/2, startY + 5 + li * lineH)
+          })
+        } else if (ci === 5) {
+          ctx.font = font(11, 400); ctx.fillStyle = '#374151'
+          ctx.fillText(course.suitable_age || '全年齡', col.x + col.w/2, cy + 5)
+        } else if (ci === 6) {
+          ctx.font = font(13, 800); ctx.fillStyle = e.accentColor
+          ctx.fillText('免費', col.x + col.w/2, cy + 5)
+        }
+        ctx.textAlign = 'left'
+      }
+    }
+
+    // ── 品牌列（畫在最上層，蓋過左欄） ──
+    ctx.fillStyle = e.brandBgColor
+    ctx.fillRect(0, 0, W, BRAND_H)
+    ctx.fillStyle = e.accentColor
+    ctx.fillRect(22, (BRAND_H-14)/2, 3, 14)
+    ctx.font = font(13, 800); ctx.fillStyle = '#ffffff'
+    ctx.letterSpacing = '0.1em'
+    ctx.fillText('XINDIAN · YANGBEI SOCIAL HOUSING', 38, BRAND_H/2 + 5)
+    ctx.letterSpacing = '0'
+    if (totalPgs > 1) {
+      ctx.font = font(12, 400); ctx.fillStyle = 'rgba(255,255,255,0.6)'
+      ctx.textAlign = 'right'
+      ctx.fillText(`${pageIdx+1} / ${totalPgs}`, W - 22, BRAND_H/2 + 5)
+      ctx.textAlign = 'left'
+    }
+
+    // ── 頁尾 ──
+    ctx.fillStyle = e.footerBgColor
+    ctx.fillRect(0, H - FOOTER_H, W, FOOTER_H)
+    const partners = [
+      { img: e.logo1, name: e.logo1Name },
+      { img: e.logo2, name: e.logo2Name },
+      { img: e.logo3, name: e.logo3Name },
+    ]
+    const partW = W / partners.length
+    for (let pi = 0; pi < partners.length; pi++) {
+      const p = partners[pi]
+      const px = pi * partW
+      const midY = H - FOOTER_H + FOOTER_H/2
+      let textX = px + partW/2
+      if (p.img) {
+        try {
+          const logoImg = await loadImage(p.img)
+          const logoH = 24
+          const logoW = (logoImg.width / logoImg.height) * logoH
+          const totalW = logoW + 8 + ctx.measureText(p.name).width
+          const startX = px + (partW - totalW) / 2
+          ctx.drawImage(logoImg, startX, midY - logoH/2, logoW, logoH)
+          textX = startX + logoW + 8
+          ctx.font = font(13, 500); ctx.fillStyle = e.footerTextColor
+          ctx.textAlign = 'left'
+          ctx.fillText(p.name, textX, midY + 5)
+        } catch {
+          ctx.font = font(13, 500); ctx.fillStyle = e.footerTextColor
+          ctx.textAlign = 'center'
+          ctx.fillText(p.name, px + partW/2, midY + 5)
+        }
+      } else {
+        ctx.font = font(13, 500); ctx.fillStyle = e.footerTextColor
+        ctx.textAlign = 'center'
+        ctx.fillText(p.name, px + partW/2, midY + 5)
+      }
+      ctx.textAlign = 'left'
+      if (pi < partners.length - 1) {
+        const sepX = (pi + 1) * partW
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1
+        ctx.beginPath(); ctx.moveTo(sepX, H - FOOTER_H + 12); ctx.lineTo(sepX, H - FOOTER_H + 22); ctx.stroke()
+        ctx.fillStyle = 'rgba(255,255,255,0.35)'
+        ctx.beginPath(); ctx.arc(sepX, H - FOOTER_H + FOOTER_H/2, 2.5, 0, Math.PI*2); ctx.fill()
+        ctx.beginPath(); ctx.moveTo(sepX, H - FOOTER_H + FOOTER_H/2 + 6); ctx.lineTo(sepX, H - FOOTER_H + FOOTER_H - 12); ctx.stroke()
+      }
+    }
+  }
+
+  const downloadVariant = async (orient: Orientation) => {
+    const { year, month } = toROC(selectedMonth + '-01')
+    const label = orient === 'landscape' ? '橫式' : '直式'
+    const isL = orient === 'landscape'
+    const canvas = document.createElement('canvas')
+
+    for (let pg = 0; pg < totalPages; pg++) {
+      const pageCourses = monthCourses.slice(pg * rowsPerPage, (pg + 1) * rowsPerPage)
+      await drawScheduleCanvas(canvas, pageCourses, isL, year, month, pg, totalPages, editor)
+      const dataUrl = canvas.toDataURL('image/png')
       const link = document.createElement('a')
       link.download = totalPages > 1
-        ? `央北社宅_${year}年${month}月活動表_${label}_第${i+1}頁.png`
+        ? `央北社宅_${year}年${month}月活動表_${label}_第${pg+1}頁.png`
         : `央北社宅_${year}年${month}月活動表_${label}.png`
-      link.href = url
+      link.href = dataUrl
       link.click()
-    })
+      await new Promise(r => setTimeout(r, 200))
+    }
   }
 
 
@@ -1188,25 +1543,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
         </div>
       </div>
 
-      {/* 隱藏下載 DOM */}
-        <div ref={downloadRefL} style={{ position: 'fixed', left: 0, top: 0, pointerEvents: 'none', zIndex: -999, width: A4L_W, height: A4L_H, overflow: 'hidden', opacity: 0 }}>
-        <DownloadPage data={{
-      pageCourses: monthCourses.slice(downloadPage*rowsPerPage, (downloadPage+1)*rowsPerPage),
-      rowsPerPage, isLandscape: true,
-          year: selectedMonth ? toROC(selectedMonth+'-01').year : 115,
-          rocMonth: selectedMonth ? toROC(selectedMonth+'-01').month : 1,
-          pageIdx: currentPage, totalPages, editor,
-        }} />
-      </div>
-        <div ref={downloadRefP} style={{ position: 'fixed', left: 0, top: 0, pointerEvents: 'none', zIndex: -999, width: A4P_W, height: A4P_H, overflow: 'hidden', opacity: 0 }}>
-        <DownloadPage data={{
-                pageCourses: monthCourses.slice(downloadPage*rowsPerPage, (downloadPage+1)*rowsPerPage),
-      rowsPerPage, isLandscape: false,
-          year: selectedMonth ? toROC(selectedMonth+'-01').year : 115,
-          rocMonth: selectedMonth ? toROC(selectedMonth+'-01').month : 1,
-          pageIdx: currentPage, totalPages, editor,
-        }} />
-      </div>
+    
 
       {/* 手機抽屜 */}
       {showMobilePanel && (
