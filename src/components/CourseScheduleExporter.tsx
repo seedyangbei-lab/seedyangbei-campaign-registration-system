@@ -64,6 +64,7 @@ interface EditorState {
   pMonthFontSize: number
   pQrSize: number
   pLeftWidth: number
+  pGapMonth: number
 }
 
 const DEFAULT_EDITOR: EditorState = {
@@ -94,6 +95,7 @@ const DEFAULT_EDITOR: EditorState = {
   pMonthFontSize: 36,
   pQrSize: 80,
   pLeftWidth: 52,
+  pGapMonth: 8,
 }
 
 // ── 色盤元件 ──────────────────────────────────────────────────────
@@ -213,7 +215,7 @@ function DownloadPage({ data }: { data: PageData }) {
   const BRAND_H = 44
   const FOOTER_H = 52
   const LEFT_W = isLandscape ? 290 : W
-  const LEFT_H = isLandscape ? H - BRAND_H - FOOTER_H : Math.round(H * e.pLeftWidth / 100)
+  const LEFT_H = isLandscape ? H - BRAND_H - FOOTER_H : 200
   const TABLE_TOP = isLandscape ? BRAND_H : BRAND_H + LEFT_H
   const TABLE_W = isLandscape ? W - LEFT_W : W
   const TABLE_H = H - TABLE_TOP - FOOTER_H
@@ -282,7 +284,7 @@ function DownloadPage({ data }: { data: PageData }) {
           </div>
           <p style={{ margin: 0, fontSize: e.titleFontSize, fontWeight: 900, color: '#18120a', lineHeight: 1.25 }}>{e.titleLine1}</p>
           <p style={{ margin: '4px 0 8px', fontSize: e.subtitleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.25 }}>{e.titleLine2}</p>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
             <span style={{ fontSize: e.monthFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
             <span style={{ fontSize: 18, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
           </div>
@@ -314,14 +316,14 @@ function DownloadPage({ data }: { data: PageData }) {
 
       {/* 左欄內容 - 直式 */}
       {!isLandscape && (
-        <div style={{ position: 'absolute', top: BRAND_H, left: 0, right: 0, height: LEFT_H, display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16 }}>
+        <div style={{ position: 'absolute', top: BRAND_H, left: 0, right: 0, display: 'flex', alignItems: 'center', padding: '28px 32px', gap: 24 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'inline-block', marginBottom: 6 }}>
               <span style={{ color: e.accentColor, fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', lineHeight: 1.4 }}>{year} 年活動</span>
             </div>
             <p style={{ margin: '0 0 1px', fontSize: e.pTitleFontSize, fontWeight: 900, color: '#18120a', lineHeight: 1.2 }}>{e.titleLine1}</p>
             <p style={{ margin: '0 0 4px', fontSize: e.pSubtitleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.2 }}>{e.titleLine2}</p>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginBottom: e.pGapMonth }}>
               <span style={{ fontSize: e.pMonthFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
               <span style={{ fontSize: 12, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
             </div>
@@ -388,7 +390,7 @@ function DownloadPage({ data }: { data: PageData }) {
       })}
 
       {/* 右欄底色 */}
-      <div style={{ position: 'absolute', top: TABLE_TOP, left: isLandscape ? LEFT_W : 0, width: TABLE_W, height: TABLE_H, background: rightBg, zIndex: -1 }} />
+      <div style={{ position: 'absolute', top: TABLE_TOP, left: isLandscape ? LEFT_W : 0, width: TABLE_W, height: TABLE_H, background: rightBg }} />
 
       {/* 底部 */}
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: FOOTER_H, background: e.footerBgColor, display: 'flex', alignItems: 'center' }}>
@@ -446,7 +448,7 @@ function PreviewPage({
   ]
 
   const QrBox = ({ label, color, imgSrc, sub }: { label:string; color:string; imgSrc:string; sub:string }) => (
-    <div style={{ flex: 1, background: 'rgba(255,255,255,0.9)', borderRadius: 10, border: '1px solid rgba(0,0,0,0.06)', padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+    <div style={{ background: 'rgba(255,255,255,0.9)', borderRadius: 10, border: '1px solid rgba(0,0,0,0.06)', padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
       <span style={{ color: color, fontSize: isL?10:9, fontWeight: 800, lineHeight: 1.4 }}>{label}</span>
       {imgSrc
         ? <img src={imgSrc} alt="" crossOrigin="anonymous" style={{ width: isL?88:e.pQrSize, height: isL?88:e.pQrSize, objectFit: 'contain', display: 'block' }} />
@@ -476,7 +478,7 @@ function PreviewPage({
         {/* 主體 */}
         <div style={{ flex: 1, display: 'flex', flexDirection: isL ? 'row' : 'column', minHeight: 0 }}>
           {/* 左欄 */}
-          <div style={{ width: isL?290:'100%', flexShrink: 0, position: 'relative', overflow: 'hidden', background: leftBg, ...(isL ? { display: 'flex', flexDirection: 'column' } : { height: `${e.pLeftWidth}%` }) }}>
+          <div style={{ width: isL?290:'100%', flexShrink: 0, position: 'relative', overflow: 'hidden', background: leftBg, ...(isL ? { display: 'flex', flexDirection: 'column' } : {}) }}>
             {gradBg && <div style={{ position: 'absolute', inset: 0, background: gradBg, zIndex: 0 }} />}
             {patternBg && <div style={{ position: 'absolute', inset: 0, backgroundImage: patternBg, backgroundRepeat: 'repeat', zIndex: 1 }} />}
             {isL && <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 3, background: `linear-gradient(to bottom,${e.accentColor}00,${e.accentColor}60,${e.accentColor}00)`, zIndex: 2 }} />}
@@ -490,7 +492,7 @@ function PreviewPage({
                 </div>
                 <p style={{ margin: '0 0 2px', fontSize: e.titleFontSize, fontWeight: 900, color: '#18120a', lineHeight: 1.25 }}>{e.titleLine1}</p>
                 <p style={{ margin: '4px 0 8px', fontSize: e.subtitleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.25 }}>{e.titleLine2}</p>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
                   <span style={{ fontSize: e.monthFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
                   <span style={{ fontSize: 18, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
                 </div>
@@ -511,14 +513,14 @@ function PreviewPage({
 
             {/* 直式左欄內容 */}
             {!isL && (
-              <div style={{ position: 'relative', zIndex: 3, display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16, height: '100%', width: '100%' }}>
+              <div style={{ position: 'relative', zIndex: 3, display: 'flex', alignItems: 'center', padding: '28px 32px', gap: 24 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'inline-block', marginBottom: 6 }}>
                     <span style={{ color: e.accentColor, fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', lineHeight: 1.4 }}>{year} 年活動</span>
                   </div>
                   <p style={{ margin: '0 0 1px', fontSize: e.pTitleFontSize, fontWeight: 900, color: '#18120a', lineHeight: 1.2 }}>{e.titleLine1}</p>
                   <p style={{ margin: '0 0 4px', fontSize: e.pSubtitleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.2 }}>{e.titleLine2}</p>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginBottom: e.pGapMonth }}>
                     <span style={{ fontSize: e.pMonthFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
                     <span style={{ fontSize: 12, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
                   </div>
@@ -569,7 +571,7 @@ function PreviewPage({
                 )
               })}
               {Array.from({ length: emptyRows }).map((_,i) => (
-                <div key={`e${i}`} style={{ display: 'grid', gridTemplateColumns: gridCols, flex: 1, minHeight: 0, background: (pageCourses.length+i)%2===0 ? 'rgba(255,255,255,0.9)' : 'rgba(255,247,237,0.9)', borderBottom: `1px solid ${e.accentColor}18` }}>
+                <div key={`e${i}`} style={{ display: 'grid', gridTemplateColumns: gridCols, flex: 1, minHeight: 40, background: (pageCourses.length+i)%2===0 ? 'rgba(255,255,255,0.9)' : 'rgba(255,247,237,0.9)', borderBottom: `1px solid ${e.accentColor}18` }}>
                   {colDefs.map((_,ci) => <div key={ci} />)}
                 </div>
               ))}
@@ -654,6 +656,7 @@ function PanelContent({ editor, set, handleImgUpload }: PanelProps): React.React
               { key:'pMonthFontSize' as const, label:'月份數字', val:e.pMonthFontSize, min:20, max:60 },
               { key:'pQrSize' as const, label:'QR 大小', val:e.pQrSize, min:50, max:120 },
               { key:'pLeftWidth' as const, label:'左欄高度 %', val:e.pLeftWidth, min:20, max:60 },
+              { key:'pGapMonth' as const, label:'月份→文案間距', val:e.pGapMonth, min:0, max:40 },
             ].map(f => (
               <div key={f.key} className="mb-3">
                 <label className="text-xs text-stone-400">{f.label} {f.val}px</label>
@@ -927,6 +930,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       pMonthFontSize: parseInt(ss.schedule_p_month_fs||'') || 36,
       pQrSize: parseInt(ss.schedule_p_qr_size||'') || 80,
       pLeftWidth: parseInt(ss.schedule_p_left_width||'') || 52,
+      pGapMonth: parseInt(ss.schedule_p_gap_month||'') || 8,
     }))
   }
 
@@ -975,6 +979,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       schedule_p_month_fs: String(editor.pMonthFontSize),
       schedule_p_qr_size: String(editor.pQrSize),
       schedule_p_left_width: String(editor.pLeftWidth),
+      schedule_p_gap_month: String(editor.pGapMonth),
     }
 
     await fetch('/api/admin/save-schedule-settings', {
