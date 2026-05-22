@@ -490,53 +490,61 @@ function PreviewPage({
             {isL && <div style={{ position:'absolute', right:0, top:0, bottom:0, width:3, background:`linear-gradient(to bottom,${e.accentColor}00,${e.accentColor}60,${e.accentColor}00)`, zIndex:2 }} />}
             {!isL && <div style={{ position:'absolute', bottom:0, left:0, right:0, height:3, background:`linear-gradient(to right,${e.accentColor}00,${e.accentColor}60,${e.accentColor}00)`, zIndex:2 }} />}
 
-            <div style={{ position:'relative', zIndex:3, padding:isL?'18px 20px 16px':'0 20px', display:'flex', flexDirection:isL?'column':'row', gap:isL?0:20, flex:isL?1:undefined, alignItems:!isL?'center':undefined, height:!isL?'100%':undefined }}>
-              {/* 標題 */}
-            <div style={{ flex:!isL?'0 0 auto':undefined }}>
-            <div style={{ display:'inline-flex', alignItems:'center', background:e.accentColor, borderRadius:6, padding:'3px 10px', marginBottom:isL?8:4 }}>
+            {/* 橫式：flex column */}
+            {isL && (
+              <div style={{ position:'relative', zIndex:3, padding:'18px 20px 16px', display:'flex', flexDirection:'column', flex:1 }}>
+                <div style={{ display:'inline-flex', alignItems:'center', background:e.accentColor, borderRadius:6, padding:'3px 10px', marginBottom:8, alignSelf:'flex-start' }}>
                   <span style={{ color:'white', fontSize:10, fontWeight:800, letterSpacing:'0.1em', lineHeight:1 }}>{year} 年活動</span>
                 </div>
                 <p style={{ margin:'0 0 2px', fontSize:titleFs, fontWeight:900, color:'#18120a', lineHeight:1.25 }}>{e.titleLine1}</p>
-                <p style={{ margin:isL?'4px 0 8px':'0 0 4px', fontSize:subFs, fontWeight:900, color:e.accentColor, lineHeight:1.25 }}>{e.titleLine2}</p>
-                <div style={{ display:'flex', alignItems:'baseline', gap:4, marginBottom:isL?8:0 }}>
+                <p style={{ margin:'4px 0 8px', fontSize:subFs, fontWeight:900, color:e.accentColor, lineHeight:1.25 }}>{e.titleLine2}</p>
+                <div style={{ display:'flex', alignItems:'baseline', gap:4, marginBottom:8 }}>
                   <span style={{ fontSize:monthFs, fontWeight:900, color:e.accentColor, lineHeight:1 }}>{rocMonth}</span>
-                  <span style={{ fontSize:isL?18:14, fontWeight:700, color:'#6b7280' }}>月份活動表</span>
+                  <span style={{ fontSize:18, fontWeight:700, color:'#6b7280' }}>月份活動表</span>
                 </div>
-                {isL && <>
-                  <div style={{ height:1, background:`${e.accentColor}25`, marginBottom:6 }} />
-                  <p style={{ margin:'0 0 2px', fontSize:12, color:'#6b7280', lineHeight:1.5 }}>各項活動皆歡迎居民們踴躍報名！</p>
-                  <p style={{ margin:0, fontSize:11, color:'#9ca3af' }}>（數量有限，額滿為止）</p>
-                </>}
+                <div style={{ height:1, background:`${e.accentColor}25`, marginBottom:6 }} />
+                <p style={{ margin:'0 0 2px', fontSize:12, color:'#6b7280', lineHeight:1.5 }}>各項活動皆歡迎居民們踴躍報名！</p>
+                <p style={{ margin:0, fontSize:11, color:'#9ca3af' }}>（數量有限，額滿為止）</p>
+                <div style={{ height: e.gapTitleToQr }} />
+                <div style={{ display:'flex', gap:8 }}>
+                  <QrBox label="活動報名" color={e.accentColor} imgSrc={QR_API(SITE_URL,200)} sub="線上報名" />
+                  <QrBox label="種子社區大學" color="#06C755" imgSrc={e.communityQr} sub="加入社群" />
+                </div>
+                <div style={{ height: e.gapQrToContact }} />
+                <div style={{ marginTop:'auto' }}>
+                  {contactItems.map((item,i) => <ContactLine key={i} item={item} dotSize={6} />)}
+                </div>
               </div>
+            )}
 
-              {isL && <div style={{ height: e.gapTitleToQr }} />}
-
-              {/* QR + 聯繫 */}
-              <div style={{ display:'flex', flexDirection:'column', gap:isL?10:6, flex:isL?1:1 }}>
-                {!isL && (
-                <>
-                  <div style={{ marginBottom: 6 }}>
-                    {contactItems.map((item,i) => (
-                      <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:5, marginBottom:2 }}>
-                        <div style={{ width:4, height:4, borderRadius:'50%', background:'#06C755', marginTop:5, flexShrink:0 }} />
-                        <span style={{ fontSize:9, color:'#374151', lineHeight:1.5 }}>{item}</span>
-                      </div>
-                    ))}
+            {/* 直式：左標題+文案，右 QR 並排 — 與 DownloadPage 邏輯一致 */}
+            {!isL && (
+              <div style={{ position:'relative', zIndex:3, display:'flex', alignItems:'center', padding:'0 24px', gap:16, height:'100%', width:'100%' }}>
+                {/* 左：標題 + 月份 + 聯繫文案 */}
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ display:'inline-block', background:e.accentColor, borderRadius:4, padding:'2px 8px', marginBottom:6 }}>
+                    <span style={{ color:'white', fontSize:9, fontWeight:800, letterSpacing:'0.08em', lineHeight:1.4 }}>{year} 年活動</span>
                   </div>
-                </>
-              )}
-              <div style={{ display:'flex', gap:8, marginTop:0 }}>
-                <QrBox label="活動報名" color={e.accentColor} imgSrc={QR_API(SITE_URL,200)} sub="線上報名" />
-                <QrBox label="種子社區大學" color="#06C755" imgSrc={e.communityQr} sub="加入社群" />
-              </div>
-                {isL && <div style={{ height: e.gapQrToContact }} />}
-                {isL && (
-                  <div style={{ marginTop:'auto' }}>
-                    {contactItems.map((item,i) => <ContactLine key={i} item={item} dotSize={6} />)}
+                  <p style={{ margin:'0 0 1px', fontSize:Math.round(titleFs * 0.72), fontWeight:900, color:'#18120a', lineHeight:1.2 }}>{e.titleLine1}</p>
+                  <p style={{ margin:'0 0 4px', fontSize:Math.round(subFs * 0.72), fontWeight:900, color:e.accentColor, lineHeight:1.2 }}>{e.titleLine2}</p>
+                  <div style={{ display:'flex', alignItems:'baseline', gap:3, marginBottom:8 }}>
+                    <span style={{ fontSize:Math.round(monthFs * 0.55), fontWeight:900, color:e.accentColor, lineHeight:1 }}>{rocMonth}</span>
+                    <span style={{ fontSize:12, fontWeight:700, color:'#6b7280' }}>月份活動表</span>
                   </div>
-                )}
+                  {contactItems.map((item,i) => (
+                    <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:5, marginBottom:2 }}>
+                      <div style={{ width:4, height:4, borderRadius:'50%', background:'#06C755', marginTop:5, flexShrink:0 }} />
+                      <span style={{ fontSize:9, color:'#374151', lineHeight:1.5 }}>{item}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* 右：QR 並排 */}
+                <div style={{ display:'flex', gap:8, flexShrink:0 }}>
+                  <QrBox label="活動報名" color={e.accentColor} imgSrc={QR_API(SITE_URL,200)} sub="線上報名" />
+                  <QrBox label="種子社區大學" color="#06C755" imgSrc={e.communityQr} sub="加入社群" />
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* 右側課表 */}
