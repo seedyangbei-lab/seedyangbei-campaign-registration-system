@@ -640,6 +640,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       monthFontSize: parseInt(ss.schedule_month_font_size||'') || 64,
       gapTitleToQr: parseInt(ss.schedule_gap_title_qr||'') || 16,
       gapQrToContact: parseInt(ss.schedule_gap_qr_contact||'') || 12,
+      bgPositionX: parseInt(ss.schedule_bg_pos_x||'') || 50,
+      bgPositionY: parseInt(ss.schedule_bg_pos_y||'') || 50,
     }))
   }
 
@@ -683,10 +685,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       schedule_gap_qr_contact: String(editor.gapQrToContact),
       schedule_bg_pos_x: String(editor.bgPositionX),
       schedule_bg_pos_y: String(editor.bgPositionY),
-      schedule_gap_title_qr: String(editor.gapTitleToQr),
-      schedule_gap_qr_contact: String(editor.gapQrToContact),
-      schedule_bg_pos_x: String(editor.bgPositionX),
-      schedule_bg_pos_y: String(editor.bgPositionY),
+    }
     }
     await fetch('/api/admin/save-schedule-settings', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -909,8 +908,6 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
           </div>
         </div>
       </div>
-          </div>
-        </div>
 
         {/* QR */}
         <div>
