@@ -61,7 +61,6 @@ interface EditorState {
   bgPositionX: number        // 底圖水平位置 0–100
   bgPositionY: number        // 底圖垂直位置 0–100
 }
-}
 
 const DEFAULT_EDITOR: EditorState = {
   bgImage: '', bgOpacity: 0.22,
