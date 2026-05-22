@@ -1123,104 +1123,145 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       ctx.fillStyle = grad2; ctx.fillRect(0, leftTop+LEFT_H-2, LEFT_W, 3)
     }
 
-    // ── 左欄文字（橫式） ──
+   // ── 左欄文字 ──
     const drawLeftContent = async () => {
       const PAD_X = 22
-      const PAD_Y = isLandscape ? leftTop + 18 : leftTop + 28
-      let cy = PAD_Y
-
-      ctx.font = font(10, 800)
-      ctx.fillStyle = e.accentColor
-      ctx.fillText(`${rocYear} 年活動`, PAD_X, cy + 10)
-      cy += isLandscape ? 26 : 22
-
-      ctx.font = font(e.titleFontSize, 900)
-      ctx.fillStyle = '#18120a'
-      ctx.fillText(e.titleLine1, PAD_X, cy + e.titleFontSize * 0.8)
-      cy += e.titleFontSize + 6
-
-      ctx.font = font(e.subtitleFontSize, 900)
-      ctx.fillStyle = e.accentColor
-      ctx.fillText(e.titleLine2, PAD_X, cy + e.subtitleFontSize * 0.8)
-      cy += e.subtitleFontSize + 10
-
-      ctx.font = font(e.monthFontSize, 900)
-      ctx.fillStyle = e.accentColor
-      ctx.fillText(String(rocMonth), PAD_X, cy + e.monthFontSize * 0.85)
-      ctx.font = font(18, 700)
-      ctx.fillStyle = '#6b7280'
-      ctx.fillText('月份活動表', PAD_X + ctx.measureText(String(rocMonth)).width + 6, cy + e.monthFontSize * 0.85)
-      cy += e.monthFontSize + 10
-
-      if (isLandscape) {
-        ctx.font = font(12, 400)
-        ctx.fillStyle = '#6b7280'
-        ctx.fillText('各項活動皆歡迎居民們踴躍報名！', PAD_X, cy + 14)
-        cy += 18
-        ctx.font = font(11, 400)
-        ctx.fillStyle = '#9ca3af'
-        ctx.fillText('（數量有限，額滿為止）', PAD_X, cy + 13)
-        cy += 18
-      }
-
-      cy += e.gapTitleToQr
-
-      const qrSize = isLandscape ? 88 : 60
-      const qrBoxW = isLandscape ? (LEFT_W - PAD_X * 2 - 8) / 2 : qrSize + 16
-      const qrItems = [
-        { label: '活動報名', color: e.accentColor, src: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(SITE_URL)}`, sub: '線上報名' },
-        { label: '種子社區大學', color: '#06C755', src: e.communityQr, sub: '加入社群' },
-      ]
-
-      let qrX = PAD_X
-      for (const qr of qrItems) {
-        const bh = qrSize + 48
-        fillRoundRect(qrX, cy, qrBoxW, bh, 10, '#ffffff')
-        ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 1
-        ctx.beginPath(); ctx.roundRect(qrX, cy, qrBoxW, bh, 10); ctx.stroke()
-        ctx.font = font(9, 800); ctx.fillStyle = qr.color
-        ctx.textAlign = 'center'
-        ctx.fillText(qr.label, qrX + qrBoxW/2, cy + 16)
-        ctx.textAlign = 'left'
-        if (qr.src) {
-          try {
-            const qrImg = await loadImage(qr.src)
-            const qrOff = (qrBoxW - qrSize) / 2
-            ctx.drawImage(qrImg, qrX + qrOff, cy + 22, qrSize, qrSize)
-          } catch {}
-        } else {
-          ctx.fillStyle = '#f3f4f6'
-          ctx.fillRect(qrX + (qrBoxW-qrSize)/2, cy + 22, qrSize, qrSize)
-          ctx.font = font(9, 400); ctx.fillStyle = '#9ca3af'
-          ctx.textAlign = 'center'
-          ctx.fillText('未上傳', qrX + qrBoxW/2, cy + 22 + qrSize/2)
-          ctx.textAlign = 'left'
-        }
-        ctx.font = font(9, 400); ctx.fillStyle = '#6b7280'
-        ctx.textAlign = 'center'
-        ctx.fillText(qr.sub, qrX + qrBoxW/2, cy + 22 + qrSize + 14)
-        ctx.textAlign = 'left'
-        qrX += qrBoxW + 8
-      }
-      cy += qrSize + 52 + e.gapQrToContact
-
+      const qrSize = isLandscape ? 88 : e.pQrSize
       const contactItems = [
         e.phone ? `洽詢專線：${e.phone}` : '',
         e.contact || '',
         e.hours ? `時間：${e.hours}` : '',
       ].filter(Boolean)
-      for (const item of contactItems) {
-        ctx.fillStyle = '#06C755'
-        ctx.beginPath(); ctx.arc(PAD_X + 3, cy + 5, 3, 0, Math.PI*2); ctx.fill()
-        ctx.font = font(11, 400); ctx.fillStyle = '#374151'
-        const lines = wrapText(ctx, item, LEFT_W - PAD_X * 2 - 12)
-        for (const line of lines) {
-          ctx.fillText(line, PAD_X + 10, cy + 13)
-          cy += 16
+      const qrItems = [
+        { label: '活動報名', color: e.accentColor, src: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(SITE_URL)}`, sub: '線上報名' },
+        { label: '種子社區大學', color: '#06C755', src: e.communityQr, sub: '加入社群' },
+      ]
+
+      if (isLandscape) {
+        // ── 橫式左欄 ──
+        let cy = leftTop + 18
+
+        ctx.font = font(10, 800); ctx.fillStyle = e.accentColor
+        ctx.fillText(`${rocYear} 年活動`, PAD_X, cy + 10); cy += 24
+
+        ctx.font = font(e.titleFontSize, 900); ctx.fillStyle = '#18120a'
+        ctx.fillText(e.titleLine1, PAD_X, cy + e.titleFontSize); cy += e.titleFontSize * 1.3
+
+        ctx.font = font(e.subtitleFontSize, 900); ctx.fillStyle = e.accentColor
+        ctx.fillText(e.titleLine2, PAD_X, cy + e.subtitleFontSize); cy += e.subtitleFontSize * 1.3
+
+        // 月份大字
+        ctx.font = font(e.monthFontSize, 900); ctx.fillStyle = e.accentColor
+        const monthStr = String(rocMonth)
+        const monthW = ctx.measureText(monthStr).width
+        ctx.fillText(monthStr, PAD_X, cy + e.monthFontSize)
+        ctx.font = font(18, 700); ctx.fillStyle = '#6b7280'
+        ctx.fillText('月份活動表', PAD_X + monthW + 6, cy + e.monthFontSize)
+        cy += e.monthFontSize * 1.2
+
+        ctx.font = font(12, 400); ctx.fillStyle = '#6b7280'
+        ctx.fillText('各項活動皆歡迎居民們踴躍報名！', PAD_X, cy + 14); cy += 20
+        ctx.font = font(11, 400); ctx.fillStyle = '#9ca3af'
+        ctx.fillText('（數量有限，額滿為止）', PAD_X, cy + 13); cy += 20
+
+        cy += e.gapTitleToQr
+
+        // QR boxes
+        const qrBoxW = (LEFT_W - PAD_X * 2 - 8) / 2
+        const bh = qrSize + 48
+        let qrX = PAD_X
+        for (const qr of qrItems) {
+          fillRoundRect(qrX, cy, qrBoxW, bh, 10, '#ffffff')
+          ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 1
+          ctx.beginPath(); ctx.roundRect(qrX, cy, qrBoxW, bh, 10); ctx.stroke()
+          ctx.font = font(9, 800); ctx.fillStyle = qr.color; ctx.textAlign = 'center'
+          ctx.fillText(qr.label, qrX + qrBoxW/2, cy + 14)
+          ctx.textAlign = 'left'
+          if (qr.src) {
+            try {
+              const qrImg = await loadImage(qr.src)
+              ctx.drawImage(qrImg, qrX + (qrBoxW - qrSize)/2, cy + 20, qrSize, qrSize)
+            } catch {}
+          } else {
+            ctx.fillStyle = '#f3f4f6'
+            ctx.fillRect(qrX + (qrBoxW-qrSize)/2, cy + 20, qrSize, qrSize)
+            ctx.font = font(9, 400); ctx.fillStyle = '#9ca3af'; ctx.textAlign = 'center'
+            ctx.fillText('未上傳', qrX + qrBoxW/2, cy + 20 + qrSize/2 + 4)
+            ctx.textAlign = 'left'
+          }
+          ctx.font = font(9, 400); ctx.fillStyle = '#6b7280'; ctx.textAlign = 'center'
+          ctx.fillText(qr.sub, qrX + qrBoxW/2, cy + 20 + qrSize + 14)
+          ctx.textAlign = 'left'
+          qrX += qrBoxW + 8
         }
-        cy += 2
-      }
-    }
+        cy += bh + e.gapQrToContact
+
+        for (const item of contactItems) {
+          ctx.fillStyle = '#06C755'
+          ctx.beginPath(); ctx.arc(PAD_X + 3, cy + 5, 3, 0, Math.PI*2); ctx.fill()
+          ctx.font = font(11, 400); ctx.fillStyle = '#374151'
+          const lines = wrapText(ctx, item, LEFT_W - PAD_X * 2 - 12)
+          for (const line of lines) { ctx.fillText(line, PAD_X + 10, cy + 13); cy += 16 }
+          cy += 2
+        }
+
+      } else {
+        // ── 直式左欄（橫向分左右兩區） ──
+        const leftAreaW = W * (e.pLeftWidth / 100)
+        const rightAreaX = leftAreaW + 16
+        const rightAreaW = W - rightAreaX - PAD_X
+        let cy = leftTop + 28
+
+        // 左側文字區
+        ctx.font = font(9, 800); ctx.fillStyle = e.accentColor
+        ctx.fillText(`${rocYear} 年活動`, PAD_X, cy + 9); cy += 20
+
+        ctx.font = font(e.pTitleFontSize, 900); ctx.fillStyle = '#18120a'
+        ctx.fillText(e.titleLine1, PAD_X, cy + e.pTitleFontSize); cy += e.pTitleFontSize * 1.3
+
+        ctx.font = font(e.pSubtitleFontSize, 900); ctx.fillStyle = e.accentColor
+        ctx.fillText(e.titleLine2, PAD_X, cy + e.pSubtitleFontSize); cy += e.pSubtitleFontSize * 1.3
+
+        // 月份大字
+        ctx.font = font(e.pMonthFontSize, 900); ctx.fillStyle = e.accentColor
+        const monthStr = String(rocMonth)
+        const monthW = ctx.measureText(monthStr).width
+        ctx.fillText(monthStr, PAD_X, cy + e.pMonthFontSize)
+        ctx.font = font(12, 700); ctx.fillStyle = '#6b7280'
+        ctx.fillText('月份活動表', PAD_X + monthW + 4, cy + e.pMonthFontSize)
+        cy += e.pMonthFontSize * 1.2 + e.pGapMonth
+
+        for (const item of contactItems) {
+          ctx.fillStyle = '#06C755'
+          ctx.beginPath(); ctx.arc(PAD_X + 2, cy + 4, 2, 0, Math.PI*2); ctx.fill()
+          ctx.font = font(9, 400); ctx.fillStyle = '#374151'
+          const lines = wrapText(ctx, item, leftAreaW - PAD_X - 12)
+          for (const line of lines) { ctx.fillText(line, PAD_X + 8, cy + 10); cy += 14 }
+          cy += 2
+        }
+
+        // 右側 QR 區
+        const qrBoxW = (rightAreaW - 8) / 2
+        const bh = qrSize + 42
+        const qrStartY = leftTop + (LEFT_H - bh) / 2
+        let qrX = rightAreaX
+        for (const qr of qrItems) {
+          fillRoundRect(qrX, qrStartY, qrBoxW, bh, 8, '#ffffff')
+          ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 1
+          ctx.beginPath(); ctx.roundRect(qrX, qrStartY, qrBoxW, bh, 8); ctx.stroke()
+          ctx.font = font(9, 800); ctx.fillStyle = qr.color; ctx.textAlign = 'center'
+          ctx.fillText(qr.label, qrX + qrBoxW/2, qrStartY + 13)
+          ctx.textAlign = 'left'
+          if (qr.src) {
+            try {
+              const qrImg = await loadImage(qr.src)
+              ctx.drawImage(qrImg, qrX + (qrBoxW - qrSize)/2, qrStartY + 18, qrSize, qrSize)
+            } catch {}
+          } else {
+            ctx.fillStyle = '#f3f4f6'
+            ctx.fillRect(qrX + (qrBoxW-qrSize)/2, qrStartY + 18, qrSize, qrSize)
+            ctx.font = font(8, 400); ctx.fillStyle = '#9ca3af'; ctx.textAlign = 'center'
+            ctx.fillText('未上傳', qrX + qrBoxW/2, qrStartY + 18 + qrSize/2
 
     await drawLeftContent()
 
@@ -1504,22 +1545,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
             }
             下載
           </button>
-          <button
-            onClick={() => {
-              const el = null; if (!el) return
-              const W = orientation === 'landscape' ? A4L_W : A4P_W
-              const H = orientation === 'landscape' ? A4L_H : A4P_H
-              const win = window.open('', '_blank', `width=${W},height=${H+80}`)
-              if (!win) return
-              const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>課表預覽</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#333;display:flex;flex-direction:column;align-items:center;padding:20px;gap:16px;font-family:sans-serif;}p{color:white;font-size:13px;opacity:0.8;}@media print{body{background:white;padding:0;}p{display:none;}}</style></head><body><p>在圖片上右鍵 → 另存圖片，或 Ctrl+P 列印成 PDF</p>${el.outerHTML}</body></html>`
-              win.document.write(html)
-              win.document.close()
-            }}
-            className="flex items-center gap-1.5 bg-stone-700 hover:bg-stone-600 text-white px-3 py-2 rounded-xl text-sm font-bold transition-colors"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            <span className="hidden sm:inline">截圖預覽</span>
-          </button>
+        
           <button onClick={reset} className="p-2 text-stone-400 hover:text-stone-600 rounded-lg hover:bg-stone-100">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
