@@ -56,8 +56,11 @@ interface EditorState {
   titleFontSize: number      // 標題字級 (px)
   subtitleFontSize: number   // 副標題字級 (px)
   monthFontSize: number      // 月份數字字級 (px)
-  gapTitleToQr: number       // 標題到 QR 間距 (px)
+  gapTitleToQr: number      // 標題到 QR 間距 (px)
   gapQrToContact: number     // QR 到聯繫資訊間距 (px)
+  bgPositionX: number        // 底圖水平位置 0–100
+  bgPositionY: number        // 底圖垂直位置 0–100
+}
 }
 
 const DEFAULT_EDITOR: EditorState = {
@@ -81,21 +84,32 @@ const DEFAULT_EDITOR: EditorState = {
   monthFontSize: 64,
   gapTitleToQr: 16,
   gapQrToContact: 12,
+  bgPositionX: 50,
+  bgPositionY: 50,
 }
 
 // ── 色盤元件 ──────────────────────────────────────────────────────
 function ColorPicker({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
   const [open, setOpen] = useState(false)
+  const isDragging = useRef(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    const onDown = () => { isDragging.current = true }
+    const onUp = (e: PointerEvent) => {
+      // 短暫延遲讓 isDragging reset，再判斷是否關閉
+      setTimeout(() => {
+        isDragging.current = false
+        if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      }, 50)
     }
-    // 用 pointerup 而非 mousedown，避免色盤拖曳中途觸發關閉
-    const t = setTimeout(() => document.addEventListener('pointerup', handler), 200)
-    return () => { clearTimeout(t); document.removeEventListener('pointerup', handler) }
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('pointerup', onUp)
+    return () => {
+      document.removeEventListener('pointerdown', onDown)
+      document.removeEventListener('pointerup', onUp)
+    }
   }, [open])
 
   return (
@@ -110,7 +124,8 @@ function ColorPicker({ value, onChange, label }: { value: string; onChange: (v: 
         {open && (
           <div
             style={{ position: 'absolute', right: 0, top: 40, zIndex: 9999, background: 'white', borderRadius: 12, padding: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.18)', border: '1px solid #e7e5e4' }}
-            onMouseDown={e => e.stopPropagation()}
+            onPointerDown={e => e.stopPropagation()}
+            onPointerUp={e => e.stopPropagation()}
           >
             <HexColorPicker color={value} onChange={onChange} style={{ width: 200 }} />
             <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -230,8 +245,7 @@ function DownloadPage({ data }: { data: PageData }) {
   return (
     <div style={{ position: 'relative', width: W, height: H, overflow: 'hidden', fontFamily: '"Noto Sans TC","GenSenRounded2TW",sans-serif' }}>
       <div style={{ position: 'absolute', inset: 0, background: '#fdf4ea' }} />
-{e.bgImage && <img src={e.bgImage} alt="" crossOrigin="anonymous" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: e.bgOpacity }} />}
-      {/* 品牌列 */}
+{e.bgImage && <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundImage: `url(${e.bgImage})`, backgroundSize: 'cover', backgroundPosition: `${e.bgPositionX}% ${e.bgPositionY}%`, opacity: e.bgOpacity }} />}      {/* 品牌列 */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: BRAND_H, background: e.brandBgColor, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 22px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 3, height: 14, background: e.accentColor, borderRadius: 2 }} />
@@ -450,7 +464,7 @@ function PreviewPage({
   return (
     <div style={{ width:W, height:H, fontFamily:'"Noto Sans TC","GenSenRounded2TW",sans-serif', position:'relative', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 20px 60px rgba(0,0,0,0.35)' }}>
       <div style={{ position:'absolute', inset:0, background:'#fdf4ea', zIndex:0 }}>
-{e.bgImage && <img src={e.bgImage} alt="" crossOrigin="anonymous" style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', objectFit:'cover', opacity:e.bgOpacity }} />}
+      {e.bgImage && <div style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', backgroundImage:`url(${e.bgImage})`, backgroundSize:'cover', backgroundPosition:`${e.bgPositionX}% ${e.bgPositionY}%`, opacity:e.bgOpacity }} />}
       </div>
       <div style={{ position:'relative', zIndex:1, display:'flex', flexDirection:'column', height:'100%' }}>
         {/* 品牌列 */}
@@ -473,13 +487,13 @@ function PreviewPage({
 
             <div style={{ position:'relative', zIndex:3, padding:isL?'18px 20px 16px':'0 20px', display:'flex', flexDirection:isL?'column':'row', gap:isL?0:20, flex:isL?1:undefined, alignItems:!isL?'center':undefined, height:!isL?'100%':undefined }}>
               {/* 標題 */}
-              <div style={{ flex:!isL?'0 0 auto':undefined, textAlign:!isL?'center':undefined }}>
-                <div style={{ display:'inline-flex', alignItems:'center', background:e.accentColor, borderRadius:6, padding:'3px 10px', marginBottom:isL?8:4 }}>
+            <div style={{ flex:!isL?'0 0 auto':undefined }}>
+            <div style={{ display:'inline-flex', alignItems:'center', background:e.accentColor, borderRadius:6, padding:'3px 10px', marginBottom:isL?8:4 }}>
                   <span style={{ color:'white', fontSize:10, fontWeight:800, letterSpacing:'0.1em', lineHeight:1 }}>{year} 年活動</span>
                 </div>
                 <p style={{ margin:'0 0 2px', fontSize:titleFs, fontWeight:900, color:'#18120a', lineHeight:1.25 }}>{e.titleLine1}</p>
                 <p style={{ margin:isL?'4px 0 8px':'0 0 4px', fontSize:subFs, fontWeight:900, color:e.accentColor, lineHeight:1.25 }}>{e.titleLine2}</p>
-                <div style={{ display:'flex', alignItems:'baseline', gap:4, marginBottom:isL?8:0, justifyContent:!isL?'center':undefined }}>
+                <div style={{ display:'flex', alignItems:'baseline', gap:4, marginBottom:isL?8:0 }}>
                   <span style={{ fontSize:monthFs, fontWeight:900, color:e.accentColor, lineHeight:1 }}>{rocMonth}</span>
                   <span style={{ fontSize:isL?18:14, fontWeight:700, color:'#6b7280' }}>月份活動表</span>
                 </div>
@@ -668,6 +682,10 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       schedule_month_font_size: String(editor.monthFontSize),
       schedule_gap_title_qr: String(editor.gapTitleToQr),
       schedule_gap_qr_contact: String(editor.gapQrToContact),
+      schedule_bg_pos_x: String(editor.bgPositionX),
+      schedule_bg_pos_y: String(editor.bgPositionY),
+      bgPositionX: parseInt(ss.schedule_bg_pos_x||'') || 50,
+      bgPositionY: parseInt(ss.schedule_bg_pos_y||'') || 50,
     }
     await fetch('/api/admin/save-schedule-settings', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -876,6 +894,20 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
             </div>
             <input type="range" min="0" max="1" step="0.05" value={editor.bgOpacity}
               onChange={e => set('bgOpacity', parseFloat(e.target.value))} className="w-full accent-orange-500" />
+        </div>
+        <div className="mt-2.5 space-y-2">
+          <div>
+            <div className="flex justify-between mb-1"><label className="text-xs text-stone-400">水平位置 {editor.bgPositionX}%</label></div>
+            <input type="range" min="0" max="100" step="5" value={editor.bgPositionX}
+              onChange={e => set('bgPositionX', parseInt(e.target.value))} className="w-full accent-orange-500" />
+          </div>
+          <div>
+            <div className="flex justify-between mb-1"><label className="text-xs text-stone-400">垂直位置 {editor.bgPositionY}%</label></div>
+            <input type="range" min="0" max="100" step="5" value={editor.bgPositionY}
+              onChange={e => set('bgPositionY', parseInt(e.target.value))} className="w-full accent-orange-500" />
+          </div>
+        </div>
+      </div>
           </div>
         </div>
 
@@ -1036,8 +1068,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="hidden md:block w-64 bg-white border-r border-stone-200 flex-shrink-0" style={{ overflowY: 'scroll', height: '100%' }}><PanelContent /></div>
+<div className="flex flex-1" style={{ overflow: 'hidden', minHeight: 0 }}>
+      <div className="hidden md:block w-64 bg-white border-r border-stone-200 flex-shrink-0" style={{ overflowY: 'auto', minHeight: 0, flex: '0 0 256px', height: '100%' }}><PanelContent /></div>
         <div className="flex-1 overflow-auto p-4 md:p-6 flex items-start justify-center bg-stone-100">
           <div className="flex flex-col items-center gap-3">
             <div style={{ transformOrigin:'top left' }} className="scale-[0.28] sm:scale-[0.42] md:scale-[0.52] lg:scale-[0.65] xl:scale-75 2xl:scale-90 origin-top-left">
