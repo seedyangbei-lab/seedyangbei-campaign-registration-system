@@ -683,10 +683,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       schedule_gap_qr_contact: String(editor.gapQrToContact),
       schedule_bg_pos_x: String(editor.bgPositionX),
       schedule_bg_pos_y: String(editor.bgPositionY),
-      bgPositionX: parseInt(ss.schedule_bg_pos_x||'') || 50,
-      bgPositionY: parseInt(ss.schedule_bg_pos_y||'') || 50,
-    }
-    await fetch('/api/admin/save-schedule-settings', {
+      schedule_gap_title_qr: String(editor.gapTitleToQr),
+      schedule_gap_qr_contact: String(editor.gapQrToContact),
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ settings: Object.entries(toSave).map(([key,value]) => ({ key, value })) }),
     })
