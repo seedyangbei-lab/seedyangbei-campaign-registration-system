@@ -297,7 +297,7 @@ function DownloadPage({ data }: { data: PageData }) {
               { label:'活動報名', color: e.accentColor, img: QR_API(SITE_URL,200), sub:'線上報名' },
               { label:'種子社區大學', color:'#06C755', img: e.communityQr, sub:'加入社群' },
             ].map((qr,qi) => (
-              <div key={qi} style={{ flex: 1, background: 'rgba(255,255,255,0.9)', borderRadius: 10, border: '1px solid rgba(0,0,0,0.06)', padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <div key={qi} style={{ flex: 1, background: '#ffffff', borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                 <span style={{ color: qr.color, fontSize: 9, fontWeight: 800, lineHeight: 1.4, display: 'block', textAlign: 'center' }}>{qr.label}</span>
                 {qr.img
                   ? <img src={qr.img} alt="" crossOrigin="anonymous" style={{ width: qrSize, height: qrSize, objectFit: 'contain' }} />
@@ -448,7 +448,7 @@ function PreviewPage({
   ]
 
   const QrBox = ({ label, color, imgSrc, sub }: { label:string; color:string; imgSrc:string; sub:string }) => (
-    <div style={{ background: 'rgba(255,255,255,0.9)', borderRadius: 10, border: '1px solid rgba(0,0,0,0.06)', padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+    <div style={{ background: '#ffffff', borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
       <span style={{ color: color, fontSize: isL?10:9, fontWeight: 800, lineHeight: 1.4 }}>{label}</span>
       {imgSrc
         ? <img src={imgSrc} alt="" crossOrigin="anonymous" style={{ width: isL?88:e.pQrSize, height: isL?88:e.pQrSize, objectFit: 'contain', display: 'block' }} />
@@ -550,7 +550,7 @@ function PreviewPage({
               {pageCourses.map((course,i) => {
                 const { month:cm, day, weekday } = toROC(course.date)
                 return (
-                  <div key={course.id} style={{ display: 'grid', gridTemplateColumns: gridCols, flex: 1, minHeight: 0, background: i%2===0 ? 'rgba(255,255,255,0.9)' : 'rgba(255,247,237,0.9)', borderBottom: `1px solid ${e.accentColor}18`, alignItems: 'center' }}>
+                  <div key={course.id} style={{ display: 'grid', gridTemplateColumns: gridCols, flex: 1, minHeight: 0, background: i%2===0 ? '#ffffff' : '#fff7ed', borderBottom: `1px solid ${e.accentColor}18`, alignItems: 'center' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', gap: 4 }}>
                       <span style={{ fontSize: 15, fontWeight: 800, color: '#18120a', lineHeight: 1 }}>{cm}/{day}</span>
                       <span style={{ fontWeight: 800, fontSize: 12, color: e.accentColor, lineHeight: 1 }}>{weekday}</span>
@@ -571,7 +571,7 @@ function PreviewPage({
                 )
               })}
               {Array.from({ length: emptyRows }).map((_,i) => (
-                <div key={`e${i}`} style={{ display: 'grid', gridTemplateColumns: gridCols, flex: 1, minHeight: 40, background: (pageCourses.length+i)%2===0 ? 'rgba(255,255,255,0.9)' : 'rgba(255,247,237,0.9)', borderBottom: `1px solid ${e.accentColor}18` }}>
+                <div key={`e${i}`} style={{ display: 'grid', gridTemplateColumns: gridCols, flex: 1, minHeight: 40, background: (pageCourses.length+i)%2===0 ? '#ffffff' : '#fff7ed', borderBottom: `1px solid ${e.accentColor}18` }}>
                   {colDefs.map((_,ci) => <div key={ci} />)}
                 </div>
               ))}
