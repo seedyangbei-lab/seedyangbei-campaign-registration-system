@@ -870,6 +870,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
   const [showDownloadModal, setShowDownloadModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savedOk, setSavedOk] = useState(false)
+  const [downloadPage, setDownloadPage] = useState(0)
+  const [downloadPage, setDownloadPage] = useState(0)
   const [editor, setEditor] = useState<EditorState>(DEFAULT_EDITOR)
   const [showMobilePanel, setShowMobilePanel] = useState(false)
   const downloadRefL = useRef<HTMLDivElement>(null)
@@ -987,7 +989,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
     })
     setSaving(false); setSavedOk(true); setTimeout(() => setSavedOk(false), 2500)
   }
-  const downloadVariant = async (orient: Orientation) => {
+  
+    const downloadVariant = async (orient: Orientation) => {
     const { year, month } = toROC(selectedMonth + '-01')
     const label = orient === 'landscape' ? '橫式' : '直式'
     const { toPng } = await import('html-to-image')
@@ -996,23 +999,20 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
     const ref = orient === 'landscape' ? downloadRefL : downloadRefP
     const el = ref.current; if (!el) return
 
-    // 把元素移到 body 最上層，確保截圖不受父層 overflow 裁切
-    const originalParent = el.parentElement
-    const originalNextSibling = el.nextSibling
-    const originalStyle = el.getAttribute('style') || ''
-
     el.style.opacity = '1'
     el.style.zIndex = '99999'
 
     const urls: string[] = []
     for (let pg = 0; pg < totalPages; pg++) {
-      setCurrentPage(pg)
-      // 等 React re-render + 圖片載入
-      await new Promise(r => setTimeout(r, 400))
+      await new Promise<void>(resolve => {
+        setDownloadPage(pg)
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      })
+      await new Promise(r => setTimeout(r, 300))
       const dataUrl = await toPng(el, {
         width: W,
         height: H,
-        pixelRatio: 2.5,   // 約 227dpi，印刷夠用；改 3 可達 ~270dpi
+        pixelRatio: 2.5,
         backgroundColor: '#fdf4ea',
         skipFonts: false,
         cacheBust: true,
@@ -1022,6 +1022,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
 
     el.style.opacity = '0'
     el.style.zIndex = '-999'
+    setDownloadPage(0)
 
     urls.forEach((url, i) => {
       const link = document.createElement('a')
@@ -1191,8 +1192,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       {/* 隱藏下載 DOM */}
         <div ref={downloadRefL} style={{ position: 'fixed', left: 0, top: 0, pointerEvents: 'none', zIndex: -999, width: A4L_W, height: A4L_H, overflow: 'hidden', opacity: 0 }}>
         <DownloadPage data={{
-          pageCourses: monthCourses.slice(currentPage*rowsPerPage, (currentPage+1)*rowsPerPage),
-          rowsPerPage, isLandscape: true,
+      pageCourses: monthCourses.slice(downloadPage*rowsPerPage, (downloadPage+1)*rowsPerPage),
+      rowsPerPage, isLandscape: true,
           year: selectedMonth ? toROC(selectedMonth+'-01').year : 115,
           rocMonth: selectedMonth ? toROC(selectedMonth+'-01').month : 1,
           pageIdx: currentPage, totalPages, editor,
@@ -1200,8 +1201,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       </div>
         <div ref={downloadRefP} style={{ position: 'fixed', left: 0, top: 0, pointerEvents: 'none', zIndex: -999, width: A4P_W, height: A4P_H, overflow: 'hidden', opacity: 0 }}>
         <DownloadPage data={{
-          pageCourses: monthCourses.slice(currentPage*rowsPerPage, (currentPage+1)*rowsPerPage),
-          rowsPerPage, isLandscape: false,
+                pageCourses: monthCourses.slice(downloadPage*rowsPerPage, (downloadPage+1)*rowsPerPage),
+      rowsPerPage, isLandscape: false,
           year: selectedMonth ? toROC(selectedMonth+'-01').year : 115,
           rocMonth: selectedMonth ? toROC(selectedMonth+'-01').month : 1,
           pageIdx: currentPage, totalPages, editor,
