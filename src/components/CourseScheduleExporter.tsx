@@ -90,55 +90,66 @@ const DEFAULT_EDITOR: EditorState = {
 // ── 色盤元件 ──────────────────────────────────────────────────────
 function ColorPicker({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
   const [open, setOpen] = useState(false)
-  const isDragging = useRef(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const popRef = useRef<HTMLDivElement>(null)
+
+  const openPicker = () => {
+    if (!btnRef.current) return
+    const r = btnRef.current.getBoundingClientRect()
+    setPos({ top: r.bottom + 8, left: Math.max(8, r.right - 224) })
+    setOpen(true)
+  }
 
   useEffect(() => {
     if (!open) return
     const handler = (e: MouseEvent) => {
-      if (isDragging.current) return
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (popRef.current && popRef.current.contains(e.target as Node)) return
+      if (btnRef.current && btnRef.current.contains(e.target as Node)) return
+      setOpen(false)
     }
-    // 用 click 而非 mousedown，確保拖曳結束後才判斷
-    const t = setTimeout(() => document.addEventListener('click', handler, true), 100)
-    return () => { clearTimeout(t); document.removeEventListener('click', handler, true) }
+    // 用 mousedown 在 capture phase，但排除色盤內部
+    document.addEventListener('mousedown', handler, true)
+    return () => document.removeEventListener('mousedown', handler, true)
   }, [open])
 
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-stone-600">{label}</span>
-      <div className="relative flex items-center gap-2" ref={ref}>
-        <button
-          onClick={() => setOpen(v => !v)}
-          style={{ width: 32, height: 32, borderRadius: 8, background: value, border: '2px solid #e7e5e4', cursor: 'pointer', flexShrink: 0 }}
-        />
-        <span className="text-xs text-stone-400 font-mono w-16">{value}</span>
-        {open && (
-          <div
-            style={{ position: 'absolute', right: 0, top: 40, zIndex: 9999, background: 'white', borderRadius: 12, padding: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.18)', border: '1px solid #e7e5e4' }}
-            onClick={e => e.stopPropagation()}
-            onPointerDown={e => { isDragging.current = true; e.stopPropagation() }}
-            onPointerUp={() => { setTimeout(() => { isDragging.current = false }, 100) }}
-          >
-            <HexColorPicker color={value} onChange={onChange} style={{ width: 200 }} />
-            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 11, color: '#78716c' }}>HEX</span>
-              <input
-                value={value}
-                onChange={e => { const v = e.target.value; if (/^#[0-9a-fA-F]{0,6}$/.test(v)) onChange(v) }}
-                style={{ flex: 1, border: '1px solid #e7e5e4', borderRadius: 6, padding: '4px 8px', fontSize: 12, fontFamily: 'monospace' }}
-              />
-            </div>
-            <button
-              onClick={() => setOpen(false)}
-              style={{ marginTop: 8, width: '100%', padding: '6px 0', background: '#f5f5f4', border: '1px solid #e7e5e4', borderRadius: 8, fontSize: 12, color: '#57534e', cursor: 'pointer' }}
-            >
-              確認
-            </button>
-          </div>
-        )}
+    <>
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-stone-600">{label}</span>
+        <div className="flex items-center gap-2">
+          <button
+            ref={btnRef}
+            onClick={openPicker}
+            style={{ width: 32, height: 32, borderRadius: 8, background: value, border: '2px solid #e7e5e4', cursor: 'pointer', flexShrink: 0 }}
+          />
+          <span className="text-xs text-stone-400 font-mono w-16">{value}</span>
+        </div>
       </div>
-    </div>
+      {open && typeof window !== 'undefined' && (
+        <div
+          ref={popRef}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 99999, background: 'white', borderRadius: 12, padding: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.22)', border: '1px solid #e7e5e4', width: 224 }}
+          onMouseDown={e => e.stopPropagation()}
+        >
+          <HexColorPicker color={value} onChange={onChange} style={{ width: 200 }} />
+          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 11, color: '#78716c' }}>HEX</span>
+            <input
+              value={value}
+              onChange={e => { const v = e.target.value; if (/^#[0-9a-fA-F]{0,6}$/.test(v)) onChange(v) }}
+              style={{ flex: 1, border: '1px solid #e7e5e4', borderRadius: 6, padding: '4px 8px', fontSize: 12, fontFamily: 'monospace' }}
+            />
+          </div>
+          <button
+            onClick={() => setOpen(false)}
+            style={{ marginTop: 8, width: '100%', padding: '6px 0', background: '#f5f5f4', border: '1px solid #e7e5e4', borderRadius: 8, fontSize: 12, color: '#57534e', cursor: 'pointer' }}
+          >
+            確認
+          </button>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -285,9 +296,7 @@ function DownloadPage({ data }: { data: PageData }) {
               { label:'種子社區大學', color:'#06C755', img: e.communityQr, sub:'加入社群' },
             ].map((qr,qi) => (
               <div key={qi} style={{ flex: 1, background: 'rgba(255,255,255,0.9)', borderRadius: 10, border: '1px solid rgba(0,0,0,0.06)', padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                <div style={{ background: qr.color, borderRadius: 20, padding: '3px 8px', textAlign:'center' }}>
-                  <span style={{ color:'white', fontSize:9, fontWeight:800, lineHeight:1.4, display:'block' }}>{qr.label}</span>
-                </div>
+                <span style={{ color: qr.color, fontSize:9, fontWeight:800, lineHeight:1.4, display:'block', textAlign:'center' }}>{qr.label}</span>
                 {qr.img
                   ? <img src={qr.img} alt="" crossOrigin="anonymous" style={{ width: qrSize, height: qrSize, objectFit:'contain' }} />
                   : <div style={{ width: qrSize, height: qrSize, background:'#f3f4f6', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ fontSize:9, color:'#9ca3af' }}>未上傳</span></div>
@@ -305,42 +314,44 @@ function DownloadPage({ data }: { data: PageData }) {
           </div>
         </div>
       ) : (
-        // 直式：flex row 水平排列，垂直置中
-        <div style={{ position: 'absolute', top: BRAND_H, left: 0, right: 0, height: LEFT_H, display: 'flex', alignItems: 'center', padding: '0 20px', gap: 20 }}>
-           {/* 左：標題區 */}
-          <div style={{ flex: '0 0 auto', textAlign: 'left' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', background: e.accentColor, borderRadius: 6, padding: '3px 10px', marginBottom: 4 }}>
-              <span style={{ color:'white', fontSize:10, fontWeight:800, letterSpacing:'0.1em', lineHeight:1 }}>{year} 年活動</span>
+        // 直式：左標題+文案，右 QR 並排
+        <div style={{ position: 'absolute', top: BRAND_H, left: 0, right: 0, height: LEFT_H, display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16 }}>
+          {/* 左：標題 + 月份 + 聯繫文案 */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'inline-block', background: e.accentColor, borderRadius: 4, padding: '2px 8px', marginBottom: 6 }}>
+              <span style={{ color:'white', fontSize:9, fontWeight:800, letterSpacing:'0.08em', lineHeight:1.4 }}>{year} 年活動</span>
             </div>
-            <p style={{ margin: '0 0 2px', fontSize: titleFs * 0.7, fontWeight: 900, color: '#18120a', lineHeight: 1.2 }}>{e.titleLine1}</p>
-            <p style={{ margin: '0 0 4px', fontSize: subFs * 0.7, fontWeight: 900, color: e.accentColor, lineHeight: 1.2 }}>{e.titleLine2}</p>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-              <span style={{ fontSize: monthFs * 0.6, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
+            <p style={{ margin: '0 0 1px', fontSize: Math.round(titleFs * 0.72), fontWeight: 900, color: '#18120a', lineHeight: 1.2 }}>{e.titleLine1}</p>
+            <p style={{ margin: '0 0 4px', fontSize: Math.round(subFs * 0.72), fontWeight: 900, color: e.accentColor, lineHeight: 1.2 }}>{e.titleLine2}</p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginBottom: 8 }}>
+              <span style={{ fontSize: Math.round(monthFs * 0.55), fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
             </div>
+            {contactItems.map((item, i) => (
+              <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:5, marginBottom:2 }}>
+                <div style={{ width:4, height:4, borderRadius:'50%', background:'#06C755', marginTop:5, flexShrink:0 }} />
+                <span style={{ fontSize:9, color:'#374151', lineHeight:1.5 }}>{item}</span>
+              </div>
+            ))}
           </div>
-          {/* 右：QR + 聯繫 */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-            {contactItems.map((item, i) => <ContactLine key={i} item={item} dotSize={5} />)}
-            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-              {[
-                { label:'活動報名', color: e.accentColor, img: QR_API(SITE_URL,200), sub:'線上報名' },
-                { label:'種子社區大學', color:'#06C755', img: e.communityQr, sub:'加入社群' },
-              ].map((qr,qi) => (
-                <div key={qi} style={{ flex:1, background:'rgba(255,255,255,0.9)', borderRadius:8, border:'1px solid rgba(0,0,0,0.06)', padding:'6px 4px', display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
-                  <div style={{ background:qr.color, borderRadius:16, padding:'2px 8px', textAlign:'center' }}>
-                    <span style={{ color:'white', fontSize:8, fontWeight:800, lineHeight:1.4, display:'block' }}>{qr.label}</span>
-                  </div>
-                  {qr.img
-                    ? <img src={qr.img} alt="" crossOrigin="anonymous" style={{ width: qrSize, height: qrSize, objectFit:'contain' }} />
-                    : <div style={{ width: qrSize, height: qrSize, background:'#f3f4f6', borderRadius:4, display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ fontSize:8, color:'#9ca3af' }}>未上傳</span></div>
-                  }
-                  <span style={{ fontSize:8, color:'#6b7280' }}>{qr.sub}</span>
-                </div>
-              ))}
-            </div>
+          {/* 右：QR 並排 */}
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            {[
+              { label:'活動報名', color: e.accentColor, img: QR_API(SITE_URL,200), sub:'線上報名' },
+              { label:'種子社區大學', color:'#06C755', img: e.communityQr, sub:'加入社群' },
+            ].map((qr,qi) => (
+              <div key={qi} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
+                <span style={{ color:qr.color, fontSize:8, fontWeight:800, lineHeight:1.4, textAlign:'center' }}>{qr.label}</span>
+                {qr.img
+                  ? <img src={qr.img} alt="" crossOrigin="anonymous" style={{ width:62, height:62, objectFit:'contain', display:'block' }} />
+                  : <div style={{ width:62, height:62, background:'#f3f4f6', borderRadius:4, display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ fontSize:8, color:'#9ca3af' }}>未上傳</span></div>
+                }
+                <span style={{ fontSize:8, color:'#6b7280', textAlign:'center' }}>{qr.sub}</span>
+              </div>
+            ))}
           </div>
         </div>
+       
       )}
 
       {/* 表頭 */}
@@ -503,14 +514,21 @@ function PreviewPage({
               {/* QR + 聯繫 */}
               <div style={{ display:'flex', flexDirection:'column', gap:isL?10:6, flex:isL?1:1 }}>
                 {!isL && (
-                  <div style={{ marginTop:0 }}>
-                    {contactItems.map((item,i) => <ContactLine key={i} item={item} dotSize={5} />)}
+                <>
+                  <div style={{ marginBottom: 6 }}>
+                    {contactItems.map((item,i) => (
+                      <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:5, marginBottom:2 }}>
+                        <div style={{ width:4, height:4, borderRadius:'50%', background:'#06C755', marginTop:5, flexShrink:0 }} />
+                        <span style={{ fontSize:9, color:'#374151', lineHeight:1.5 }}>{item}</span>
+                      </div>
+                    ))}
                   </div>
-                )}
-                <div style={{ display:'flex', gap:8, marginTop:!isL?6:0 }}>
-                  <QrBox label="活動報名" color={e.accentColor} imgSrc={QR_API(SITE_URL,200)} sub="線上報名" />
-                  <QrBox label="種子社區大學" color="#06C755" imgSrc={e.communityQr} sub="加入社群" />
-                </div>
+                </>
+              )}
+              <div style={{ display:'flex', gap:8, marginTop:0 }}>
+                <QrBox label="活動報名" color={e.accentColor} imgSrc={QR_API(SITE_URL,200)} sub="線上報名" />
+                <QrBox label="種子社區大學" color="#06C755" imgSrc={e.communityQr} sub="加入社群" />
+              </div>
                 {isL && <div style={{ height: e.gapQrToContact }} />}
                 {isL && (
                   <div style={{ marginTop:'auto' }}>
