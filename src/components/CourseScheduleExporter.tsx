@@ -1145,11 +1145,18 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
         ctx.fillText(`${rocYear} 年活動`, PAD_X, cy + 10); cy += 24
 
         ctx.font = font(e.titleFontSize, 900); ctx.fillStyle = '#18120a'
-        ctx.fillText(e.titleLine1, PAD_X, cy + e.titleFontSize); cy += e.titleFontSize * 1.3
+        const title1Lines = wrapText(ctx, e.titleLine1, LEFT_W - PAD_X * 2)
+        title1Lines.forEach((line, li) => {
+          ctx.fillText(line, PAD_X, cy + e.titleFontSize + li * e.titleFontSize * 1.2)
+        })
+        cy += e.titleFontSize * 1.2 * title1Lines.length + 4
 
         ctx.font = font(e.subtitleFontSize, 900); ctx.fillStyle = e.accentColor
-        ctx.fillText(e.titleLine2, PAD_X, cy + e.subtitleFontSize); cy += e.subtitleFontSize * 1.3
-
+        const title2Lines = wrapText(ctx, e.titleLine2, LEFT_W - PAD_X * 2)
+        title2Lines.forEach((line, li) => {
+          ctx.fillText(line, PAD_X, cy + e.subtitleFontSize + li * e.subtitleFontSize * 1.2)
+        })
+        cy += e.subtitleFontSize * 1.2 * title2Lines.length + 6
         // 月份大字
         ctx.font = font(e.monthFontSize, 900); ctx.fillStyle = e.accentColor
         const monthStr = String(rocMonth)
