@@ -874,6 +874,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
   const [showMobilePanel, setShowMobilePanel] = useState(false)
   const downloadRefL = useRef<HTMLDivElement>(null)
   const downloadRefP = useRef<HTMLDivElement>(null)
+  const previewRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
 
   const set = useCallback((key: keyof EditorState, val: any) =>
@@ -990,35 +991,54 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
   const downloadVariant = async (orient: Orientation) => {
     const { year, month } = toROC(selectedMonth + '-01')
     const label = orient === 'landscape' ? '橫式' : '直式'
-    const domtoimage = (await import('dom-to-image-more')).default
+    const h2c = (await import('html2canvas')).default
     const W = orient === 'landscape' ? A4L_W : A4P_W
     const H = orient === 'landscape' ? A4L_H : A4P_H
-    const ref = orient === 'landscape' ? downloadRefL : downloadRefP
+    const SCALE = 3  // 3x = ~300dpi for A4
+
+    // 切換到目標方向，逐頁截圖
+    const prevOrientation = orientation
+    setOrientation(orient)
+    await new Promise(r => setTimeout(r, 100))
+
     const urls: string[] = []
-    const el = ref.current; if (!el) return
+    const previewEl = previewRef.current
+    if (!previewEl) return
 
-    const originalParent = el.parentElement
-    const originalNextSibling = el.nextSibling
-    const originalStyle = el.getAttribute('style') || ''
-
-    document.body.appendChild(el)
-    el.style.cssText = `position:absolute;left:-9999px;top:0;z-index:-1;width:${W}px;height:${H}px;overflow:hidden;pointer-events:none;`
+    // 暫時移除縮放，讓 PreviewPage 呈現原始尺寸
+    const wrapper = previewEl.parentElement
+    if (!wrapper) return
+    const prevTransform = wrapper.style.transform
+    const prevTransformOrigin = wrapper.style.transformOrigin
+    wrapper.style.transform = 'none'
+    wrapper.style.transformOrigin = 'top left'
+    // 確保外層 overflow 不裁切
+    const scrollContainer = wrapper.parentElement
+    const prevOverflow = scrollContainer ? scrollContainer.style.overflow : ''
+    if (scrollContainer) scrollContainer.style.overflow = 'visible'
 
     for (let pg = 0; pg < totalPages; pg++) {
       setCurrentPage(pg)
-      await new Promise(r => setTimeout(r, 600))
-      const dataUrl = await domtoimage.toPng(el, {
-        width: W, height: H, style: { transform: 'none' },
-        bgcolor: '#fdf4ea', quality: 1,
+      await new Promise(r => setTimeout(r, 400))
+      const canvas = await h2c(previewEl, {
+        scale: SCALE,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+        logging: false,
+        width: W,
+        height: H,
+        windowWidth: W,
+        windowHeight: H,
       })
-      urls.push(dataUrl)
+      urls.push(canvas.toDataURL('image/png'))
     }
 
-    el.setAttribute('style', originalStyle)
-    if (originalParent) {
-      if (originalNextSibling) originalParent.insertBefore(el, originalNextSibling)
-      else originalParent.appendChild(el)
-    }
+    // 還原
+    wrapper.style.transform = prevTransform
+    wrapper.style.transformOrigin = prevTransformOrigin
+    if (scrollContainer) scrollContainer.style.overflow = prevOverflow
+    setOrientation(prevOrientation)
 
     urls.forEach((url, i) => {
       const link = document.createElement('a')
@@ -1136,6 +1156,23 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
             }
             下載
           </button>
+          <button
+            onClick={() => {
+              const ref = orientation === 'landscape' ? downloadRefL : downloadRefP
+              const el = ref.current; if (!el) return
+              const W = orientation === 'landscape' ? A4L_W : A4P_W
+              const H = orientation === 'landscape' ? A4L_H : A4P_H
+              const win = window.open('', '_blank', `width=${W},height=${H+80}`)
+              if (!win) return
+              const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>課表預覽</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#333;display:flex;flex-direction:column;align-items:center;padding:20px;gap:16px;font-family:sans-serif;}p{color:white;font-size:13px;opacity:0.8;}@media print{body{background:white;padding:0;}p{display:none;}}</style></head><body><p>在圖片上右鍵 → 另存圖片，或 Ctrl+P 列印成 PDF</p>${el.outerHTML}</body></html>`
+              win.document.write(html)
+              win.document.close()
+            }}
+            className="flex items-center gap-1.5 bg-stone-700 hover:bg-stone-600 text-white px-3 py-2 rounded-xl text-sm font-bold transition-colors"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            <span className="hidden sm:inline">截圖預覽</span>
+          </button>
           <button onClick={reset} className="p-2 text-stone-400 hover:text-stone-600 rounded-lg hover:bg-stone-100">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
@@ -1151,7 +1188,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
         </div>
         <div className="flex-1 overflow-auto p-4 md:p-6 flex items-start justify-center bg-stone-100">
           <div className="flex flex-col items-center gap-3">
-            <div style={{ transformOrigin: 'top left' }} className="scale-[0.28] sm:scale-[0.42] md:scale-[0.52] lg:scale-[0.65] xl:scale-75 2xl:scale-90 origin-top-left">
+            <div ref={previewRef} style={{ transformOrigin: 'top left' }} className="scale-[0.28] sm:scale-[0.42] md:scale-[0.52] lg:scale-[0.65] xl:scale-75 2xl:scale-90 origin-top-left">
               <PreviewPage
                 monthCourses={monthCourses}
                 selectedMonth={selectedMonth}
