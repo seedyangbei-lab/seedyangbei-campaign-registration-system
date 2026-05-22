@@ -333,18 +333,18 @@ function DownloadPage({ data }: { data: PageData }) {
               </div>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
             {[
               { label:'活動報名', color: e.accentColor, img: QR_API(SITE_URL,200), sub:'線上報名' },
               { label:'種子社區大學', color:'#06C755', img: e.communityQr, sub:'加入社群' },
             ].map((qr,qi) => (
-              <div key={qi} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                <span style={{ color: qr.color, fontSize: 8, fontWeight: 800, lineHeight: 1.4, textAlign: 'center' }}>{qr.label}</span>
+              <div key={qi} style={{ background: '#ffffff', borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', padding: '10px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+                <span style={{ color: qr.color, fontSize: 9, fontWeight: 800, lineHeight: 1.4, textAlign: 'center' }}>{qr.label}</span>
                 {qr.img
                   ? <img src={qr.img} alt="" crossOrigin="anonymous" style={{ width: e.pQrSize, height: e.pQrSize, objectFit: 'contain', display: 'block' }} />
                   : <div style={{ width: e.pQrSize, height: e.pQrSize, background: '#f3f4f6', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 8, color: '#9ca3af' }}>未上傳</span></div>
                 }
-                <span style={{ fontSize: 8, color: '#6b7280', textAlign: 'center' }}>{qr.sub}</span>
+                <span style={{ fontSize: 9, color: '#6b7280', textAlign: 'center' }}>{qr.sub}</span>
               </div>
             ))}
           </div>
@@ -990,7 +990,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
   const downloadVariant = async (orient: Orientation) => {
     const { year, month } = toROC(selectedMonth + '-01')
     const label = orient === 'landscape' ? '橫式' : '直式'
-    const h2c = (await import('html2canvas')).default
+    const domtoimage = (await import('dom-to-image-more')).default
     const W = orient === 'landscape' ? A4L_W : A4P_W
     const H = orient === 'landscape' ? A4L_H : A4P_H
     const ref = orient === 'landscape' ? downloadRefL : downloadRefP
@@ -1007,12 +1007,11 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
     for (let pg = 0; pg < totalPages; pg++) {
       setCurrentPage(pg)
       await new Promise(r => setTimeout(r, 600))
-      const canvas = await h2c(el, {
-        scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#fdf4ea',
-        logging: false, imageTimeout: 15000, width: W, height: H,
-        x: 0, y: 0, scrollX: 0, scrollY: 0, windowWidth: W, windowHeight: H,
+      const dataUrl = await domtoimage.toPng(el, {
+        width: W, height: H, style: { transform: 'none' },
+        bgcolor: '#fdf4ea', quality: 1,
       })
-      urls.push(canvas.toDataURL('image/png'))
+      urls.push(dataUrl)
     }
 
     el.setAttribute('style', originalStyle)
