@@ -52,15 +52,13 @@ interface EditorState {
   logo3: string; logo3Name: string
   phone: string; contact: string; hours: string
   titleLine1: string; titleLine2: string
-  // 新增：字級與間距控制
-  titleFontSize: number      // 標題字級 (px)
-  subtitleFontSize: number   // 副標題字級 (px)
-  monthFontSize: number      // 月份數字字級 (px)
-  gapTitleToQr: number      // 標題到 QR 間距 (px)
-  gapQrToContact: number     // QR 到聯繫資訊間距 (px)
-  bgPositionX: number        // 底圖水平位置 0–100
-  bgPositionY: number        // 底圖垂直位置 0–100
-  // 直式專用
+  titleFontSize: number
+  subtitleFontSize: number
+  monthFontSize: number
+  gapTitleToQr: number
+  gapQrToContact: number
+  bgPositionX: number
+  bgPositionY: number
   pTitleFontSize: number
   pSubtitleFontSize: number
   pMonthFontSize: number
@@ -117,7 +115,6 @@ function ColorPicker({ value, onChange, label }: { value: string; onChange: (v: 
       if (btnRef.current && btnRef.current.contains(e.target as Node)) return
       setOpen(false)
     }
-    // 用 mousedown 在 capture phase，但排除色盤內部
     document.addEventListener('mousedown', handler, true)
     return () => document.removeEventListener('mousedown', handler, true)
   }, [open])
@@ -180,7 +177,6 @@ const GRADIENT_CSS: Record<GradientDir, string> = {
   'to-b': 'to bottom', 'to-r': 'to right', 'to-br': 'to bottom right',
 }
 
-// ── 底部分隔 SVG ──────────────────────────────────────────────────
 function FooterSeparator({ color = 'rgba(255,255,255,0.35)' }: { color?: string }) {
   return (
     <svg width="6" height="28" viewBox="0 0 6 28" fill="none" style={{ flexShrink: 0 }}>
@@ -191,7 +187,6 @@ function FooterSeparator({ color = 'rgba(255,255,255,0.35)' }: { color?: string 
   )
 }
 
-// ── 共用：聯繫資訊列 ─────────────────────────────────────────────
 function ContactLine({ item, dotSize = 6 }: { item: string; dotSize?: number }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 4 }}>
@@ -201,14 +196,13 @@ function ContactLine({ item, dotSize = 6 }: { item: string; dotSize?: number }) 
   )
 }
 
-// ── 共用資料結構 ─────────────────────────────────────────────────
 interface PageData {
   pageCourses: Course[]; rowsPerPage: number; isLandscape: boolean
   year: number; rocMonth: number; pageIdx: number; totalPages: number; editor: EditorState
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 下載專用版（全部用 absolute 定位 + inline style，html2canvas 安全）
+// 下載專用版
 // ═══════════════════════════════════════════════════════════════════
 function DownloadPage({ data }: { data: PageData }) {
   const { pageCourses, rowsPerPage, isLandscape, year, rocMonth, pageIdx, totalPages, editor: e } = data
@@ -250,15 +244,16 @@ function DownloadPage({ data }: { data: PageData }) {
     { img: e.logo3, name: e.logo3Name },
   ]
 
-  const titleFs = isLandscape ? e.titleFontSize : Math.round(e.titleFontSize * 0.7)
-  const subFs = isLandscape ? e.subtitleFontSize : Math.round(e.subtitleFontSize * 0.7)
-  const monthFs = isLandscape ? e.monthFontSize : Math.round(e.monthFontSize * 0.65)
   const qrSize = isLandscape ? 88 : 60
 
   return (
     <div style={{ position: 'relative', width: W, height: H, overflow: 'hidden', fontFamily: '"Noto Sans TC","GenSenRounded2TW",sans-serif' }}>
       <div style={{ position: 'absolute', inset: 0, background: '#fdf4ea' }} />
-{e.bgImage && <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundImage: `url(${e.bgImage})`, backgroundSize: 'cover', backgroundPosition: `${e.bgPositionX}% ${e.bgPositionY}%`, opacity: e.bgOpacity }} />}      {/* 品牌列 */}
+      {e.bgImage && (
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundImage: `url(${e.bgImage})`, backgroundSize: 'cover', backgroundPosition: `${e.bgPositionX}% ${e.bgPositionY}%`, opacity: e.bgOpacity }} />
+      )}
+
+      {/* 品牌列 */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: BRAND_H, background: e.brandBgColor, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 22px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 3, height: 14, background: e.accentColor, borderRadius: 2 }} />
@@ -277,58 +272,50 @@ function DownloadPage({ data }: { data: PageData }) {
         }
       </div>
 
-      {/* ─── 左欄內容 ─── */}
-      {isLandscape ? (
-        // 橫式：用 flex column 自動分配空間
+      {/* 左欄內容 - 橫式 */}
+      {isLandscape && (
         <div style={{ position: 'absolute', top: BRAND_H, left: 0, width: LEFT_W, height: LEFT_H, display: 'flex', flexDirection: 'column', padding: '18px 22px 16px' }}>
-          {/* 年份標籤 */}
           <div style={{ display: 'inline-flex', alignItems: 'center', background: e.accentColor, borderRadius: 6, padding: '3px 10px', marginBottom: 8, alignSelf: 'flex-start' }}>
             <span style={{ color: 'white', fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', lineHeight: 1 }}>{year} 年活動</span>
           </div>
-          {/* 標題 */}
-          <p style={{ margin: 0, fontSize: titleFs, fontWeight: 900, color: '#18120a', lineHeight: 1.25 }}>{e.titleLine1}</p>
-          <p style={{ margin: '4px 0 8px', fontSize: subFs, fontWeight: 900, color: e.accentColor, lineHeight: 1.25 }}>{e.titleLine2}</p>
+          <p style={{ margin: 0, fontSize: e.titleFontSize, fontWeight: 900, color: '#18120a', lineHeight: 1.25 }}>{e.titleLine1}</p>
+          <p style={{ margin: '4px 0 8px', fontSize: e.subtitleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.25 }}>{e.titleLine2}</p>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 8 }}>
-            <span style={{ fontSize: monthFs, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
+            <span style={{ fontSize: e.monthFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
             <span style={{ fontSize: 18, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
           </div>
           <div style={{ height: 1, background: `${e.accentColor}25`, marginBottom: 6 }} />
           <p style={{ margin: '0 0 2px', fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>各項活動皆歡迎居民們踴躍報名！</p>
-          <p style={{ margin: '0 0 0', fontSize: 11, color: '#9ca3af' }}>（數量有限，額滿為止）</p>
-
+          <p style={{ margin: 0, fontSize: 11, color: '#9ca3af' }}>（數量有限，額滿為止）</p>
           <div style={{ height: e.gapTitleToQr }} />
-
-          {/* QR */}
           <div style={{ display: 'flex', gap: 8 }}>
             {[
               { label:'活動報名', color: e.accentColor, img: QR_API(SITE_URL,200), sub:'線上報名' },
               { label:'種子社區大學', color:'#06C755', img: e.communityQr, sub:'加入社群' },
             ].map((qr,qi) => (
               <div key={qi} style={{ flex: 1, background: 'rgba(255,255,255,0.9)', borderRadius: 10, border: '1px solid rgba(0,0,0,0.06)', padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                <span style={{ color: qr.color, fontSize:9, fontWeight:800, lineHeight:1.4, display:'block', textAlign:'center' }}>{qr.label}</span>
+                <span style={{ color: qr.color, fontSize: 9, fontWeight: 800, lineHeight: 1.4, display: 'block', textAlign: 'center' }}>{qr.label}</span>
                 {qr.img
-                  ? <img src={qr.img} alt="" crossOrigin="anonymous" style={{ width: qrSize, height: qrSize, objectFit:'contain' }} />
-                  : <div style={{ width: qrSize, height: qrSize, background:'#f3f4f6', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ fontSize:9, color:'#9ca3af' }}>未上傳</span></div>
+                  ? <img src={qr.img} alt="" crossOrigin="anonymous" style={{ width: qrSize, height: qrSize, objectFit: 'contain' }} />
+                  : <div style={{ width: qrSize, height: qrSize, background: '#f3f4f6', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 9, color: '#9ca3af' }}>未上傳</span></div>
                 }
-                <span style={{ fontSize:9, color:'#6b7280', textAlign:'center' }}>{qr.sub}</span>
+                <span style={{ fontSize: 9, color: '#6b7280', textAlign: 'center' }}>{qr.sub}</span>
               </div>
             ))}
           </div>
-
           <div style={{ height: e.gapQrToContact }} />
-
-          {/* 聯繫資訊 */}
           <div style={{ marginTop: 'auto' }}>
             {contactItems.map((item, i) => <ContactLine key={i} item={item} />)}
           </div>
         </div>
-      ) : (
-        // 直式：左標題+文案，右 QR 並排
+      )}
+
+      {/* 左欄內容 - 直式 */}
+      {!isLandscape && (
         <div style={{ position: 'absolute', top: BRAND_H, left: 0, right: 0, height: LEFT_H, display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16 }}>
-          {/* 左：標題 + 月份 + 聯繫文案 */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'inline-block', background: e.accentColor, borderRadius: 4, padding: '2px 8px', marginBottom: 6 }}>
-              <span style={{ color:'white', fontSize:9, fontWeight:800, letterSpacing:'0.08em', lineHeight:1.4 }}>{year} 年活動</span>
+              <span style={{ color: 'white', fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', lineHeight: 1.4 }}>{year} 年活動</span>
             </div>
             <p style={{ margin: '0 0 1px', fontSize: e.pTitleFontSize, fontWeight: 900, color: '#18120a', lineHeight: 1.2 }}>{e.titleLine1}</p>
             <p style={{ margin: '0 0 4px', fontSize: e.pSubtitleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.2 }}>{e.titleLine2}</p>
@@ -337,37 +324,35 @@ function DownloadPage({ data }: { data: PageData }) {
               <span style={{ fontSize: 12, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
             </div>
             {contactItems.map((item, i) => (
-              <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:5, marginBottom:2 }}>
-                <div style={{ width:4, height:4, borderRadius:'50%', background:'#06C755', marginTop:5, flexShrink:0 }} />
-                <span style={{ fontSize:9, color:'#374151', lineHeight:1.5 }}>{item}</span>
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginBottom: 2 }}>
+                <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#06C755', marginTop: 5, flexShrink: 0 }} />
+                <span style={{ fontSize: 9, color: '#374151', lineHeight: 1.5 }}>{item}</span>
               </div>
             ))}
           </div>
-          {/* 右：QR 並排 */}
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
             {[
               { label:'活動報名', color: e.accentColor, img: QR_API(SITE_URL,200), sub:'線上報名' },
               { label:'種子社區大學', color:'#06C755', img: e.communityQr, sub:'加入社群' },
             ].map((qr,qi) => (
-              <div key={qi} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
-                <span style={{ color:qr.color, fontSize:8, fontWeight:800, lineHeight:1.4, textAlign:'center' }}>{qr.label}</span>
+              <div key={qi} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                <span style={{ color: qr.color, fontSize: 8, fontWeight: 800, lineHeight: 1.4, textAlign: 'center' }}>{qr.label}</span>
                 {qr.img
-                  ? <img src={qr.img} alt="" crossOrigin="anonymous" style={{ width:e.pQrSize, height:e.pQrSize, objectFit:'contain', display:'block' }} />
-                  : <div style={{ width:e.pQrSize, height:e.pQrSize, background:'#f3f4f6', borderRadius:4, display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ fontSize:8, color:'#9ca3af' }}>未上傳</span></div>
+                  ? <img src={qr.img} alt="" crossOrigin="anonymous" style={{ width: e.pQrSize, height: e.pQrSize, objectFit: 'contain', display: 'block' }} />
+                  : <div style={{ width: e.pQrSize, height: e.pQrSize, background: '#f3f4f6', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 8, color: '#9ca3af' }}>未上傳</span></div>
                 }
-                <span style={{ fontSize:8, color:'#6b7280', textAlign:'center' }}>{qr.sub}</span>
+                <span style={{ fontSize: 8, color: '#6b7280', textAlign: 'center' }}>{qr.sub}</span>
               </div>
             ))}
           </div>
         </div>
-       
       )}
 
       {/* 表頭 */}
       <div style={{ position: 'absolute', top: TABLE_TOP, left: isLandscape ? LEFT_W : 0, width: TABLE_W, height: TABLE_HEADER_H, background: e.accentColor, display: 'flex', alignItems: 'center' }}>
         {colsWithX.map(col => (
           <div key={col.label} style={{ position: 'absolute', left: col.x, width: col.w, height: TABLE_HEADER_H, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color:'white', fontWeight:700, fontSize:14, textAlign:'center' }}>{col.label}</span>
+            <span style={{ color: 'white', fontWeight: 700, fontSize: 14, textAlign: 'center' }}>{col.label}</span>
           </div>
         ))}
       </div>
@@ -377,17 +362,17 @@ function DownloadPage({ data }: { data: PageData }) {
         const { month: cm, day, weekday } = toROC(course.date)
         const rowY = TABLE_TOP + TABLE_HEADER_H + i * ROW_H
         return (
-          <div key={course.id} style={{ position:'absolute', top:rowY, left:isLandscape?LEFT_W:0, width:TABLE_W, height:ROW_H, background:i%2===0?'rgba(255,255,255,0.92)':'rgba(255,247,237,0.92)', borderBottom:`1px solid ${e.accentColor}18` }}>
+          <div key={course.id} style={{ position: 'absolute', top: rowY, left: isLandscape ? LEFT_W : 0, width: TABLE_W, height: ROW_H, background: i%2===0 ? 'rgba(255,255,255,0.92)' : 'rgba(255,247,237,0.92)', borderBottom: `1px solid ${e.accentColor}18` }}>
             {colsWithX.map((col, ci) => {
               const padV = Math.floor((ROW_H - 26) / 2)
-              const cs: React.CSSProperties = { position:'absolute', left:col.x, width:col.w, height:ROW_H, display:'flex', alignItems:'center', justifyContent:'center', padding:`${padV}px 4px`, boxSizing:'border-box' }
-              if (ci === 0) return <div key={ci} style={cs}><div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}><span style={{ fontSize:16, fontWeight:800, color:'#18120a', lineHeight:1 }}>{cm}/{day}</span><div style={{ width:26, height:26, borderRadius:'50%', background:e.accentColor, display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ color:'white', fontWeight:800, fontSize:12, lineHeight:1 }}>{weekday}</span></div></div></div>
-              if (ci === 1) return <div key={ci} style={cs}><div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:1 }}><span style={{ fontSize:13, fontWeight:700, color:'#18120a', lineHeight:1 }}>{course.time_start?.slice(0,5)}</span><span style={{ fontSize:10, color:`${e.accentColor}80`, lineHeight:1.2 }}>|</span><span style={{ fontSize:13, fontWeight:700, color:'#18120a', lineHeight:1 }}>{course.time_end?.slice(0,5)}</span></div></div>
-              if (ci === 2) return <div key={ci} style={{ ...cs, justifyContent:'center' }}><span style={{ fontSize:14, fontWeight:700, color:'#18120a', lineHeight:1.4, textAlign:'center', wordBreak:'break-word' }}>{course.title}</span></div>
-              if (ci === 3) return <div key={ci} style={cs}>{course.instructors?.name && <span style={{ color:e.accentColor, fontWeight:700, fontSize:12, lineHeight:1 }}>{course.instructors.name}</span>}</div>
-              if (ci === 4) return <div key={ci} style={{ ...cs, padding:'0 6px' }}><span style={{ fontSize:12, color:'#374151', lineHeight:1.4, textAlign:'center', wordBreak:'break-word' }}>{course.location}</span></div>
-              if (ci === 5) return <div key={ci} style={cs}><span style={{ fontSize:11, color:'#374151', lineHeight:1.4, textAlign:'center' }}>{course.suitable_age||'全年齡'}</span></div>
-              if (ci === 6) return <div key={ci} style={cs}><span style={{ fontSize:13, fontWeight:800, color:e.accentColor, lineHeight:1 }}>免費</span></div>
+              const cs: React.CSSProperties = { position: 'absolute', left: col.x, width: col.w, height: ROW_H, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: `${padV}px 4px`, boxSizing: 'border-box' }
+              if (ci === 0) return <div key={ci} style={cs}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}><span style={{ fontSize: 16, fontWeight: 800, color: '#18120a', lineHeight: 1 }}>{cm}/{day}</span><div style={{ width: 26, height: 26, borderRadius: '50%', background: e.accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'white', fontWeight: 800, fontSize: 12, lineHeight: 1 }}>{weekday}</span></div></div></div>
+              if (ci === 1) return <div key={ci} style={cs}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}><span style={{ fontSize: 13, fontWeight: 700, color: '#18120a', lineHeight: 1 }}>{course.time_start?.slice(0,5)}</span><span style={{ fontSize: 10, color: `${e.accentColor}80`, lineHeight: 1.2 }}>|</span><span style={{ fontSize: 13, fontWeight: 700, color: '#18120a', lineHeight: 1 }}>{course.time_end?.slice(0,5)}</span></div></div>
+              if (ci === 2) return <div key={ci} style={{ ...cs, justifyContent: 'center' }}><span style={{ fontSize: 14, fontWeight: 700, color: '#18120a', lineHeight: 1.4, textAlign: 'center', wordBreak: 'break-word' }}>{course.title}</span></div>
+              if (ci === 3) return <div key={ci} style={cs}>{course.instructors?.name && <span style={{ color: e.accentColor, fontWeight: 700, fontSize: 12, lineHeight: 1 }}>{course.instructors.name}</span>}</div>
+              if (ci === 4) return <div key={ci} style={{ ...cs, padding: '0 6px' }}><span style={{ fontSize: 12, color: '#374151', lineHeight: 1.4, textAlign: 'center', wordBreak: 'break-word' }}>{course.location}</span></div>
+              if (ci === 5) return <div key={ci} style={cs}><span style={{ fontSize: 11, color: '#374151', lineHeight: 1.4, textAlign: 'center' }}>{course.suitable_age||'全年齡'}</span></div>
+              if (ci === 6) return <div key={ci} style={cs}><span style={{ fontSize: 13, fontWeight: 800, color: e.accentColor, lineHeight: 1 }}>免費</span></div>
               return <div key={ci} style={cs} />
             })}
           </div>
@@ -397,19 +382,19 @@ function DownloadPage({ data }: { data: PageData }) {
       {/* 空列 */}
       {Array.from({ length: emptyRows }).map((_, i) => {
         const rowY = TABLE_TOP + TABLE_HEADER_H + (pageCourses.length + i) * ROW_H
-        return <div key={`e${i}`} style={{ position:'absolute', top:rowY, left:isLandscape?LEFT_W:0, width:TABLE_W, height:ROW_H, background:(pageCourses.length+i)%2===0?'rgba(255,255,255,0.92)':'rgba(255,247,237,0.92)', borderBottom:`1px solid ${e.accentColor}18` }} />
+        return <div key={`e${i}`} style={{ position: 'absolute', top: rowY, left: isLandscape ? LEFT_W : 0, width: TABLE_W, height: ROW_H, background: (pageCourses.length+i)%2===0 ? 'rgba(255,255,255,0.92)' : 'rgba(255,247,237,0.92)', borderBottom: `1px solid ${e.accentColor}18` }} />
       })}
 
       {/* 右欄底色 */}
-      <div style={{ position:'absolute', top:TABLE_TOP, left:isLandscape?LEFT_W:0, width:TABLE_W, height:TABLE_H, background:rightBg, zIndex:-1 }} />
+      <div style={{ position: 'absolute', top: TABLE_TOP, left: isLandscape ? LEFT_W : 0, width: TABLE_W, height: TABLE_H, background: rightBg, zIndex: -1 }} />
 
       {/* 底部 */}
-      <div style={{ position:'absolute', bottom:0, left:0, right:0, height:FOOTER_H, background:e.footerBgColor, borderTop:`2px solid ${e.accentColor}50`, display:'flex', alignItems:'center' }}>
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: FOOTER_H, background: e.footerBgColor, borderTop: `2px solid ${e.accentColor}50`, display: 'flex', alignItems: 'center' }}>
         {partners.map((p, i) => (
           <React.Fragment key={i}>
-            <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, height:'100%' }}>
-              {p.img && <img src={p.img} alt="" crossOrigin="anonymous" style={{ height:24, width:'auto', objectFit:'contain' }} />}
-              <span style={{ color:e.footerTextColor, fontSize:13, fontWeight:500 }}>{p.name}</span>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: '100%' }}>
+              {p.img && <img src={p.img} alt="" crossOrigin="anonymous" style={{ height: 24, width: 'auto', objectFit: 'contain' }} />}
+              <span style={{ color: e.footerTextColor, fontSize: 13, fontWeight: 500 }}>{p.name}</span>
             </div>
             {i < partners.length-1 && <FooterSeparator />}
           </React.Fragment>
@@ -420,7 +405,7 @@ function DownloadPage({ data }: { data: PageData }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 預覽版（CSS flex）
+// 預覽版
 // ═══════════════════════════════════════════════════════════════════
 function PreviewPage({
   monthCourses, selectedMonth, rowsPerPage, orientation, editor, pageIdx, totalPages,
@@ -458,95 +443,91 @@ function PreviewPage({
     { img: e.logo3, name: e.logo3Name },
   ]
 
-  const titleFs = isL ? e.titleFontSize : Math.round(e.titleFontSize * 0.7)
-  const subFs = isL ? e.subtitleFontSize : Math.round(e.subtitleFontSize * 0.7)
-  const monthFs = isL ? e.monthFontSize : Math.round(e.monthFontSize * 0.65)
-
   const QrBox = ({ label, color, imgSrc, sub }: { label:string; color:string; imgSrc:string; sub:string }) => (
-    <div style={{ flex:1, background:'rgba(255,255,255,0.9)', borderRadius:10, border:'1px solid rgba(0,0,0,0.06)', padding:'8px 4px', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
-      <span style={{ color:color, fontSize:isL?10:9, fontWeight:800, lineHeight:1.4 }}>{label}</span>
+    <div style={{ flex: 1, background: 'rgba(255,255,255,0.9)', borderRadius: 10, border: '1px solid rgba(0,0,0,0.06)', padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+      <span style={{ color: color, fontSize: isL?10:9, fontWeight: 800, lineHeight: 1.4 }}>{label}</span>
       {imgSrc
-      ? <img src={imgSrc} alt="" crossOrigin="anonymous" style={{ width:isL?88:e.pQrSize, height:isL?88:e.pQrSize, objectFit:'contain', display:'block' }} />
-        : <div style={{ width:isL?88:e.pQrSize, height:isL?88:e.pQrSize, background:'#f3f4f6', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ fontSize:9, color:'#9ca3af' }}>未上傳</span></div>
+        ? <img src={imgSrc} alt="" crossOrigin="anonymous" style={{ width: isL?88:e.pQrSize, height: isL?88:e.pQrSize, objectFit: 'contain', display: 'block' }} />
+        : <div style={{ width: isL?88:e.pQrSize, height: isL?88:e.pQrSize, background: '#f3f4f6', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 9, color: '#9ca3af' }}>未上傳</span></div>
       }
-      <span style={{ fontSize:isL?10:9, color:'#6b7280', textAlign:'center' }}>{sub}</span>
+      <span style={{ fontSize: isL?10:9, color: '#6b7280', textAlign: 'center' }}>{sub}</span>
     </div>
   )
 
   return (
-    <div style={{ width:W, height:H, fontFamily:'"Noto Sans TC","GenSenRounded2TW",sans-serif', position:'relative', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 20px 60px rgba(0,0,0,0.35)' }}>
-      <div style={{ position:'absolute', inset:0, background:'#fdf4ea', zIndex:0 }}>
-      {e.bgImage && <div style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', backgroundImage:`url(${e.bgImage})`, backgroundSize:'cover', backgroundPosition:`${e.bgPositionX}% ${e.bgPositionY}%`, opacity:e.bgOpacity }} />}
+    <div style={{ width: W, height: H, fontFamily: '"Noto Sans TC","GenSenRounded2TW",sans-serif', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}>
+      <div style={{ position: 'absolute', inset: 0, background: '#fdf4ea', zIndex: 0 }}>
+        {e.bgImage && (
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundImage: `url(${e.bgImage})`, backgroundSize: 'cover', backgroundPosition: `${e.bgPositionX}% ${e.bgPositionY}%`, opacity: e.bgOpacity }} />
+        )}
       </div>
-      <div style={{ position:'relative', zIndex:1, display:'flex', flexDirection:'column', height:'100%' }}>
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
         {/* 品牌列 */}
-        <div style={{ background:e.brandBgColor, height:44, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 22px', flexShrink:0 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <div style={{ width:3, height:14, background:e.accentColor, borderRadius:2 }} />
-            <span style={{ color:'white', fontWeight:800, fontSize:13, letterSpacing:'0.1em' }}>XINDIAN · YANGBEI SOCIAL HOUSING</span>
+        <div style={{ background: e.brandBgColor, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 22px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 3, height: 14, background: e.accentColor, borderRadius: 2 }} />
+            <span style={{ color: 'white', fontWeight: 800, fontSize: 13, letterSpacing: '0.1em' }}>XINDIAN · YANGBEI SOCIAL HOUSING</span>
           </div>
-          {totalPages > 1 && <span style={{ color:'rgba(255,255,255,0.6)', fontSize:12 }}>{pageIdx+1} / {totalPages}</span>}
+          {totalPages > 1 && <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>{pageIdx+1} / {totalPages}</span>}
         </div>
 
         {/* 主體 */}
-        <div style={{ flex:1, display:'flex', flexDirection:isL?'row':'column', minHeight:0 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: isL ? 'row' : 'column', minHeight: 0 }}>
           {/* 左欄 */}
-          <div style={{ width:isL?290:'100%', flexShrink:0, position:'relative', overflow:'hidden', background:leftBg, ...(isL ? { display:'flex', flexDirection:'column' } : { height:220 }) }}>
-            {gradBg && <div style={{ position:'absolute', inset:0, background:gradBg, zIndex:0 }} />}
-            {patternBg && <div style={{ position:'absolute', inset:0, backgroundImage:patternBg, backgroundRepeat:'repeat', zIndex:1 }} />}
-            {isL && <div style={{ position:'absolute', right:0, top:0, bottom:0, width:3, background:`linear-gradient(to bottom,${e.accentColor}00,${e.accentColor}60,${e.accentColor}00)`, zIndex:2 }} />}
-            {!isL && <div style={{ position:'absolute', bottom:0, left:0, right:0, height:3, background:`linear-gradient(to right,${e.accentColor}00,${e.accentColor}60,${e.accentColor}00)`, zIndex:2 }} />}
+          <div style={{ width: isL?290:'100%', flexShrink: 0, position: 'relative', overflow: 'hidden', background: leftBg, ...(isL ? { display: 'flex', flexDirection: 'column' } : { height: 220 }) }}>
+            {gradBg && <div style={{ position: 'absolute', inset: 0, background: gradBg, zIndex: 0 }} />}
+            {patternBg && <div style={{ position: 'absolute', inset: 0, backgroundImage: patternBg, backgroundRepeat: 'repeat', zIndex: 1 }} />}
+            {isL && <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 3, background: `linear-gradient(to bottom,${e.accentColor}00,${e.accentColor}60,${e.accentColor}00)`, zIndex: 2 }} />}
+            {!isL && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: `linear-gradient(to right,${e.accentColor}00,${e.accentColor}60,${e.accentColor}00)`, zIndex: 2 }} />}
 
-            {/* 橫式：flex column */}
+            {/* 橫式左欄內容 */}
             {isL && (
-              <div style={{ position:'relative', zIndex:3, padding:'18px 20px 16px', display:'flex', flexDirection:'column', flex:1 }}>
-                <div style={{ display:'inline-flex', alignItems:'center', background:e.accentColor, borderRadius:6, padding:'3px 10px', marginBottom:8, alignSelf:'flex-start' }}>
-                  <span style={{ color:'white', fontSize:10, fontWeight:800, letterSpacing:'0.1em', lineHeight:1 }}>{year} 年活動</span>
+              <div style={{ position: 'relative', zIndex: 3, padding: '18px 20px 16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', background: e.accentColor, borderRadius: 6, padding: '3px 10px', marginBottom: 8, alignSelf: 'flex-start' }}>
+                  <span style={{ color: 'white', fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', lineHeight: 1 }}>{year} 年活動</span>
                 </div>
-                <p style={{ margin:'0 0 2px', fontSize:titleFs, fontWeight:900, color:'#18120a', lineHeight:1.25 }}>{e.titleLine1}</p>
-                <p style={{ margin:'4px 0 8px', fontSize:subFs, fontWeight:900, color:e.accentColor, lineHeight:1.25 }}>{e.titleLine2}</p>
-                <div style={{ display:'flex', alignItems:'baseline', gap:4, marginBottom:8 }}>
-                  <span style={{ fontSize:monthFs, fontWeight:900, color:e.accentColor, lineHeight:1 }}>{rocMonth}</span>
-                  <span style={{ fontSize:18, fontWeight:700, color:'#6b7280' }}>月份活動表</span>
+                <p style={{ margin: '0 0 2px', fontSize: e.titleFontSize, fontWeight: 900, color: '#18120a', lineHeight: 1.25 }}>{e.titleLine1}</p>
+                <p style={{ margin: '4px 0 8px', fontSize: e.subtitleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.25 }}>{e.titleLine2}</p>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 8 }}>
+                  <span style={{ fontSize: e.monthFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
                 </div>
-                <div style={{ height:1, background:`${e.accentColor}25`, marginBottom:6 }} />
-                <p style={{ margin:'0 0 2px', fontSize:12, color:'#6b7280', lineHeight:1.5 }}>各項活動皆歡迎居民們踴躍報名！</p>
-                <p style={{ margin:0, fontSize:11, color:'#9ca3af' }}>（數量有限，額滿為止）</p>
+                <div style={{ height: 1, background: `${e.accentColor}25`, marginBottom: 6 }} />
+                <p style={{ margin: '0 0 2px', fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>各項活動皆歡迎居民們踴躍報名！</p>
+                <p style={{ margin: 0, fontSize: 11, color: '#9ca3af' }}>（數量有限，額滿為止）</p>
                 <div style={{ height: e.gapTitleToQr }} />
-                <div style={{ display:'flex', gap:8 }}>
+                <div style={{ display: 'flex', gap: 8 }}>
                   <QrBox label="活動報名" color={e.accentColor} imgSrc={QR_API(SITE_URL,200)} sub="線上報名" />
                   <QrBox label="種子社區大學" color="#06C755" imgSrc={e.communityQr} sub="加入社群" />
                 </div>
                 <div style={{ height: e.gapQrToContact }} />
-                <div style={{ marginTop:'auto' }}>
+                <div style={{ marginTop: 'auto' }}>
                   {contactItems.map((item,i) => <ContactLine key={i} item={item} dotSize={6} />)}
                 </div>
               </div>
             )}
 
-            {/* 直式：左標題+文案，右 QR 並排 — 與 DownloadPage 邏輯一致 */}
+            {/* 直式左欄內容 */}
             {!isL && (
-              <div style={{ position:'relative', zIndex:3, display:'flex', alignItems:'center', padding:'0 24px', gap:16, height:'100%', width:'100%' }}>
-                {/* 左：標題 + 月份 + 聯繫文案 */}
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ display:'inline-block', background:e.accentColor, borderRadius:4, padding:'2px 8px', marginBottom:6 }}>
-                    <span style={{ color:'white', fontSize:9, fontWeight:800, letterSpacing:'0.08em', lineHeight:1.4 }}>{year} 年活動</span>
+              <div style={{ position: 'relative', zIndex: 3, display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16, height: '100%', width: '100%' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'inline-block', background: e.accentColor, borderRadius: 4, padding: '2px 8px', marginBottom: 6 }}>
+                    <span style={{ color: 'white', fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', lineHeight: 1.4 }}>{year} 年活動</span>
                   </div>
-                 <p style={{ margin:'0 0 1px', fontSize:e.pTitleFontSize, fontWeight:900, color:'#18120a', lineHeight:1.2 }}>{e.titleLine1}</p>
-                  <p style={{ margin:'0 0 4px', fontSize:e.pSubtitleFontSize, fontWeight:900, color:e.accentColor, lineHeight:1.2 }}>{e.titleLine2}</p>
-                  <div style={{ display:'flex', alignItems:'baseline', gap:3, marginBottom:8 }}>
-                    <span style={{ fontSize:e.pMonthFontSize, fontWeight:900, color:e.accentColor, lineHeight:1 }}>{rocMonth}</span>fontWeight:900, color:e.accentColor, lineHeight:1 }}>{rocMonth}</span>
-                    <span style={{ fontSize:12, fontWeight:700, color:'#6b7280' }}>月份活動表</span>
+                  <p style={{ margin: '0 0 1px', fontSize: e.pTitleFontSize, fontWeight: 900, color: '#18120a', lineHeight: 1.2 }}>{e.titleLine1}</p>
+                  <p style={{ margin: '0 0 4px', fontSize: e.pSubtitleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.2 }}>{e.titleLine2}</p>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginBottom: 8 }}>
+                    <span style={{ fontSize: e.pMonthFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
                   </div>
                   {contactItems.map((item,i) => (
-                    <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:5, marginBottom:2 }}>
-                      <div style={{ width:4, height:4, borderRadius:'50%', background:'#06C755', marginTop:5, flexShrink:0 }} />
-                      <span style={{ fontSize:9, color:'#374151', lineHeight:1.5 }}>{item}</span>
+                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginBottom: 2 }}>
+                      <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#06C755', marginTop: 5, flexShrink: 0 }} />
+                      <span style={{ fontSize: 9, color: '#374151', lineHeight: 1.5 }}>{item}</span>
                     </div>
                   ))}
                 </div>
-                {/* 右：QR 並排 */}
-                <div style={{ display:'flex', gap:8, flexShrink:0 }}>
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                   <QrBox label="活動報名" color={e.accentColor} imgSrc={QR_API(SITE_URL,200)} sub="線上報名" />
                   <QrBox label="種子社區大學" color="#06C755" imgSrc={e.communityQr} sub="加入社群" />
                 </div>
@@ -555,38 +536,38 @@ function PreviewPage({
           </div>
 
           {/* 右側課表 */}
-          <div style={{ flex:1, display:'flex', flexDirection:'column', background:rightBg, backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)', minWidth:0, minHeight:0 }}>
-            <div style={{ display:'grid', gridTemplateColumns:gridCols, background:e.accentColor, flexShrink:0 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: rightBg, backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', minWidth: 0, minHeight: 0 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: gridCols, background: e.accentColor, flexShrink: 0 }}>
               {colDefs.map(col => (
-                <div key={col.label} style={{ display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontWeight:700, fontSize:14, padding:'13px 6px', textAlign:'center' }}>{col.label}</div>
+                <div key={col.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: 14, padding: '13px 6px', textAlign: 'center' }}>{col.label}</div>
               ))}
             </div>
-            <div style={{ flex:1, display:'flex', flexDirection:'column' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
               {pageCourses.map((course,i) => {
                 const { month:cm, day, weekday } = toROC(course.date)
                 return (
-                  <div key={course.id} style={{ display:'grid', gridTemplateColumns:gridCols, flex:1, minHeight:0, background:i%2===0?'rgba(255,255,255,0.9)':'rgba(255,247,237,0.9)', borderBottom:`1px solid ${e.accentColor}18`, alignItems:'center' }}>
-                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'8px 4px', gap:4 }}>
-                      <span style={{ fontSize:15, fontWeight:800, color:'#18120a', lineHeight:1 }}>{cm}/{day}</span>
-                      <div style={{ width:26, height:26, borderRadius:'50%', background:e.accentColor, display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ color:'white', fontWeight:800, fontSize:12, lineHeight:1 }}>{weekday}</span></div>
+                  <div key={course.id} style={{ display: 'grid', gridTemplateColumns: gridCols, flex: 1, minHeight: 0, background: i%2===0 ? 'rgba(255,255,255,0.9)' : 'rgba(255,247,237,0.9)', borderBottom: `1px solid ${e.accentColor}18`, alignItems: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', gap: 4 }}>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: '#18120a', lineHeight: 1 }}>{cm}/{day}</span>
+                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: e.accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'white', fontWeight: 800, fontSize: 12, lineHeight: 1 }}>{weekday}</span></div>
                     </div>
-                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'8px 4px', gap:1 }}>
-                      <span style={{ fontSize:13, fontWeight:700, color:'#18120a', lineHeight:1 }}>{course.time_start?.slice(0,5)}</span>
-                      <span style={{ fontSize:10, color:`${e.accentColor}80`, lineHeight:1.2 }}>|</span>
-                      <span style={{ fontSize:13, fontWeight:700, color:'#18120a', lineHeight:1 }}>{course.time_end?.slice(0,5)}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', gap: 1 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#18120a', lineHeight: 1 }}>{course.time_start?.slice(0,5)}</span>
+                      <span style={{ fontSize: 10, color: `${e.accentColor}80`, lineHeight: 1.2 }}>|</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#18120a', lineHeight: 1 }}>{course.time_end?.slice(0,5)}</span>
                     </div>
-                    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'8px 10px', textAlign:'center' }}><span style={{ fontSize:14, fontWeight:700, color:'#18120a', lineHeight:1.4 }}>{course.title}</span></div>
-                    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'8px 6px' }}>
-                      {course.instructors?.name && <span style={{ color:e.accentColor, fontWeight:700, fontSize:12, lineHeight:1 }}>{course.instructors.name}</span>}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 10px', textAlign: 'center' }}><span style={{ fontSize: 14, fontWeight: 700, color: '#18120a', lineHeight: 1.4 }}>{course.title}</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 6px' }}>
+                      {course.instructors?.name && <span style={{ color: e.accentColor, fontWeight: 700, fontSize: 12, lineHeight: 1 }}>{course.instructors.name}</span>}
                     </div>
-                    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'8px 6px', textAlign:'center' }}><span style={{ fontSize:12, color:'#374151', lineHeight:1.4 }}>{course.location}</span></div>
-                    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'8px 4px', textAlign:'center' }}><span style={{ fontSize:11, color:'#374151', lineHeight:1.4 }}>{course.suitable_age||'全年齡'}</span></div>
-                    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'8px 4px' }}><span style={{ fontSize:13, fontWeight:800, color:e.accentColor, lineHeight:1 }}>免費</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 6px', textAlign: 'center' }}><span style={{ fontSize: 12, color: '#374151', lineHeight: 1.4 }}>{course.location}</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', textAlign: 'center' }}><span style={{ fontSize: 11, color: '#374151', lineHeight: 1.4 }}>{course.suitable_age||'全年齡'}</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px' }}><span style={{ fontSize: 13, fontWeight: 800, color: e.accentColor, lineHeight: 1 }}>免費</span></div>
                   </div>
                 )
               })}
-              {Array.from({ length:emptyRows }).map((_,i) => (
-                <div key={`e${i}`} style={{ display:'grid', gridTemplateColumns:gridCols, flex:1, minHeight:0, background:(pageCourses.length+i)%2===0?'rgba(255,255,255,0.9)':'rgba(255,247,237,0.9)', borderBottom:`1px solid ${e.accentColor}18` }}>
+              {Array.from({ length: emptyRows }).map((_,i) => (
+                <div key={`e${i}`} style={{ display: 'grid', gridTemplateColumns: gridCols, flex: 1, minHeight: 0, background: (pageCourses.length+i)%2===0 ? 'rgba(255,255,255,0.9)' : 'rgba(255,247,237,0.9)', borderBottom: `1px solid ${e.accentColor}18` }}>
                   {colDefs.map((_,ci) => <div key={ci} />)}
                 </div>
               ))}
@@ -595,15 +576,276 @@ function PreviewPage({
         </div>
 
         {/* 底部 */}
-        <div style={{ background:e.footerBgColor, height:52, display:'flex', alignItems:'center', borderTop:`2px solid ${e.accentColor}50`, flexShrink:0 }}>
+        <div style={{ background: e.footerBgColor, height: 52, display: 'flex', alignItems: 'center', borderTop: `2px solid ${e.accentColor}50`, flexShrink: 0 }}>
           {partners.map((p,i) => (
             <React.Fragment key={i}>
-              <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, height:'100%' }}>
-                {p.img && <img src={p.img} alt="" crossOrigin="anonymous" style={{ height:24, width:'auto', objectFit:'contain' }} />}
-                <span style={{ color:e.footerTextColor, fontSize:13, fontWeight:500 }}>{p.name}</span>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: '100%' }}>
+                {p.img && <img src={p.img} alt="" crossOrigin="anonymous" style={{ height: 24, width: 'auto', objectFit: 'contain' }} />}
+                <span style={{ color: e.footerTextColor, fontSize: 13, fontWeight: 500 }}>{p.name}</span>
               </div>
               {i < partners.length-1 && <FooterSeparator />}
             </React.Fragment>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Panel 面板（獨立元件，避免主元件 re-render 時重建）
+// ═══════════════════════════════════════════════════════════════════
+interface PanelProps {
+  editor: EditorState
+  set: (key: keyof EditorState, val: any) => void
+  handleImgUpload: (key: keyof EditorState) => (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
+}
+
+function PanelContent({ editor, set, handleImgUpload }: PanelProps): React.ReactElement {
+  const e = editor
+  return (
+    <div className="p-4 space-y-5" onWheel={ev => ev.stopPropagation()}>
+      {/* 標題文字 */}
+      <div>
+        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">標題文字</p>
+        <div className="space-y-2">
+          {(['titleLine1','titleLine2'] as const).map((key, i) => (
+            <div key={key}>
+              <label className="block text-xs text-stone-400 mb-1">第 {i+1} 行</label>
+              <input value={e[key]} onChange={ev => set(key, ev.target.value)}
+                className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 字級控制 */}
+      <div>
+        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">字級大小</p>
+        <div className="flex gap-1 p-1 bg-stone-100 rounded-lg mb-3">
+          {(['橫式','直式'] as const).map((t, ti) => (
+            <button key={t} onClick={() => set('_layoutTab' as any, ti)}
+              className={`flex-1 py-1 rounded-md text-xs font-medium transition-colors ${(e as any)._layoutTab === ti || (!('_layoutTab' in e) && ti === 0) ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400'}`}>
+              {t}
+            </button>
+          ))}
+        </div>
+        {((e as any)._layoutTab ?? 0) === 0 ? (
+          <>
+            {[
+              { key:'titleFontSize' as const, label:'主標題', val:e.titleFontSize, min:16, max:48 },
+              { key:'subtitleFontSize' as const, label:'副標題', val:e.subtitleFontSize, min:14, max:40 },
+              { key:'monthFontSize' as const, label:'月份數字', val:e.monthFontSize, min:32, max:96 },
+            ].map(f => (
+              <div key={f.key} className="mb-3">
+                <label className="text-xs text-stone-400">{f.label} {f.val}px</label>
+                <input type="range" min={f.min} max={f.max} step="1" value={f.val}
+                  onChange={ev => set(f.key, parseInt(ev.target.value))} className="w-full accent-orange-500" />
+              </div>
+            ))}
+          </>
+        ) : (
+          <>
+            {[
+              { key:'pTitleFontSize' as const, label:'主標題', val:e.pTitleFontSize, min:12, max:36 },
+              { key:'pSubtitleFontSize' as const, label:'副標題', val:e.pSubtitleFontSize, min:10, max:30 },
+              { key:'pMonthFontSize' as const, label:'月份數字', val:e.pMonthFontSize, min:20, max:60 },
+              { key:'pQrSize' as const, label:'QR 大小', val:e.pQrSize, min:50, max:120 },
+            ].map(f => (
+              <div key={f.key} className="mb-3">
+                <label className="text-xs text-stone-400">{f.label} {f.val}px</label>
+                <input type="range" min={f.min} max={f.max} step="1" value={f.val}
+                  onChange={ev => set(f.key, parseInt(ev.target.value))} className="w-full accent-orange-500" />
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+
+      {/* 間距控制 */}
+      <div>
+        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">間距</p>
+        {[
+          { key:'gapTitleToQr' as const, label:'標題 → QR Code', val:e.gapTitleToQr, min:0, max:60 },
+          { key:'gapQrToContact' as const, label:'QR Code → 聯繫資訊', val:e.gapQrToContact, min:0, max:40 },
+        ].map(f => (
+          <div key={f.key} className="mb-3">
+            <label className="text-xs text-stone-400">{f.label} {f.val}px</label>
+            <input type="range" min={f.min} max={f.max} step="2" value={f.val}
+              onChange={ev => set(f.key, parseInt(ev.target.value))} className="w-full accent-orange-500" />
+          </div>
+        ))}
+      </div>
+
+      {/* 顏色 */}
+      <div>
+        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">顏色</p>
+        <div className="space-y-2.5">
+          {[
+            { key:'accentColor', label:'主題色' }, { key:'brandBgColor', label:'頂部品牌列底色' },
+            { key:'leftBgColor', label:'左欄底色' }, { key:'rightBgColor', label:'右欄底色' },
+            { key:'footerBgColor', label:'底部背景' }, { key:'footerTextColor', label:'底部文字' },
+          ].map(f => (
+            <ColorPicker key={f.key} label={f.label} value={(e as any)[f.key]}
+              onChange={v => set(f.key as keyof EditorState, v)} />
+          ))}
+        </div>
+      </div>
+
+      {/* 透明度 */}
+      <div>
+        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">欄位透明度</p>
+        {[
+          { key:'leftBgOpacity' as const, label:'左欄', val:e.leftBgOpacity },
+          { key:'rightBgOpacity' as const, label:'右欄', val:e.rightBgOpacity },
+        ].map(f => (
+          <div key={f.key} className="mb-3">
+            <label className="text-xs text-stone-400">{f.label} {Math.round(f.val*100)}%</label>
+            <input type="range" min="0" max="1" step="0.05" value={f.val}
+              onChange={ev => set(f.key, parseFloat(ev.target.value))} className="w-full accent-orange-500" />
+          </div>
+        ))}
+      </div>
+
+      {/* Pattern */}
+      <div>
+        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">左欄 Pattern</p>
+        <select value={e.patternType} onChange={ev => set('patternType', ev.target.value as PatternType)}
+          className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300 mb-3">
+          <option value="none">無</option><option value="dots">圓點</option><option value="lines">斜線</option>
+          <option value="grid">網格</option><option value="waves">波浪</option><option value="diamonds">菱形</option>
+        </select>
+        {e.patternType !== 'none' && (
+          <div>
+            <label className="text-xs text-stone-400">濃度 {Math.round(e.patternOpacity*100)}%</label>
+            <input type="range" min="0.02" max="0.5" step="0.02" value={e.patternOpacity}
+              onChange={ev => set('patternOpacity', parseFloat(ev.target.value))} className="w-full accent-orange-500" />
+          </div>
+        )}
+      </div>
+
+      {/* 漸層 */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">左欄漸層</p>
+          <button onClick={() => set('gradientEnabled', !e.gradientEnabled)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${e.gradientEnabled?'bg-orange-500':'bg-stone-200'}`}>
+            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${e.gradientEnabled?'translate-x-5':'translate-x-0.5'}`} />
+          </button>
+        </div>
+        {e.gradientEnabled && (
+          <div className="space-y-2.5">
+            <div className="flex gap-2">
+              {([['to-b','上到下'],['to-r','左到右'],['to-br','斜角']] as const).map(([v,label]) => (
+                <button key={v} onClick={() => set('gradientDir', v)}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${e.gradientDir===v?'bg-orange-500 text-white border-orange-500':'text-stone-600 border-stone-200 hover:border-orange-300'}`}>{label}</button>
+              ))}
+            </div>
+            <ColorPicker label="起始色" value={e.gradientFrom} onChange={v => set('gradientFrom', v)} />
+            <ColorPicker label="結束色" value={e.gradientTo} onChange={v => set('gradientTo', v)} />
+            <div>
+              <label className="text-xs text-stone-400">強度 {Math.round(e.gradientOpacity*100)}%</label>
+              <input type="range" min="0.1" max="1" step="0.05" value={e.gradientOpacity}
+                onChange={ev => set('gradientOpacity', parseFloat(ev.target.value))} className="w-full accent-orange-500" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 底圖 */}
+      <div>
+        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">底圖</p>
+        <label className="flex items-center gap-2 w-full border border-dashed border-stone-300 hover:border-orange-300 rounded-lg py-2.5 px-3 cursor-pointer transition-colors text-sm text-stone-500">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          {e.bgImage ? '已上傳，點擊替換' : '上傳底圖'}
+          <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload('bgImage')} />
+        </label>
+        {e.bgImage && <img src={e.bgImage} alt="" className="mt-2 w-full h-14 object-cover rounded-lg border border-stone-200" />}
+        <div className="mt-2.5">
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs text-stone-400">透明度 {Math.round(e.bgOpacity*100)}%</label>
+            {e.bgImage && <button onClick={() => set('bgImage','')} className="text-xs text-red-400 hover:text-red-600">移除</button>}
+          </div>
+          <input type="range" min="0" max="1" step="0.05" value={e.bgOpacity}
+            onChange={ev => set('bgOpacity', parseFloat(ev.target.value))} className="w-full accent-orange-500" />
+        </div>
+        <div className="mt-2.5 space-y-2">
+          <div>
+            <label className="text-xs text-stone-400">水平位置 {e.bgPositionX}%</label>
+            <input type="range" min="0" max="100" step="5" value={e.bgPositionX}
+              onChange={ev => set('bgPositionX', parseInt(ev.target.value))} className="w-full accent-orange-500" />
+          </div>
+          <div>
+            <label className="text-xs text-stone-400">垂直位置 {e.bgPositionY}%</label>
+            <input type="range" min="0" max="100" step="5" value={e.bgPositionY}
+              onChange={ev => set('bgPositionY', parseInt(ev.target.value))} className="w-full accent-orange-500" />
+          </div>
+        </div>
+      </div>
+
+      {/* QR */}
+      <div>
+        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">QR Code</p>
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs text-stone-400 mb-1.5">報名 QR（自動生成）</p>
+            <img src={QR_API(SITE_URL, 80)} alt="" className="w-14 h-14 rounded-lg border border-stone-200" />
+          </div>
+          <div>
+            <p className="text-xs text-stone-400 mb-1.5">社群 QR Code</p>
+            <label className="flex items-center gap-2 border border-dashed border-stone-300 hover:border-orange-300 rounded-lg py-2 px-3 cursor-pointer transition-colors text-xs text-stone-500">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              {e.communityQr ? '已上傳，點擊替換' : '上傳社群QR'}
+              <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload('communityQr')} />
+            </label>
+            {e.communityQr && <img src={e.communityQr} alt="" className="mt-2 w-14 h-14 object-contain rounded-lg border border-stone-200" />}
+          </div>
+        </div>
+      </div>
+
+      {/* 夥伴 */}
+      <div>
+        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">合作夥伴</p>
+        <div className="space-y-4">
+          {([
+            { logoKey:'logo1' as const, nameKey:'logo1Name' as const, label:'1' },
+            { logoKey:'logo2' as const, nameKey:'logo2Name' as const, label:'2' },
+            { logoKey:'logo3' as const, nameKey:'logo3Name' as const, label:'3' },
+          ]).map(f => (
+            <div key={f.logoKey}>
+              <label className="block text-xs text-stone-400 mb-1">夥伴 {f.label}</label>
+              <input value={e[f.nameKey]} onChange={ev => set(f.nameKey, ev.target.value)}
+                className="w-full border border-stone-200 rounded-lg px-3 py-1.5 text-xs text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300 mb-1.5" />
+              <label className="flex items-center gap-1.5 border border-dashed border-stone-300 hover:border-orange-300 rounded-lg py-1.5 px-3 cursor-pointer transition-colors text-xs text-stone-500">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                {e[f.logoKey] ? '已上傳' : '上傳 Logo'}
+                <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload(f.logoKey)} />
+              </label>
+              {e[f.logoKey] && (
+                <div className="mt-1.5 flex items-center gap-2">
+                  <img src={e[f.logoKey]} alt="" className="h-7 w-auto object-contain rounded border border-stone-200" />
+                  <button onClick={() => set(f.logoKey,'')} className="text-xs text-red-400 hover:text-red-600">移除</button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 聯繫 */}
+      <div>
+        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">聯繫資訊</p>
+        <div className="space-y-2">
+          {[
+            { key:'phone' as const, label:'電話' },
+            { key:'contact' as const, label:'聯絡窗口' },
+            { key:'hours' as const, label:'服務時間' },
+          ].map(f => (
+            <div key={f.key}>
+              <label className="block text-xs text-stone-400 mb-1">{f.label}</label>
+              <input value={e[f.key]} onChange={ev => set(f.key, ev.target.value)}
+                className="w-full border border-stone-200 rounded-lg px-3 py-1.5 text-xs text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300" />
+            </div>
           ))}
         </div>
       </div>
@@ -675,7 +917,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       monthFontSize: parseInt(ss.schedule_month_font_size||'') || 64,
       gapTitleToQr: parseInt(ss.schedule_gap_title_qr||'') || 16,
       gapQrToContact: parseInt(ss.schedule_gap_qr_contact||'') || 12,
-     bgPositionX: parseInt(ss.schedule_bg_pos_x||'') || 50,
+      bgPositionX: parseInt(ss.schedule_bg_pos_x||'') || 50,
       bgPositionY: parseInt(ss.schedule_bg_pos_y||'') || 50,
       pTitleFontSize: parseInt(ss.schedule_p_title_fs||'') || 22,
       pSubtitleFontSize: parseInt(ss.schedule_p_sub_fs||'') || 18,
@@ -684,7 +926,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
     }))
   }
 
-  const handleImgUpload = (key: keyof EditorState) => async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImgUpload = useCallback((key: keyof EditorState) => async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
     const ext = file.name.split('.').pop()
     const path = `schedule/${key}_${Date.now()}.${ext}`
@@ -697,7 +939,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       reader.onload = ev => set(key, ev.target?.result as string)
       reader.readAsDataURL(file)
     }
-  }
+  }, [set, supabase])
 
   const saveSettings = async () => {
     setSaving(true)
@@ -736,13 +978,6 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
     })
     setSaving(false); setSavedOk(true); setTimeout(() => setSavedOk(false), 2500)
   }
-  
-    await fetch('/api/admin/save-schedule-settings', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ settings: Object.entries(toSave).map(([key,value]) => ({ key, value })) }),
-    })
-    setSaving(false); setSavedOk(true); setTimeout(() => setSavedOk(false), 2500)
-  }
 
   const downloadVariant = async (orient: Orientation) => {
     const { year, month } = toROC(selectedMonth + '-01')
@@ -767,7 +1002,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       const canvas = await h2c(el, {
         scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#fdf4ea',
         logging: false, imageTimeout: 15000, width: W, height: H,
-        x:0, y:0, scrollX:0, scrollY:0, windowWidth: W, windowHeight: H,
+        x: 0, y: 0, scrollX: 0, scrollY: 0, windowWidth: W, windowHeight: H,
       })
       urls.push(canvas.toDataURL('image/png'))
     }
@@ -795,255 +1030,6 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
   }
 
   const reset = () => { setStep('idle'); setCurrentPage(0) }
-
-  function PanelContent(): React.ReactElement {
-    return (
-      <div className="p-4 space-y-5" onWheel={e => e.stopPropagation()}>
-        {/* 標題文字 */}
-        <div>
-          <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">標題文字</p>
-          <div className="space-y-2">
-            {(['titleLine1','titleLine2'] as const).map((key, i) => (
-              <div key={key}>
-                <label className="block text-xs text-stone-400 mb-1">第 {i+1} 行</label>
-                <input value={editor[key]} onChange={e => set(key, e.target.value)}
-                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300" />
-              </div>
-            ))}
-          </div>
-        </div>
-
-       {/* 字級控制 */}
-        <div>
-          <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">字級大小</p>
-          <div className="flex gap-1 p-1 bg-stone-100 rounded-lg mb-3">
-            {(['橫式','直式'] as const).map((t, ti) => (
-              <button key={t} onClick={() => set('_layoutTab' as any, ti)}
-                className={`flex-1 py-1 rounded-md text-xs font-medium transition-colors ${(editor as any)._layoutTab === ti || (!( '_layoutTab' in editor) && ti === 0) ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400'}`}>
-                {t}
-              </button>
-            ))}
-          </div>
-          {((editor as any)._layoutTab ?? 0) === 0 ? (
-            <>
-              {[
-                { key:'titleFontSize' as const, label:'主標題', val:editor.titleFontSize, min:16, max:48 },
-                { key:'subtitleFontSize' as const, label:'副標題', val:editor.subtitleFontSize, min:14, max:40 },
-                { key:'monthFontSize' as const, label:'月份數字', val:editor.monthFontSize, min:32, max:96 },
-              ].map(f => (
-                <div key={f.key} className="mb-3">
-                  <label className="text-xs text-stone-400">{f.label} {f.val}px</label>
-                  <input type="range" min={f.min} max={f.max} step="1" value={f.val}
-                    onChange={e => set(f.key, parseInt(e.target.value))} className="w-full accent-orange-500" />
-                </div>
-              ))}
-            </>
-          ) : (
-            <>
-              {[
-                { key:'pTitleFontSize' as const, label:'主標題', val:editor.pTitleFontSize, min:12, max:36 },
-                { key:'pSubtitleFontSize' as const, label:'副標題', val:editor.pSubtitleFontSize, min:10, max:30 },
-                { key:'pMonthFontSize' as const, label:'月份數字', val:editor.pMonthFontSize, min:20, max:60 },
-                { key:'pQrSize' as const, label:'QR 大小', val:editor.pQrSize, min:50, max:120 },
-              ].map(f => (
-                <div key={f.key} className="mb-3">
-                  <label className="text-xs text-stone-400">{f.label} {f.val}px</label>
-                  <input type="range" min={f.min} max={f.max} step="1" value={f.val}
-                    onChange={e => set(f.key, parseInt(e.target.value))} className="w-full accent-orange-500" />
-                </div>
-              ))}
-            </>
-          )}
-        </div>
-
-        {/* 間距控制 */}
-        <div>
-          <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">間距</p>
-          {[
-            { key:'gapTitleToQr' as const, label:'標題 → QR Code', val:editor.gapTitleToQr, min:0, max:60 },
-            { key:'gapQrToContact' as const, label:'QR Code → 聯繫資訊', val:editor.gapQrToContact, min:0, max:40 },
-          ].map(f => (
-            <div key={f.key} className="mb-3">
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs text-stone-400">{f.label} {f.val}px</label>
-              </div>
-              <input type="range" min={f.min} max={f.max} step="2" value={f.val}
-                onChange={e => set(f.key, parseInt(e.target.value))}
-                className="w-full accent-orange-500" />
-            </div>
-          ))}
-        </div>
-
-        {/* 顏色 */}
-        <div>
-          <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">顏色</p>
-          <div className="space-y-2.5">
-            {[
-              { key:'accentColor', label:'主題色' }, { key:'brandBgColor', label:'頂部品牌列底色' },
-              { key:'leftBgColor', label:'左欄底色' }, { key:'rightBgColor', label:'右欄底色' },
-              { key:'footerBgColor', label:'底部背景' }, { key:'footerTextColor', label:'底部文字' },
-            ].map(f => (
-              <ColorPicker key={f.key} label={f.label} value={(editor as any)[f.key]}
-                onChange={v => set(f.key as keyof EditorState, v)} />
-            ))}
-          </div>
-        </div>
-
-        {/* 透明度 */}
-        <div>
-          <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">欄位透明度</p>
-          {[
-            { key:'leftBgOpacity' as const, label:'左欄', val:editor.leftBgOpacity },
-            { key:'rightBgOpacity' as const, label:'右欄', val:editor.rightBgOpacity },
-          ].map(f => (
-            <div key={f.key} className="mb-3">
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs text-stone-400">{f.label} {Math.round(f.val*100)}%</label>
-              </div>
-              <input type="range" min="0" max="1" step="0.05" value={f.val}
-                onChange={e => set(f.key, parseFloat(e.target.value))}
-                className="w-full accent-orange-500" />
-            </div>
-          ))}
-        </div>
-
-        {/* Pattern */}
-        <div>
-          <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">左欄 Pattern</p>
-          <select value={editor.patternType} onChange={e => set('patternType', e.target.value as PatternType)}
-            className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300 mb-3">
-            <option value="none">無</option><option value="dots">圓點</option><option value="lines">斜線</option>
-            <option value="grid">網格</option><option value="waves">波浪</option><option value="diamonds">菱形</option>
-          </select>
-          {editor.patternType !== 'none' && (
-            <div>
-              <div className="flex justify-between mb-1"><label className="text-xs text-stone-400">濃度 {Math.round(editor.patternOpacity*100)}%</label></div>
-              <input type="range" min="0.02" max="0.5" step="0.02" value={editor.patternOpacity}
-                onChange={e => set('patternOpacity', parseFloat(e.target.value))} className="w-full accent-orange-500" />
-            </div>
-          )}
-        </div>
-
-        {/* 漸層 */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">左欄漸層</p>
-            <button onClick={() => set('gradientEnabled', !editor.gradientEnabled)}
-              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${editor.gradientEnabled?'bg-orange-500':'bg-stone-200'}`}>
-              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${editor.gradientEnabled?'translate-x-5':'translate-x-0.5'}`} />
-            </button>
-          </div>
-          {editor.gradientEnabled && (
-            <div className="space-y-2.5">
-              <div className="flex gap-2">
-                {([['to-b','上到下'],['to-r','左到右'],['to-br','斜角']] as const).map(([v,label]) => (
-                  <button key={v} onClick={() => set('gradientDir', v)}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${editor.gradientDir===v?'bg-orange-500 text-white border-orange-500':'text-stone-600 border-stone-200 hover:border-orange-300'}`}>{label}</button>
-                ))}
-              </div>
-              <ColorPicker label="起始色" value={editor.gradientFrom} onChange={v => set('gradientFrom', v)} />
-              <ColorPicker label="結束色" value={editor.gradientTo} onChange={v => set('gradientTo', v)} />
-              <div>
-                <div className="flex justify-between mb-1"><label className="text-xs text-stone-400">強度 {Math.round(editor.gradientOpacity*100)}%</label></div>
-                <input type="range" min="0.1" max="1" step="0.05" value={editor.gradientOpacity}
-                  onChange={e => set('gradientOpacity', parseFloat(e.target.value))} className="w-full accent-orange-500" />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 底圖 */}
-        <div>
-          <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">底圖</p>
-          <label className="flex items-center gap-2 w-full border border-dashed border-stone-300 hover:border-orange-300 rounded-lg py-2.5 px-3 cursor-pointer transition-colors text-sm text-stone-500">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            {editor.bgImage ? '已上傳，點擊替換' : '上傳底圖'}
-            <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload('bgImage')} />
-          </label>
-          {editor.bgImage && <img src={editor.bgImage} alt="" className="mt-2 w-full h-14 object-cover rounded-lg border border-stone-200" />}
-          <div className="mt-2.5">
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs text-stone-400">透明度 {Math.round(editor.bgOpacity*100)}%</label>
-              {editor.bgImage && <button onClick={() => set('bgImage','')} className="text-xs text-red-400 hover:text-red-600">移除</button>}
-            </div>
-            <input type="range" min="0" max="1" step="0.05" value={editor.bgOpacity}
-              onChange={e => set('bgOpacity', parseFloat(e.target.value))} className="w-full accent-orange-500" />
-        </div>
-        <div className="mt-2.5 space-y-2">
-          <div>
-            <div className="flex justify-between mb-1"><label className="text-xs text-stone-400">水平位置 {editor.bgPositionX}%</label></div>
-            <input type="range" min="0" max="100" step="5" value={editor.bgPositionX}
-              onChange={e => set('bgPositionX', parseInt(e.target.value))} className="w-full accent-orange-500" />
-          </div>
-          <div>
-            <div className="flex justify-between mb-1"><label className="text-xs text-stone-400">垂直位置 {editor.bgPositionY}%</label></div>
-            <input type="range" min="0" max="100" step="5" value={editor.bgPositionY}
-              onChange={e => set('bgPositionY', parseInt(e.target.value))} className="w-full accent-orange-500" />
-          </div>
-        </div>
-      </div>
-
-        {/* QR */}
-        <div>
-          <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">QR Code</p>
-          <div className="space-y-3">
-            <div>
-              <p className="text-xs text-stone-400 mb-1.5">報名 QR（自動生成）</p>
-              <img src={QR_API(SITE_URL, 80)} alt="" className="w-14 h-14 rounded-lg border border-stone-200" />
-            </div>
-            <div>
-              <p className="text-xs text-stone-400 mb-1.5">社群 QR Code</p>
-              <label className="flex items-center gap-2 border border-dashed border-stone-300 hover:border-orange-300 rounded-lg py-2 px-3 cursor-pointer transition-colors text-xs text-stone-500">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                {editor.communityQr ? '已上傳，點擊替換' : '上傳社群QR'}
-                <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload('communityQr')} />
-              </label>
-              {editor.communityQr && <img src={editor.communityQr} alt="" className="mt-2 w-14 h-14 object-contain rounded-lg border border-stone-200" />}
-            </div>
-          </div>
-        </div>
-
-        {/* 夥伴 */}
-        <div>
-          <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">合作夥伴</p>
-          <div className="space-y-4">
-            {([{ logoKey:'logo1' as const, nameKey:'logo1Name' as const, label:'1' },{ logoKey:'logo2' as const, nameKey:'logo2Name' as const, label:'2' },{ logoKey:'logo3' as const, nameKey:'logo3Name' as const, label:'3' }]).map(f => (
-              <div key={f.logoKey}>
-                <label className="block text-xs text-stone-400 mb-1">夥伴 {f.label}</label>
-                <input value={editor[f.nameKey]} onChange={e => set(f.nameKey, e.target.value)}
-                  className="w-full border border-stone-200 rounded-lg px-3 py-1.5 text-xs text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300 mb-1.5" />
-                <label className="flex items-center gap-1.5 border border-dashed border-stone-300 hover:border-orange-300 rounded-lg py-1.5 px-3 cursor-pointer transition-colors text-xs text-stone-500">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  {editor[f.logoKey] ? '已上傳' : '上傳 Logo'}
-                  <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload(f.logoKey)} />
-                </label>
-                {editor[f.logoKey] && (
-                  <div className="mt-1.5 flex items-center gap-2">
-                    <img src={editor[f.logoKey]} alt="" className="h-7 w-auto object-contain rounded border border-stone-200" />
-                    <button onClick={() => set(f.logoKey,'')} className="text-xs text-red-400 hover:text-red-600">移除</button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 聯繫 */}
-        <div>
-          <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">聯繫資訊</p>
-          <div className="space-y-2">
-            {[{ key:'phone' as const, label:'電話' },{ key:'contact' as const, label:'聯絡窗口' },{ key:'hours' as const, label:'服務時間' }].map(f => (
-              <div key={f.key}>
-                <label className="block text-xs text-stone-400 mb-1">{f.label}</label>
-                <input value={editor[f.key]} onChange={e => set(f.key, e.target.value)}
-                  className="w-full border border-stone-200 rounded-lg px-3 py-1.5 text-xs text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   if (step === 'idle') return (
     <button onClick={() => setStep('config')} className="flex items-center gap-2 bg-white border border-stone-200 hover:bg-stone-50 text-stone-700 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
@@ -1107,10 +1093,14 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
         </button>
         <div className="w-px h-4 bg-stone-200 hidden sm:block" />
         <span className="font-bold text-stone-700 text-sm hidden sm:inline">課表編輯器</span>
-        {totalPages > 1 && <div className="flex gap-1">{Array.from({ length: totalPages }).map((_,i) => (
-          <button key={i} onClick={() => setCurrentPage(i)}
-            className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${currentPage===i?'bg-orange-500 text-white':'bg-stone-100 text-stone-500 hover:bg-stone-200'}`}>{i+1}</button>
-        ))}</div>}
+        {totalPages > 1 && (
+          <div className="flex gap-1">
+            {Array.from({ length: totalPages }).map((_,i) => (
+              <button key={i} onClick={() => setCurrentPage(i)}
+                className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${currentPage===i?'bg-orange-500 text-white':'bg-stone-100 text-stone-500 hover:bg-stone-200'}`}>{i+1}</button>
+            ))}
+          </div>
+        )}
         <div className="flex rounded-xl overflow-hidden border border-stone-200">
           {([['landscape','橫'] as const, ['portrait','直'] as const]).map(([v,label]) => (
             <button key={v} onClick={() => setOrientation(v)}
@@ -1123,15 +1113,20 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
         <div className="ml-auto flex items-center gap-2">
           <button onClick={saveSettings} disabled={saving}
             className="flex items-center gap-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 px-3 py-2 rounded-xl text-sm font-medium border border-stone-200 transition-colors">
-            {saving ? <div className="w-3.5 h-3.5 border-2 border-stone-400/40 border-t-stone-500 rounded-full animate-spin" />
-              : savedOk ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>}
+            {saving
+              ? <div className="w-3.5 h-3.5 border-2 border-stone-400/40 border-t-stone-500 rounded-full animate-spin" />
+              : savedOk
+                ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+            }
             <span className="hidden sm:inline">{savedOk ? '已儲存' : '儲存'}</span>
           </button>
           <button onClick={() => setShowDownloadModal(true)} disabled={downloading}
             className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white px-3 py-2 rounded-xl text-sm font-bold transition-colors">
-            {downloading ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}
+            {downloading
+              ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            }
             下載
           </button>
           <button onClick={reset} className="p-2 text-stone-400 hover:text-stone-600 rounded-lg hover:bg-stone-100">
@@ -1140,32 +1135,48 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
         </div>
       </div>
 
-<div className="flex flex-1" style={{ overflow: 'hidden', minHeight: 0 }}>
-  <div
-    className="hidden md:block w-64 bg-white border-r border-stone-200"
-    style={{ overflowY: 'auto', flex: '0 0 256px', alignSelf: 'stretch' }}
-    onWheel={e => { e.stopPropagation(); }}
-  ><PanelContent /></div>
-  <div className="flex-1 overflow-auto p-4 md:p-6 flex items-start justify-center bg-stone-100">
+      <div className="flex flex-1" style={{ overflow: 'hidden', minHeight: 0 }}>
+        <div
+          className="hidden md:block w-64 bg-white border-r border-stone-200"
+          style={{ overflowY: 'auto', flex: '0 0 256px', alignSelf: 'stretch' }}
+        >
+          <PanelContent editor={editor} set={set} handleImgUpload={handleImgUpload} />
+        </div>
+        <div className="flex-1 overflow-auto p-4 md:p-6 flex items-start justify-center bg-stone-100">
           <div className="flex flex-col items-center gap-3">
-            <div style={{ transformOrigin:'top left' }} className="scale-[0.28] sm:scale-[0.42] md:scale-[0.52] lg:scale-[0.65] xl:scale-75 2xl:scale-90 origin-top-left">
-              <PreviewPage monthCourses={monthCourses} selectedMonth={selectedMonth} rowsPerPage={rowsPerPage}
-                orientation={orientation} editor={editor} pageIdx={currentPage} totalPages={totalPages} />
+            <div style={{ transformOrigin: 'top left' }} className="scale-[0.28] sm:scale-[0.42] md:scale-[0.52] lg:scale-[0.65] xl:scale-75 2xl:scale-90 origin-top-left">
+              <PreviewPage
+                monthCourses={monthCourses}
+                selectedMonth={selectedMonth}
+                rowsPerPage={rowsPerPage}
+                orientation={orientation}
+                editor={editor}
+                pageIdx={currentPage}
+                totalPages={totalPages}
+              />
             </div>
           </div>
         </div>
       </div>
 
       {/* 隱藏下載 DOM */}
-      <div ref={downloadRefL} style={{ position:'fixed', left:'-99999px', top:0, pointerEvents:'none', zIndex:-1, width:A4L_W, height:A4L_H, overflow:'hidden' }}>
-        <DownloadPage data={{ pageCourses: monthCourses.slice(currentPage*rowsPerPage, (currentPage+1)*rowsPerPage),
-          rowsPerPage, isLandscape:true, year: selectedMonth ? toROC(selectedMonth+'-01').year : 115,
-          rocMonth: selectedMonth ? toROC(selectedMonth+'-01').month : 1, pageIdx:currentPage, totalPages, editor }} />
+      <div ref={downloadRefL} style={{ position: 'fixed', left: '-99999px', top: 0, pointerEvents: 'none', zIndex: -1, width: A4L_W, height: A4L_H, overflow: 'hidden' }}>
+        <DownloadPage data={{
+          pageCourses: monthCourses.slice(currentPage*rowsPerPage, (currentPage+1)*rowsPerPage),
+          rowsPerPage, isLandscape: true,
+          year: selectedMonth ? toROC(selectedMonth+'-01').year : 115,
+          rocMonth: selectedMonth ? toROC(selectedMonth+'-01').month : 1,
+          pageIdx: currentPage, totalPages, editor,
+        }} />
       </div>
-      <div ref={downloadRefP} style={{ position:'fixed', left:'-99999px', top:A4L_H+40, pointerEvents:'none', zIndex:-1, width:A4P_W, height:A4P_H, overflow:'hidden' }}>
-        <DownloadPage data={{ pageCourses: monthCourses.slice(currentPage*rowsPerPage, (currentPage+1)*rowsPerPage),
-          rowsPerPage, isLandscape:false, year: selectedMonth ? toROC(selectedMonth+'-01').year : 115,
-          rocMonth: selectedMonth ? toROC(selectedMonth+'-01').month : 1, pageIdx:currentPage, totalPages, editor }} />
+      <div ref={downloadRefP} style={{ position: 'fixed', left: '-99999px', top: A4L_H+40, pointerEvents: 'none', zIndex: -1, width: A4P_W, height: A4P_H, overflow: 'hidden' }}>
+        <DownloadPage data={{
+          pageCourses: monthCourses.slice(currentPage*rowsPerPage, (currentPage+1)*rowsPerPage),
+          rowsPerPage, isLandscape: false,
+          year: selectedMonth ? toROC(selectedMonth+'-01').year : 115,
+          rocMonth: selectedMonth ? toROC(selectedMonth+'-01').month : 1,
+          pageIdx: currentPage, totalPages, editor,
+        }} />
       </div>
 
       {/* 手機抽屜 */}
@@ -1179,14 +1190,14 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-            <PanelContent />
+            <PanelContent editor={editor} set={set} handleImgUpload={handleImgUpload} />
           </div>
         </div>
       )}
 
       {/* 下載彈窗 */}
       {showDownloadModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4" style={{ zIndex:9999 }}
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4" style={{ zIndex: 9999 }}
           onClick={e => { if (e.target === e.currentTarget) setShowDownloadModal(false) }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
             <h3 className="font-bold text-stone-800 text-lg">選擇下載格式</h3>
@@ -1198,7 +1209,10 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
               ].map(opt => (
                 <button key={opt.mode} onClick={() => handleDownload(opt.mode)}
                   className="w-full flex items-center justify-between bg-stone-50 hover:bg-orange-50 hover:border-orange-300 border border-stone-200 rounded-xl px-4 py-3.5 transition-colors text-left">
-                  <div><p className="font-semibold text-stone-800 text-sm">{opt.label}</p><p className="text-stone-400 text-xs mt-0.5">{opt.desc}</p></div>
+                  <div>
+                    <p className="font-semibold text-stone-800 text-sm">{opt.label}</p>
+                    <p className="text-stone-400 text-xs mt-0.5">{opt.desc}</p>
+                  </div>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 </button>
               ))}
