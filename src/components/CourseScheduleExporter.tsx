@@ -93,8 +93,9 @@ function ColorPicker({ value, onChange, label }: { value: string; onChange: (v: 
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
-    const t = setTimeout(() => document.addEventListener('mousedown', handler), 80)
-    return () => { clearTimeout(t); document.removeEventListener('mousedown', handler) }
+    // 用 pointerup 而非 mousedown，避免色盤拖曳中途觸發關閉
+    const t = setTimeout(() => document.addEventListener('pointerup', handler), 200)
+    return () => { clearTimeout(t); document.removeEventListener('pointerup', handler) }
   }, [open])
 
   return (
@@ -229,8 +230,7 @@ function DownloadPage({ data }: { data: PageData }) {
   return (
     <div style={{ position: 'relative', width: W, height: H, overflow: 'hidden', fontFamily: '"Noto Sans TC","GenSenRounded2TW",sans-serif' }}>
       <div style={{ position: 'absolute', inset: 0, background: '#fdf4ea' }} />
-      {e.bgImage && <img src={e.bgImage} alt="" crossOrigin="anonymous" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: e.bgOpacity }} />}
-
+{e.bgImage && <img src={e.bgImage} alt="" crossOrigin="anonymous" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: e.bgOpacity }} />}
       {/* 品牌列 */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: BRAND_H, background: e.brandBgColor, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 22px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -300,14 +300,14 @@ function DownloadPage({ data }: { data: PageData }) {
       ) : (
         // 直式：flex row 水平排列，垂直置中
         <div style={{ position: 'absolute', top: BRAND_H, left: 0, right: 0, height: LEFT_H, display: 'flex', alignItems: 'center', padding: '0 20px', gap: 20 }}>
-          {/* 左：標題區 */}
-          <div style={{ flex: '0 0 auto', textAlign: 'center' }}>
+           {/* 左：標題區 */}
+          <div style={{ flex: '0 0 auto', textAlign: 'left' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', background: e.accentColor, borderRadius: 6, padding: '3px 10px', marginBottom: 4 }}>
               <span style={{ color:'white', fontSize:10, fontWeight:800, letterSpacing:'0.1em', lineHeight:1 }}>{year} 年活動</span>
             </div>
-            <p style={{ margin: '0 0 2px', fontSize: titleFs * 0.7, fontWeight: 900, color: '#18120a', lineHeight: 1.2, textAlign: 'center' }}>{e.titleLine1}</p>
-            <p style={{ margin: '0 0 4px', fontSize: subFs * 0.7, fontWeight: 900, color: e.accentColor, lineHeight: 1.2, textAlign: 'center' }}>{e.titleLine2}</p>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, justifyContent: 'center' }}>
+            <p style={{ margin: '0 0 2px', fontSize: titleFs * 0.7, fontWeight: 900, color: '#18120a', lineHeight: 1.2 }}>{e.titleLine1}</p>
+            <p style={{ margin: '0 0 4px', fontSize: subFs * 0.7, fontWeight: 900, color: e.accentColor, lineHeight: 1.2 }}>{e.titleLine2}</p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
               <span style={{ fontSize: monthFs * 0.6, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
             </div>
@@ -352,7 +352,7 @@ function DownloadPage({ data }: { data: PageData }) {
         return (
           <div key={course.id} style={{ position:'absolute', top:rowY, left:isLandscape?LEFT_W:0, width:TABLE_W, height:ROW_H, background:i%2===0?'rgba(255,255,255,0.92)':'rgba(255,247,237,0.92)', borderBottom:`1px solid ${e.accentColor}18` }}>
             {colsWithX.map((col, ci) => {
-              const cs: React.CSSProperties = { position:'absolute', left:col.x, width:col.w, height:ROW_H, display:'flex', alignItems:'center', justifyContent:'center', padding:'0 4px' }
+              const cs: React.CSSProperties = { position:'absolute', left:col.x, width:col.w, height:ROW_H, display:'flex', alignItems:'center', justifyContent:'center', padding:'0 4px', boxSizing:'border-box' }
               if (ci === 0) return <div key={ci} style={cs}><div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}><span style={{ fontSize:16, fontWeight:800, color:'#18120a', lineHeight:1 }}>{cm}/{day}</span><div style={{ width:26, height:26, borderRadius:'50%', background:e.accentColor, display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ color:'white', fontWeight:800, fontSize:12, lineHeight:1 }}>{weekday}</span></div></div></div>
               if (ci === 1) return <div key={ci} style={cs}><div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:1 }}><span style={{ fontSize:13, fontWeight:700, color:'#18120a', lineHeight:1 }}>{course.time_start?.slice(0,5)}</span><span style={{ fontSize:10, color:`${e.accentColor}80`, lineHeight:1.2 }}>|</span><span style={{ fontSize:13, fontWeight:700, color:'#18120a', lineHeight:1 }}>{course.time_end?.slice(0,5)}</span></div></div>
               if (ci === 2) return <div key={ci} style={{ ...cs, justifyContent:'center' }}><span style={{ fontSize:14, fontWeight:700, color:'#18120a', lineHeight:1.4, textAlign:'center', wordBreak:'break-word' }}>{course.title}</span></div>
@@ -450,7 +450,7 @@ function PreviewPage({
   return (
     <div style={{ width:W, height:H, fontFamily:'"Noto Sans TC","GenSenRounded2TW",sans-serif', position:'relative', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 20px 60px rgba(0,0,0,0.35)' }}>
       <div style={{ position:'absolute', inset:0, background:'#fdf4ea', zIndex:0 }}>
-        {e.bgImage && <img src={e.bgImage} alt="" crossOrigin="anonymous" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:e.bgOpacity }} />}
+{e.bgImage && <img src={e.bgImage} alt="" crossOrigin="anonymous" style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', objectFit:'cover', opacity:e.bgOpacity }} />}
       </div>
       <div style={{ position:'relative', zIndex:1, display:'flex', flexDirection:'column', height:'100%' }}>
         {/* 品牌列 */}
@@ -695,7 +695,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
 
     for (let pg = 0; pg < totalPages; pg++) {
       setCurrentPage(pg)
-      await new Promise(r => setTimeout(r, 350))
+      await new Promise(r => setTimeout(r, 600))
       const canvas = await h2c(el, {
         scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#fdf4ea',
         logging: false, imageTimeout: 15000, width: W, height: H,
@@ -1037,7 +1037,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="hidden md:block w-64 bg-white border-r border-stone-200 overflow-y-auto flex-shrink-0"><PanelContent /></div>
+        <div className="hidden md:block w-64 bg-white border-r border-stone-200 flex-shrink-0" style={{ overflowY: 'scroll', height: '100%' }}><PanelContent /></div>
         <div className="flex-1 overflow-auto p-4 md:p-6 flex items-start justify-center bg-stone-100">
           <div className="flex flex-col items-center gap-3">
             <div style={{ transformOrigin:'top left' }} className="scale-[0.28] sm:scale-[0.42] md:scale-[0.52] lg:scale-[0.65] xl:scale-75 2xl:scale-90 origin-top-left">
