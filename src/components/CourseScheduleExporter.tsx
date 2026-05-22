@@ -987,67 +987,56 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
     })
     setSaving(false); setSavedOk(true); setTimeout(() => setSavedOk(false), 2500)
   }
-
   const downloadVariant = async (orient: Orientation) => {
     const { year, month } = toROC(selectedMonth + '-01')
     const label = orient === 'landscape' ? '橫式' : '直式'
-    const h2c = (await import('html2canvas')).default
+    const { toPng } = await import('html-to-image')
     const W = orient === 'landscape' ? A4L_W : A4P_W
     const H = orient === 'landscape' ? A4L_H : A4P_H
-    const SCALE = 3  // 3x = ~300dpi for A4
+    const ref = orient === 'landscape' ? downloadRefL : downloadRefP
+    const el = ref.current; if (!el) return
 
-    // 切換到目標方向，逐頁截圖
-    const prevOrientation = orientation
-    setOrientation(orient)
-    await new Promise(r => setTimeout(r, 100))
+    // 把元素移到 body 最上層，確保截圖不受父層 overflow 裁切
+    const originalParent = el.parentElement
+    const originalNextSibling = el.nextSibling
+    const originalStyle = el.getAttribute('style') || ''
+
+    document.body.appendChild(el)
+    el.style.cssText = `position:fixed;left:0;top:0;z-index:99999;width:${W}px;height:${H}px;overflow:hidden;pointer-events:none;opacity:1;`
 
     const urls: string[] = []
-    const previewEl = previewRef.current
-    if (!previewEl) return
-
-    // 暫時移除縮放，讓 PreviewPage 呈現原始尺寸
-    const wrapper = previewEl.parentElement
-    if (!wrapper) return
-    const prevTransform = wrapper.style.transform
-    const prevTransformOrigin = wrapper.style.transformOrigin
-    wrapper.style.transform = 'none'
-    wrapper.style.transformOrigin = 'top left'
-    // 確保外層 overflow 不裁切
-    const scrollContainer = wrapper.parentElement
-    const prevOverflow = scrollContainer ? scrollContainer.style.overflow : ''
-    if (scrollContainer) scrollContainer.style.overflow = 'visible'
-
     for (let pg = 0; pg < totalPages; pg++) {
       setCurrentPage(pg)
-      await new Promise(r => setTimeout(r, 400))
-      const canvas = await h2c(previewEl, {
-        scale: SCALE,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: null,
-        logging: false,
+      // 等 React re-render + 圖片載入
+      await new Promise(r => setTimeout(r, 800))
+      const dataUrl = await toPng(el, {
         width: W,
         height: H,
-        windowWidth: W,
-        windowHeight: H,
+        pixelRatio: 2.5,   // 約 227dpi，印刷夠用；改 3 可達 ~270dpi
+        backgroundColor: '#fdf4ea',
+        skipFonts: false,
+        cacheBust: true,
       })
-      urls.push(canvas.toDataURL('image/png'))
+      urls.push(dataUrl)
     }
 
-    // 還原
-    wrapper.style.transform = prevTransform
-    wrapper.style.transformOrigin = prevTransformOrigin
-    if (scrollContainer) scrollContainer.style.overflow = prevOverflow
-    setOrientation(prevOrientation)
+    // 還原位置
+    el.setAttribute('style', originalStyle)
+    if (originalParent) {
+      if (originalNextSibling) originalParent.insertBefore(el, originalNextSibling)
+      else originalParent.appendChild(el)
+    }
 
     urls.forEach((url, i) => {
       const link = document.createElement('a')
       link.download = totalPages > 1
         ? `央北社宅_${year}年${month}月活動表_${label}_第${i+1}頁.png`
         : `央北社宅_${year}年${month}月活動表_${label}.png`
-      link.href = url; link.click()
+      link.href = url
+      link.click()
     })
   }
+
 
   const handleDownload = async (mode: 'landscape'|'portrait'|'both') => {
     setShowDownloadModal(false); setDownloading(true)
