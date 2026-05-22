@@ -1008,7 +1008,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
     for (let pg = 0; pg < totalPages; pg++) {
       setCurrentPage(pg)
       // 等 React re-render + 圖片載入
-      await new Promise(r => setTimeout(r, 800))
+      await new Promise(r => setTimeout(r, 400))
       const dataUrl = await toPng(el, {
         width: W,
         height: H,
