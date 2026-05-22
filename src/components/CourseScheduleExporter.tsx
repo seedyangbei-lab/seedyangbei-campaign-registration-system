@@ -1001,8 +1001,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
     const originalNextSibling = el.nextSibling
     const originalStyle = el.getAttribute('style') || ''
 
-    document.body.appendChild(el)
-    el.style.cssText = `position:fixed;left:0;top:0;z-index:99999;width:${W}px;height:${H}px;overflow:hidden;pointer-events:none;opacity:1;`
+    el.style.opacity = '1'
+    el.style.zIndex = '99999'
 
     const urls: string[] = []
     for (let pg = 0; pg < totalPages; pg++) {
@@ -1020,12 +1020,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       urls.push(dataUrl)
     }
 
-    // 還原位置
-    el.setAttribute('style', originalStyle)
-    if (originalParent) {
-      if (originalNextSibling) originalParent.insertBefore(el, originalNextSibling)
-      else originalParent.appendChild(el)
-    }
+    el.style.opacity = '0'
+    el.style.zIndex = '-999'
 
     urls.forEach((url, i) => {
       const link = document.createElement('a')
@@ -1193,7 +1189,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       </div>
 
       {/* 隱藏下載 DOM */}
-      <div ref={downloadRefL} style={{ position: 'fixed', left: '-99999px', top: 0, pointerEvents: 'none', zIndex: -1, width: A4L_W, height: A4L_H, overflow: 'hidden' }}>
+        <div ref={downloadRefL} style={{ position: 'fixed', left: 0, top: 0, pointerEvents: 'none', zIndex: -999, width: A4L_W, height: A4L_H, overflow: 'hidden', opacity: 0 }}>
         <DownloadPage data={{
           pageCourses: monthCourses.slice(currentPage*rowsPerPage, (currentPage+1)*rowsPerPage),
           rowsPerPage, isLandscape: true,
@@ -1202,7 +1198,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
           pageIdx: currentPage, totalPages, editor,
         }} />
       </div>
-      <div ref={downloadRefP} style={{ position: 'fixed', left: '-99999px', top: A4L_H+40, pointerEvents: 'none', zIndex: -1, width: A4P_W, height: A4P_H, overflow: 'hidden' }}>
+        <div ref={downloadRefP} style={{ position: 'fixed', left: 0, top: 0, pointerEvents: 'none', zIndex: -999, width: A4P_W, height: A4P_H, overflow: 'hidden', opacity: 0 }}>
         <DownloadPage data={{
           pageCourses: monthCourses.slice(currentPage*rowsPerPage, (currentPage+1)*rowsPerPage),
           rowsPerPage, isLandscape: false,
