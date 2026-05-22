@@ -213,7 +213,7 @@ function DownloadPage({ data }: { data: PageData }) {
   const BRAND_H = 44
   const FOOTER_H = 52
   const LEFT_W = isLandscape ? 290 : W
-  const LEFT_H = isLandscape ? H - BRAND_H - FOOTER_H : Math.round(H * 0.22)
+  const LEFT_H = isLandscape ? H - BRAND_H - FOOTER_H : Math.round(H * e.pLeftWidth / 100)
   const TABLE_TOP = isLandscape ? BRAND_H : BRAND_H + LEFT_H
   const TABLE_W = isLandscape ? W - LEFT_W : W
   const TABLE_H = H - TABLE_TOP - FOOTER_H
@@ -250,9 +250,9 @@ function DownloadPage({ data }: { data: PageData }) {
 
   return (
     <div style={{ position: 'relative', width: W, height: H, overflow: 'hidden', fontFamily: '"Noto Sans TC","GenSenRounded2TW",sans-serif' }}>
-     <div style={{ position: 'absolute', inset: 0, background: '#fdf4ea' }} />
+      <div style={{ position: 'absolute', inset: 0, background: '#fdf4ea' }} />
       {e.bgImage && (
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: H, backgroundImage: `url(${e.bgImage})`, backgroundSize: 'cover', backgroundPosition: `${e.bgPositionX}% ${e.bgPositionY}%`, opacity: e.bgOpacity }} />
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundImage: `url(${e.bgImage})`, backgroundSize: 'cover', backgroundPosition: `${e.bgPositionX}% ${e.bgPositionY}%`, opacity: e.bgOpacity }} />
       )}
 
       {/* 品牌列 */}
@@ -286,7 +286,8 @@ function DownloadPage({ data }: { data: PageData }) {
             <span style={{ fontSize: e.monthFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
             <span style={{ fontSize: 18, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
           </div>
-          <p style={{ margin: '0 0 2px', fontSize: 12,color: '#6b7280', lineHeight: 1.5 }}>各項活動皆歡迎居民們踴躍報名！</p>
+          <div style={{ height: 1, background: `${e.accentColor}25`, marginBottom: 6 }} />
+          <p style={{ margin: '0 0 2px', fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>各項活動皆歡迎居民們踴躍報名！</p>
           <p style={{ margin: 0, fontSize: 11, color: '#9ca3af' }}>（數量有限，額滿為止）</p>
           <div style={{ height: e.gapTitleToQr }} />
           <div style={{ display: 'flex', gap: 8 }}>
@@ -295,7 +296,7 @@ function DownloadPage({ data }: { data: PageData }) {
               { label:'種子社區大學', color:'#06C755', img: e.communityQr, sub:'加入社群' },
             ].map((qr,qi) => (
               <div key={qi} style={{ flex: 1, background: 'rgba(255,255,255,0.9)', borderRadius: 10, border: '1px solid rgba(0,0,0,0.06)', padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                <span style={{ color: qr.color, fontSize: 11, fontWeight: 800, lineHeight: 1.4, display: 'block', textAlign: 'center' }}>{qr.label}</span>
+                <span style={{ color: qr.color, fontSize: 9, fontWeight: 800, lineHeight: 1.4, display: 'block', textAlign: 'center' }}>{qr.label}</span>
                 {qr.img
                   ? <img src={qr.img} alt="" crossOrigin="anonymous" style={{ width: qrSize, height: qrSize, objectFit: 'contain' }} />
                   : <div style={{ width: qrSize, height: qrSize, background: '#f3f4f6', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 9, color: '#9ca3af' }}>未上傳</span></div>
@@ -331,7 +332,7 @@ function DownloadPage({ data }: { data: PageData }) {
               </div>
             ))}
           </div>
-         <div style={{ display: 'flex', gap: 12, flexShrink: 0, paddingLeft: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
             {[
               { label:'活動報名', color: e.accentColor, img: QR_API(SITE_URL,200), sub:'線上報名' },
               { label:'種子社區大學', color:'#06C755', img: e.communityQr, sub:'加入社群' },
@@ -367,7 +368,8 @@ function DownloadPage({ data }: { data: PageData }) {
             {colsWithX.map((col, ci) => {
               const padV = Math.floor((ROW_H - 26) / 2)
               const cs: React.CSSProperties = { position: 'absolute', left: col.x, width: col.w, height: ROW_H, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: `${padV}px 4px`, boxSizing: 'border-box' }
-              if (ci === 0) return <div key={ci} style={cs}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}><span style={{ fontSize: 16, fontWeight: 800, color: '#18120a', lineHeight: 1 }}>{cm}/{day}</span><span style={{ fontWeight: 800, fontSize: 12, color: e.accentColor, lineHeight: 1 }}>{weekday}</span>
+              if (ci === 0) return <div key={ci} style={cs}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}><span style={{ fontSize: 16, fontWeight: 800, color: '#18120a', lineHeight: 1 }}>{cm}/{day}</span><span style={{ fontWeight: 800, fontSize: 12, color: e.accentColor, lineHeight: 1 }}>{weekday}</span></div></div>
+              if (ci === 1) return <div key={ci} style={cs}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}><span style={{ fontSize: 13, fontWeight: 700, color: '#18120a', lineHeight: 1 }}>{course.time_start?.slice(0,5)}</span><span style={{ fontSize: 10, color: `${e.accentColor}80`, lineHeight: 1.2 }}>|</span><span style={{ fontSize: 13, fontWeight: 700, color: '#18120a', lineHeight: 1 }}>{course.time_end?.slice(0,5)}</span></div></div>
               if (ci === 2) return <div key={ci} style={{ ...cs, justifyContent: 'center' }}><span style={{ fontSize: 14, fontWeight: 700, color: '#18120a', lineHeight: 1.4, textAlign: 'center', wordBreak: 'break-word' }}>{course.title}</span></div>
               if (ci === 3) return <div key={ci} style={cs}>{course.instructors?.name && <span style={{ color: e.accentColor, fontWeight: 700, fontSize: 12, lineHeight: 1 }}>{course.instructors.name}</span>}</div>
               if (ci === 4) return <div key={ci} style={{ ...cs, padding: '0 6px' }}><span style={{ fontSize: 12, color: '#374151', lineHeight: 1.4, textAlign: 'center', wordBreak: 'break-word' }}>{course.location}</span></div>
@@ -389,7 +391,8 @@ function DownloadPage({ data }: { data: PageData }) {
       <div style={{ position: 'absolute', top: TABLE_TOP, left: isLandscape ? LEFT_W : 0, width: TABLE_W, height: TABLE_H, background: rightBg, zIndex: -1 }} />
 
       {/* 底部 */}
-<div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: FOOTER_H, background: e.footerBgColor, display: 'flex', alignItems: 'center' }}>        {partners.map((p, i) => (
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: FOOTER_H, background: e.footerBgColor, display: 'flex', alignItems: 'center' }}>
+        {partners.map((p, i) => (
           <React.Fragment key={i}>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: '100%' }}>
               {p.img && <img src={p.img} alt="" crossOrigin="anonymous" style={{ height: 24, width: 'auto', objectFit: 'contain' }} />}
@@ -443,8 +446,8 @@ function PreviewPage({
   ]
 
   const QrBox = ({ label, color, imgSrc, sub }: { label:string; color:string; imgSrc:string; sub:string }) => (
-        <div style={{ flex: 1, background: 'rgba(255,255,255,0.9)', borderRadius: 10, border: '1px solid rgba(0,0,0,0.06)', padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-        <span style={{ color: color, fontSize: isL?12:10, fontWeight: 800, lineHeight: 1.4 }}>{label}</span>
+    <div style={{ flex: 1, background: 'rgba(255,255,255,0.9)', borderRadius: 10, border: '1px solid rgba(0,0,0,0.06)', padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+      <span style={{ color: color, fontSize: isL?10:9, fontWeight: 800, lineHeight: 1.4 }}>{label}</span>
       {imgSrc
         ? <img src={imgSrc} alt="" crossOrigin="anonymous" style={{ width: isL?88:e.pQrSize, height: isL?88:e.pQrSize, objectFit: 'contain', display: 'block' }} />
         : <div style={{ width: isL?88:e.pQrSize, height: isL?88:e.pQrSize, background: '#f3f4f6', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 9, color: '#9ca3af' }}>未上傳</span></div>
@@ -473,7 +476,7 @@ function PreviewPage({
         {/* 主體 */}
         <div style={{ flex: 1, display: 'flex', flexDirection: isL ? 'row' : 'column', minHeight: 0 }}>
           {/* 左欄 */}
-          <div style={{ { width: isL?290:'100%', flexShrink: 0, position: 'relative', overflow: 'hidden', background: leftBg, ...(isL ? { display: 'flex', flexDirection: 'column' } : { height: `${e.pLeftWidth}%`, maxHeight: Math.round(H * 0.32) }) }}>
+          <div style={{ width: isL?290:'100%', flexShrink: 0, position: 'relative', overflow: 'hidden', background: leftBg, ...(isL ? { display: 'flex', flexDirection: 'column' } : { height: `${e.pLeftWidth}%` }) }}>
             {gradBg && <div style={{ position: 'absolute', inset: 0, background: gradBg, zIndex: 0 }} />}
             {patternBg && <div style={{ position: 'absolute', inset: 0, backgroundImage: patternBg, backgroundRepeat: 'repeat', zIndex: 1 }} />}
             {isL && <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 3, background: `linear-gradient(to bottom,${e.accentColor}00,${e.accentColor}60,${e.accentColor}00)`, zIndex: 2 }} />}
@@ -487,15 +490,15 @@ function PreviewPage({
                 </div>
                 <p style={{ margin: '0 0 2px', fontSize: e.titleFontSize, fontWeight: 900, color: '#18120a', lineHeight: 1.25 }}>{e.titleLine1}</p>
                 <p style={{ margin: '4px 0 8px', fontSize: e.subtitleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.25 }}>{e.titleLine2}</p>
-                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 16 }}>
                   <span style={{ fontSize: e.monthFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
                   <span style={{ fontSize: 18, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
                 </div>
-                <p style={{ margin: '0 0 2px', fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>各項活動皆歡迎居民們踴躍報名！</p>
+                <div style={{ height: 1, background: `${e.accentColor}25`, marginBottom: 6 }} />
                 <p style={{ margin: '0 0 2px', fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>各項活動皆歡迎居民們踴躍報名！</p>
                 <p style={{ margin: 0, fontSize: 11, color: '#9ca3af' }}>（數量有限，額滿為止）</p>
                 <div style={{ height: e.gapTitleToQr }} />
-                <div style={{ display: 'flex', gap: 12, flexShrink: 0, paddingLeft: 8 }}>
+                <div style={{ display: 'flex', gap: 8 }}>
                   <QrBox label="活動報名" color={e.accentColor} imgSrc={QR_API(SITE_URL,200)} sub="線上報名" />
                   <QrBox label="種子社區大學" color="#06C755" imgSrc={e.communityQr} sub="加入社群" />
                 </div>
@@ -548,7 +551,7 @@ function PreviewPage({
                   <div key={course.id} style={{ display: 'grid', gridTemplateColumns: gridCols, flex: 1, minHeight: 0, background: i%2===0 ? 'rgba(255,255,255,0.9)' : 'rgba(255,247,237,0.9)', borderBottom: `1px solid ${e.accentColor}18`, alignItems: 'center' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', gap: 4 }}>
                       <span style={{ fontSize: 15, fontWeight: 800, color: '#18120a', lineHeight: 1 }}>{cm}/{day}</span>
-                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: e.accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'white', fontWeight: 800, fontSize: 12, lineHeight: 1 }}>{weekday}</span></div>
+                      <span style={{ fontWeight: 800, fontSize: 12, color: e.accentColor, lineHeight: 1 }}>{weekday}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', gap: 1 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: '#18120a', lineHeight: 1 }}>{course.time_start?.slice(0,5)}</span>
@@ -575,7 +578,7 @@ function PreviewPage({
         </div>
 
         {/* 底部 */}
-    <div style={{ background: e.footerBgColor, height: 52, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+        <div style={{ background: e.footerBgColor, height: 52, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
           {partners.map((p,i) => (
             <React.Fragment key={i}>
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: '100%' }}>
