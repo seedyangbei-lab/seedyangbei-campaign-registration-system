@@ -1261,7 +1261,16 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
             ctx.fillStyle = '#f3f4f6'
             ctx.fillRect(qrX + (qrBoxW-qrSize)/2, qrStartY + 18, qrSize, qrSize)
             ctx.font = font(8, 400); ctx.fillStyle = '#9ca3af'; ctx.textAlign = 'center'
-            ctx.fillText('未上傳', qrX + qrBoxW/2, qrStartY + 18 + qrSize/2
+            ctx.fillText('未上傳', qrX + qrBoxW/2, qrStartY + 18 + qrSize/2 + 4)
+            ctx.textAlign = 'left'
+          }
+          ctx.font = font(9, 400); ctx.fillStyle = '#6b7280'; ctx.textAlign = 'center'
+          ctx.fillText(qr.sub, qrX + qrBoxW/2, qrStartY + 18 + qrSize + 13)
+          ctx.textAlign = 'left'
+          qrX += qrBoxW + 8
+        }
+      }
+    }
 
     await drawLeftContent()
 
