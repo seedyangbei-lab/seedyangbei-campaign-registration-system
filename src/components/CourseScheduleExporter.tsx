@@ -502,14 +502,21 @@ function PreviewPage({
 
               {/* QR + 聯繫 */}
               <div style={{ display:'flex', flexDirection:'column', gap:isL?10:6, flex:isL?1:1 }}>
-                <div style={{ display:'flex', gap:8 }}>
-                  <QrBox label="活動報名" color={e.accentColor} imgSrc={QR_API(SITE_URL,200)} sub={isL?'線上報名':'線上報名'} />
+                {!isL && (
+                  <div style={{ marginTop:0 }}>
+                    {contactItems.map((item,i) => <ContactLine key={i} item={item} dotSize={5} />)}
+                  </div>
+                )}
+                <div style={{ display:'flex', gap:8, marginTop:!isL?6:0 }}>
+                  <QrBox label="活動報名" color={e.accentColor} imgSrc={QR_API(SITE_URL,200)} sub="線上報名" />
                   <QrBox label="種子社區大學" color="#06C755" imgSrc={e.communityQr} sub="加入社群" />
                 </div>
                 {isL && <div style={{ height: e.gapQrToContact }} />}
-                <div style={{ marginTop:isL?'auto':0 }}>
-                  {contactItems.map((item,i) => <ContactLine key={i} item={item} dotSize={isL?6:5} />)}
-                </div>
+                {isL && (
+                  <div style={{ marginTop:'auto' }}>
+                    {contactItems.map((item,i) => <ContactLine key={i} item={item} dotSize={6} />)}
+                  </div>
+                )}
               </div>
             </div>
           </div>
