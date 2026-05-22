@@ -871,7 +871,6 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
   const [saving, setSaving] = useState(false)
   const [savedOk, setSavedOk] = useState(false)
   const [downloadPage, setDownloadPage] = useState(0)
-  const [downloadPage, setDownloadPage] = useState(0)
   const [editor, setEditor] = useState<EditorState>(DEFAULT_EDITOR)
   const [showMobilePanel, setShowMobilePanel] = useState(false)
   const downloadRefL = useRef<HTMLDivElement>(null)
