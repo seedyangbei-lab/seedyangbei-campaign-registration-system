@@ -66,7 +66,6 @@ interface EditorState {
   pMonthFontSize: number
   pQrSize: number
 }
-}
 
 const DEFAULT_EDITOR: EditorState = {
   bgImage: '', bgOpacity: 0.22,
