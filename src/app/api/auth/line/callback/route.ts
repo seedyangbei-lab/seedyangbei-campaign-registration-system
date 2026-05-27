@@ -106,12 +106,22 @@ export async function GET(request: NextRequest) {
       email,
     }))
 
-    let redirectUrl = state || `${new URL(request.url).origin}/register`
-    // state 可能被 LINE double-encoded，先嘗試 decode
-    try {
-      const decoded = decodeURIComponent(redirectUrl)
-      if (decoded.startsWith('http')) redirectUrl = decoded
-    } catch {}
+   let redirectUrl = `${new URL(request.url).origin}/register`
+    if (state) {
+      try {
+        const decoded = decodeURIComponent(state)
+        const parsed = JSON.parse(decoded)
+        if (parsed.url && parsed.url.startsWith('http')) {
+          redirectUrl = parsed.url
+        }
+      } catch {
+        // state 不是 JSON，當作純 URL（舊格式相容）
+        try {
+          const decoded = decodeURIComponent(state)
+          if (decoded.startsWith('http')) redirectUrl = decoded
+        } catch {}
+      }
+    }
     const separator = redirectUrl.includes('?') ? '&' : '?'
     return NextResponse.redirect(
       new URL(`${redirectUrl}${separator}line_user=${userInfo}`, request.url)
