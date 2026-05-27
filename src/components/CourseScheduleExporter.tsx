@@ -981,8 +981,10 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       schedule_p_gap_month: String(editor.pGapMonth),
     }
 
+    const raw = localStorage.getItem('admin_auth')
+    const token = raw ? JSON.parse(raw).token : ''
     await fetch('/api/admin/save-schedule-settings', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
       body: JSON.stringify({ settings: Object.entries(toSave).map(([key,value]) => ({ key, value })) }),
     })
     setSaving(false); setSavedOk(true); setTimeout(() => setSavedOk(false), 2500)
