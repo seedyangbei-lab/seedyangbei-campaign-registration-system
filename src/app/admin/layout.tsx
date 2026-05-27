@@ -9,8 +9,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (pathname === '/admin/login') return
-    const auth = localStorage.getItem('admin_auth')
-    if (auth !== 'true') router.replace('/admin/login')
+    try {
+      const raw = localStorage.getItem('admin_auth')
+      if (!raw) { router.replace('/admin/login'); return }
+      const auth = JSON.parse(raw)
+      if (!auth.token || !auth.expires || Date.now() > auth.expires) {
+        localStorage.removeItem('admin_auth')
+        router.replace('/admin/login')
+      }
+    } catch {
+      localStorage.removeItem('admin_auth')
+      router.replace('/admin/login')
+    }
   }, [pathname])
 
   if (pathname === '/admin/login') return <>{children}</>
