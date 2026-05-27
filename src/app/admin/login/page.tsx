@@ -9,12 +9,25 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
- const handleLogin = (e: React.FormEvent) => {
+ const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true)
-    if (account === 'seed.yangbei2026' && password === 'seed2026') {
-      localStorage.setItem('admin_auth', 'true'); router.push('/admin')
-    } else {
-      setError('帳號或密碼錯誤，請重新輸入'); setLoading(false)
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account, password }),
+      })
+      if (res.ok) {
+        const { token, expires } = await res.json()
+        localStorage.setItem('admin_auth', JSON.stringify({ token, expires }))
+        router.push('/admin')
+      } else {
+        setError('帳號或密碼錯誤，請重新輸入')
+        setLoading(false)
+      }
+    } catch {
+      setError('網路錯誤，請稍後再試')
+      setLoading(false)
     }
   }
   return (
