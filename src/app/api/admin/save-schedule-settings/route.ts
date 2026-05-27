@@ -7,6 +7,10 @@ const supabase = createClient(
 )
 
 export async function POST(req: NextRequest) {
+  const authHeader = req.headers.get('x-admin-token')
+  if (!authHeader) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   const body = await req.json()
   const updates: { key: string; value: string }[] = body.settings || []
   for (const { key, value } of updates) {
