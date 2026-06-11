@@ -34,7 +34,6 @@ const MASK_ID_PREFIX = "ymask"
 
 function StampSlot({ log, index }: { log?: StampLog; index: number }) {
   const isStamped = !!log && log.delta > 0
-  const flowerColor = STAMP_COLORS[index % 6]
   const maskId = `${MASK_ID_PREFIX}-${index}`
 
   const shortName = log?.reason
