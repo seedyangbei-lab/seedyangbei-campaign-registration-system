@@ -7,20 +7,22 @@ const supabase = createClient(
 )
 
 export async function POST(req: NextRequest) {
-const body = await req.json()
-  const { registrationId, courseTitle, lineUserId, action } = body
-  // action: 'attend' | 'unattend'
+  const body = await req.json()
+  const { registrationId, courseTitle, lineUserId, action, delta: manualDelta, reason: manualReason } = body
 
-  const delta = action === 'attend' ? 1 : action === 'unattend' ? -1 : (body.delta ?? 1)
-  const reason = action === 'attend'
-    ? `出席課程：${courseTitle}`
-    : action === 'unattend'
-    ? `撤銷出席：${courseTitle}`
-    : body.reason || '手動調整'
+  const delta = action === 'attend' ? 1
+    : action === 'unattend' ? -1
+    : (manualDelta ?? 1)
 
-  await supabase.from('registrations')
-    .update({ status: action === 'attend' ? 'attended' : 'confirmed' })
-    .eq('id', registrationId)
+  const reason = action === 'attend' ? `出席課程：${courseTitle}`
+    : action === 'unattend' ? `撤銷出席：${courseTitle}`
+    : (manualReason || '手動調整')
+
+  if (registrationId) {
+    await supabase.from('registrations')
+      .update({ status: action === 'attend' ? 'attended' : 'confirmed' })
+      .eq('id', registrationId)
+  }
 
   if (lineUserId) {
     const { data: member } = await supabase
@@ -30,12 +32,15 @@ const body = await req.json()
       .maybeSingle()
 
     if (member) {
-      await supabase.from('point_logs').insert({
+      const { error } = await supabase.from('point_logs').insert({
         line_member_id: member.id,
         delta,
         reason,
-        related_registration_id: registrationId,
+        related_registration_id: registrationId || null,
       })
+      if (error) console.error('point_logs insert error:', error)
+    } else {
+      console.error('member not found for lineUserId:', lineUserId)
     }
   }
 
