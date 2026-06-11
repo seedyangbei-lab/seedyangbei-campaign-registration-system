@@ -14,7 +14,7 @@ interface StampCardProps {
   totalPoints: number
 }
 
-const STAMPS_PER_CARD = 8
+const STAMPS_PER_CARD = 6
 
 function StampSlot({ log, index }: { log?: StampLog; index: number }) {
   const isStamped = !!log && log.delta > 0
@@ -31,76 +31,53 @@ function StampSlot({ log, index }: { log?: StampLog; index: number }) {
     <div className="flex flex-col items-center gap-1">
       <div className="relative w-[68px] h-[68px]">
         <svg viewBox="0 0 68 68" width="68" height="68" xmlns="http://www.w3.org/2000/svg">
-          {/* 鋸齒外圈 */}
-          {Array.from({ length: 24 }).map((_, i) => {
-            const angle = (i / 24) * Math.PI * 2
-            const outerR = 32
-            const innerR = 28
-            const x1 = 34 + Math.cos(angle) * outerR
-            const y1 = 34 + Math.sin(angle) * outerR
-            const x2 = 34 + Math.cos(angle) * innerR
-            const y2 = 34 + Math.sin(angle) * innerR
-            return (
-              <line
-                key={i}
-                x1={x1} y1={y1} x2={x2} y2={y2}
-                stroke={isStamped ? '#f97316' : '#d6d3d1'}
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            )
-          })}
-          {/* 中圈 */}
-          <circle
-            cx="34" cy="34" r="26"
-            fill={isStamped ? '#fff7ed' : '#fafaf9'}
-            stroke={isStamped ? '#f97316' : '#d6d3d1'}
-            strokeWidth="1.5"
-          />
-          {/* 內圈虛線 */}
-          <circle
-            cx="34" cy="34" r="21"
-            fill="none"
-            stroke={isStamped ? '#fed7aa' : '#e7e5e4'}
-            strokeWidth="1"
-            strokeDasharray="2.5 2.5"
-          />
+          // 6 種略不規則的手繪花朵 path，依 index 輪替
+  const flowerPaths = [
+    "M34 14 C37 19 42 18 44 14 C47 17 52 16 53 20 C58 20 60 25 57 28 C61 31 61 37 57 39 C60 43 58 48 53 48 C52 52 47 53 44 50 C42 54 37 53 34 50 C31 53 26 54 24 50 C19 53 14 52 13 48 C8 48 6 43 9 39 C5 37 5 31 9 28 C6 25 8 20 13 20 C14 16 19 15 24 14 C26 10 31 11 34 14Z",
+    "M34 13 C38 17 43 15 46 12 C50 15 54 14 55 19 C60 19 63 24 59 28 C63 32 62 38 58 40 C61 44 59 50 54 50 C53 55 47 56 43 52 C40 56 35 55 34 51 C31 55 26 56 23 52 C19 56 13 55 12 50 C7 50 5 44 8 40 C4 38 3 32 7 28 C3 24 6 19 11 19 C12 14 16 13 20 12 C23 9 28 11 34 13Z",
+    "M34 15 C36 20 41 19 43 15 C47 18 51 17 52 21 C57 21 59 26 56 29 C60 32 59 38 55 40 C58 44 56 49 51 49 C50 53 45 54 42 51 C40 55 35 54 34 51 C31 54 26 55 24 51 C21 54 16 53 15 49 C10 49 8 44 11 40 C7 38 6 32 10 29 C7 26 9 21 14 21 C15 17 19 16 23 15 C26 11 30 12 34 15Z",
+    "M34 12 C37 18 43 17 45 13 C49 16 53 14 55 19 C60 18 63 23 60 27 C64 31 63 37 59 39 C62 44 60 49 55 49 C54 54 48 55 44 51 C41 56 36 55 34 51 C30 55 25 56 22 51 C18 55 12 54 11 49 C6 49 4 44 7 39 C3 37 2 31 6 27 C3 23 6 18 11 19 C13 14 17 13 21 13 C24 9 29 10 34 12Z",
+    "M34 14 C36 19 41 18 44 13 C48 16 52 15 53 20 C58 19 61 24 58 28 C62 31 61 37 57 39 C61 43 59 48 54 49 C53 53 47 54 43 51 C41 55 36 54 34 51 C30 54 25 55 23 51 C19 54 13 53 12 49 C7 49 5 43 9 39 C5 37 4 31 8 28 C5 24 7 19 12 20 C13 15 17 14 21 13 C25 10 30 11 34 14Z",
+    "M34 13 C37 18 42 17 45 12 C49 15 54 13 55 18 C61 18 63 23 59 27 C63 31 62 38 58 40 C61 45 59 50 53 50 C52 55 46 56 42 52 C40 57 35 56 34 52 C31 56 26 57 24 52 C20 56 14 55 13 50 C7 50 5 45 8 40 C4 38 3 31 7 27 C3 23 5 18 11 18 C12 13 16 12 20 12 C24 9 29 10 34 13Z",
+  ]
+  const flowerPath = flowerPaths[index % 6]
+
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <div className="relative w-[76px] h-[76px]">
+        <svg viewBox="0 0 68 68" width="76" height="76" xmlns="http://www.w3.org/2000/svg">
           {isStamped ? (
-            /* 蓋章：花形 */
             <>
-              <path
-                d="M34 16 C36 20 40 20 42 17 C43 22 47 24 50 22 C49 27 52 30 56 30 C53 33 53 37 56 40 C52 40 49 43 50 48 C47 46 43 48 42 53 C40 50 36 50 34 52 C32 50 28 50 26 53 C24 48 20 46 18 48 C19 43 16 40 12 40 C15 37 15 33 12 30 C16 30 19 27 18 22 C21 24 25 22 26 17 C28 20 32 20 34 16Z"
-                fill="#f97316"
-                opacity="0.15"
-              />
-              <path
-                d="M34 21 C35.5 24 38.5 24 40 22 C40.8 25.5 43.5 27 46 25.5 C45.5 29 47.5 31 50 31 C48 33.5 48 36.5 50 39 C47.5 39 45.5 41 46 44.5 C43.5 43 40.8 44.5 40 48 C38.5 46 35.5 46 34 47 C32.5 46 29.5 46 28 48 C27.2 44.5 24.5 43 22 44.5 C22.5 41 20.5 39 18 39 C20 36.5 20 33.5 18 31 C20.5 31 22.5 29 22 25.5 C24.5 27 27.2 25.5 28 22 C29.5 24 32.5 24 34 21Z"
-                fill="none"
-                stroke="#f97316"
-                strokeWidth="1"
-              />
+              {/* 蓋章：手繪花朵填色 */}
+              <path d={flowerPath} fill="#f97316" opacity="0.18" />
+              {/* 花朵輪廓（略粗，手繪感） */}
+              <path d={flowerPath} fill="none" stroke="#f97316" strokeWidth="1.8" strokeLinejoin="round" />
               {/* 核取符號 */}
               <path
-                d="M26 34 L31 39 L42 28"
+                d="M25 34 L31 40 L43 27"
                 fill="none"
                 stroke="#f97316"
-                strokeWidth="2.5"
+                strokeWidth="2.8"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
             </>
           ) : (
-            /* 未蓋章：序號 */
-            <text
-              x="34" y="39"
-              textAnchor="middle"
-              fontSize="13"
-              fontFamily="system-ui, sans-serif"
-              fill="#a8a29e"
-              fontWeight="400"
-            >
-              {String(index + 1).padStart(2, '0')}
-            </text>
+            <>
+              {/* 未蓋章：花朵輪廓（淡灰） */}
+              <path d={flowerPath} fill="#f5f5f4" stroke="#d6d3d1" strokeWidth="1.5" strokeLinejoin="round" />
+              {/* 序號 */}
+              <text
+                x="34" y="39"
+                textAnchor="middle"
+                fontSize="13"
+                fontFamily="system-ui, sans-serif"
+                fill="#a8a29e"
+                fontWeight="400"
+              >
+                {String(index + 1).padStart(2, '0')}
+              </text>
+            </>
           )}
         </svg>
       </div>
@@ -108,14 +85,13 @@ function StampSlot({ log, index }: { log?: StampLog; index: number }) {
       <div className="h-8 flex flex-col items-center justify-start">
         {isStamped && (
           <>
-            <p className="text-[10px] text-orange-700 font-medium leading-tight text-center line-clamp-1 w-[68px]">{shortName}</p>
+            <p className="text-[10px] text-orange-700 font-medium leading-tight text-center line-clamp-1 w-[76px]">{shortName}</p>
             <p className="text-[9px] text-stone-400 leading-tight">{dateStr}</p>
           </>
         )}
       </div>
     </div>
   )
-}
 
 export default function StampCard({ logs, totalPoints }: StampCardProps) {
   const stampedLogs = logs.filter(l => l.delta > 0)
@@ -182,7 +158,7 @@ export default function StampCard({ logs, totalPoints }: StampCardProps) {
                 <div className="mx-4 border-t border-dashed border-orange-200 mb-4" />
 
                 {/* 印章格子 */}
-                <div className="grid grid-cols-4 gap-x-2 gap-y-1 px-4 pb-4 justify-items-center">
+                <div className="grid grid-cols-3 gap-x-3 gap-y-2 px-5 pb-4 justify-items-center">
                   {slotLogs.map((log, slotIdx) => (
                     <StampSlot
                       key={slotIdx}
