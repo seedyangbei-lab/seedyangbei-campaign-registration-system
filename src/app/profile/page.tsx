@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
+import StampCard from '@/components/StampCard'
 
 function getParticipationTag(count: number) {
   if (count === 0) return { label: '尚未參與', color: '#9ca3af', bg: '#f3f4f6' }
@@ -22,6 +23,7 @@ function ProfileContent() {
   const [memberPoints, setMemberPoints] = useState<number | null>(null)
   const [rewardItems, setRewardItems] = useState<any[]>([])
   const [myRedemptions, setMyRedemptions] = useState<any[]>([])
+  const [pointLogs, setPointLogs] = useState<any[]>([])
   const [showRedeemModal, setShowRedeemModal] = useState(false)
   const [selectedReward, setSelectedReward] = useState<any>(null)
   const [redeeming, setRedeeming] = useState(false)
@@ -71,6 +73,14 @@ function ProfileContent() {
         .eq('line_member_id', member.id)
         .order('requested_at', { ascending: false })
       setMyRedemptions(redemptions || [])
+
+      const { data: logs } = await supabase
+        .from('point_logs')
+        .select('id, delta, reason, created_at')
+        .eq('line_member_id', member.id)
+        .gt('delta', 0)
+        .order('created_at', { ascending: true })
+      setPointLogs(logs || [])
     }
 
     const { data: rewards } = await supabase
@@ -159,16 +169,8 @@ function ProfileContent() {
          {/* 點數卡 */}
         {memberPoints !== null && (
           <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="font-semibold text-stone-700">我的點數</h2>
-                <p className="text-stone-400 text-xs mt-0.5">每次出席課程獲得 1 點</p>
-              </div>
-              <div className="text-right">
-                <p className="text-3xl font-bold text-orange-500">{memberPoints}</p>
-                <p className="text-xs text-stone-400">累積點數</p>
-              </div>
-            </div>
+            <StampCard logs={pointLogs} totalPoints={memberPoints} />
+            <div className="mt-4">
             {redeemSuccess && (
               <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 text-sm mb-4 flex items-center gap-2">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -205,6 +207,7 @@ function ProfileContent() {
                 </div>
               </div>
             )}
+            </div>
             {myRedemptions.length > 0 && (
               <div className="mt-4">
                 <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-3">兌換記錄</p>
