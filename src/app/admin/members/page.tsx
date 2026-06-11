@@ -35,7 +35,8 @@ export default function MembersPage() {
   const supabase = createClient()
 
   const fetchMembers = async () => {
-    const { data } = await supabase.from('line_members').select('*').order('created_at', { ascending: false })
+    const { data, error } = await supabase.from('line_members').select('*').order('created_at', { ascending: false })
+    console.log('[members] data:', data, 'error:', error)
     setMembers(data || [])
     if (data && data.length > 0) {
       const counts: Record<string, number> = {}
