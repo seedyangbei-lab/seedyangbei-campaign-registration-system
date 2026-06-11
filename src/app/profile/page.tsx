@@ -157,7 +157,7 @@ function ProfileContent() {
         </div>
 
          {/* 點數卡 */}
-        {memberPoints !== null && memberPoints !== undefined && (
+        {memberPoints !== null && (
           <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div>
