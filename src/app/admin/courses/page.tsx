@@ -133,6 +133,11 @@ export default function CoursesPage() {
   const [filterMonth, setFilterMonth] = useState('')
   const [uploading, setUploading] = useState(false)
   const [timeError, setTimeError] = useState('')
+  const [attendanceModal, setAttendanceModal] = useState<any>(null)
+  const [attendanceList, setAttendanceList] = useState<any[]>([])
+  const [attendanceLoading, setAttendanceLoading] = useState(false)
+  const [attendanceSaving, setAttendanceSaving] = useState(false)
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const supabase = createClient()
 
   const fetchAll = async () => {
@@ -205,6 +210,58 @@ export default function CoursesPage() {
 
   const toggleActive = async (id: string, current: boolean) => { await supabase.from('courses').update({ is_active: !current }).eq('id', id); fetchAll() }
   const handleDelete = async (id: string) => { if (!confirm('確定要刪除這個課程嗎？')) return; await supabase.from('courses').delete().eq('id', id); fetchAll() }
+
+  const openAttendance = async (course: any) => {
+    setAttendanceModal(course)
+    setAttendanceLoading(true)
+    setCheckedIds(new Set())
+    const { data: regs } = await supabase
+      .from('registrations')
+      .select('id, status, users(id, name, room_number, line_id)')
+      .eq('course_id', course.id)
+      .in('status', ['confirmed', 'attended'])
+      .order('registered_at')
+    setAttendanceList(regs || [])
+    const attended = new Set((regs || []).filter((r: any) => r.status === 'attended').map((r: any) => r.id))
+    setCheckedIds(attended)
+    setAttendanceLoading(false)
+  }
+
+  const saveAttendance = async () => {
+    setAttendanceSaving(true)
+    for (const reg of attendanceList) {
+      const shouldAttend = checkedIds.has(reg.id)
+      const isAttended = reg.status === 'attended'
+      if (shouldAttend && !isAttended) {
+        await supabase.from('registrations').update({ status: 'attended' }).eq('id', reg.id)
+        const memberRes = await fetch(`/api/member-points?line_user_id=${encodeURIComponent(reg.users?.line_id || '')}`)
+        const member = memberRes.ok ? await memberRes.json() : null
+        if (member) {
+          await supabase.from('point_logs').insert({
+            line_member_id: member.id,
+            delta: 1,
+            reason: `出席課程：${attendanceModal.title}`,
+            related_registration_id: reg.id,
+          })
+        }
+      } else if (!shouldAttend && isAttended) {
+        await supabase.from('registrations').update({ status: 'confirmed' }).eq('id', reg.id)
+        const memberRes = await fetch(`/api/member-points?line_user_id=${encodeURIComponent(reg.users?.line_id || '')}`)
+        const member = memberRes.ok ? await memberRes.json() : null
+        if (member) {
+          await supabase.from('point_logs').insert({
+            line_member_id: member.id,
+            delta: -1,
+            reason: `撤銷出席：${attendanceModal.title}`,
+            related_registration_id: reg.id,
+          })
+        }
+      }
+    }
+    setAttendanceSaving(false)
+    setAttendanceModal(null)
+    await fetchAll()
+  }
 
   const now = new Date()
   const isExpired = (course: any) => new Date(`${course.date}T${course.time_end}`) < now
@@ -307,6 +364,7 @@ export default function CoursesPage() {
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </button>
                 {!expired && <button onClick={() => toggleActive(course.id, course.is_active)} className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${course.is_active ? 'bg-stone-100 hover:bg-stone-200 text-stone-600' : 'bg-green-50 hover:bg-green-100 text-green-700'}`}>{course.is_active ? '關閉' : '開放'}</button>}
+                {expired && <button onClick={() => openAttendance(course)} className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg transition-colors font-medium">出席紀錄</button>}
                 <button onClick={() => handleDelete(course.id)} className="p-2 hover:bg-red-50 rounded-lg transition-colors text-stone-400 hover:text-red-500">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
                 </button>
@@ -387,6 +445,71 @@ export default function CoursesPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+       {attendanceModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+          onClick={e => { if (e.target === e.currentTarget) setAttendanceModal(null) }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-stone-200">
+              <div>
+                <h3 className="font-bold text-stone-800">{attendanceModal.title}</h3>
+                <p className="text-stone-400 text-xs mt-0.5">{attendanceModal.date} · 出席紀錄</p>
+              </div>
+              <button onClick={() => setAttendanceModal(null)} className="p-2 hover:bg-stone-100 rounded-xl">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              {attendanceLoading ? (
+                <div className="text-center py-8 text-stone-400 text-sm">載入中...</div>
+              ) : attendanceList.length === 0 ? (
+                <div className="text-center py-8 text-stone-400 text-sm">此課程尚無報名者</div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-stone-400 mb-4">勾選代表已出席，取消勾選代表撤銷出席（點數同步調整）</p>
+                  {attendanceList.map((reg: any) => (
+                    <label key={reg.id} className="flex items-center gap-3 bg-stone-50 rounded-xl px-4 py-3 border border-stone-100 cursor-pointer hover:bg-orange-50 hover:border-orange-200 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={checkedIds.has(reg.id)}
+                        onChange={e => {
+                          const next = new Set(checkedIds)
+                          e.target.checked ? next.add(reg.id) : next.delete(reg.id)
+                          setCheckedIds(next)
+                        }}
+                        className="w-4 h-4 accent-orange-500 cursor-pointer"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-stone-700 text-sm font-medium">{reg.users?.name}</p>
+                        <p className="text-stone-400 text-xs">{reg.users?.room_number}</p>
+                      </div>
+                      {checkedIds.has(reg.id) && (
+                        <span className="text-xs text-green-600 font-medium flex items-center gap-1">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                          出席
+                        </span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-stone-100 flex items-center justify-between">
+              <p className="text-xs text-stone-400">已勾選 {checkedIds.size} / {attendanceList.length} 人</p>
+              <div className="flex gap-2">
+                <button onClick={() => setAttendanceModal(null)}
+                  className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 text-sm rounded-xl transition-colors">
+                  取消
+                </button>
+                <button onClick={saveAttendance} disabled={attendanceSaving}
+                  className="px-5 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white text-sm font-medium rounded-xl transition-colors">
+                  {attendanceSaving ? '儲存中...' : '儲存出席紀錄'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
