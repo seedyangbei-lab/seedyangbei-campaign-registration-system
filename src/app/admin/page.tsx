@@ -30,7 +30,7 @@ export default function AdminDashboard() {
 
   const fetchAll = async () => {
     setLoading(true)
-   const [
+    const [
       { count: activeCourses },
       { data: regs },
       { data: cancelledData },
@@ -41,9 +41,16 @@ export default function AdminDashboard() {
         .select('*, users(name, room_number, phone, age_group, line_id), courses(id, title, date)')
         .in('status', ['confirmed', 'attended'])
         .order('registered_at', { ascending: false }),
+      supabase.from('registrations')
+        .select('*, users(name, room_number, phone, age_group, line_id), courses(id, title, date)')
+        .eq('status', 'cancelled')
+        .order('registered_at', { ascending: false }),
       supabase.from('courses').select('id, title, date').order('date', { ascending: false }),
-    // 正確計算：有報名記錄的不重複 user_id
-    const uniqueUserIds = new Set(allRegs.map((r: any) => r.user_id))
+    ])
+
+    const allRegs = regs || []
+     
+    Set(allRegs.map((r: any) => r.user_id))
 
     setStats({
       activeCourses: activeCourses ?? 0,
