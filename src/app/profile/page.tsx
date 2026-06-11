@@ -58,11 +58,8 @@ function ProfileContent() {
       setRegistrations(regs || [])
     }
 
-    const { data: member } = await supabase
-      .from('line_members')
-      .select('id, points')
-      .eq('line_user_id', lineUserId)
-      .maybeSingle()
+    const memberRes = await fetch(`/api/member-points?line_user_id=${encodeURIComponent(lineUserId)}`)
+    const member = memberRes.ok ? await memberRes.json() : null
 
     console.log('[profile] lineUserId:', lineUserId, 'member:', member, 'points:', member?.points)
     if (member) {
