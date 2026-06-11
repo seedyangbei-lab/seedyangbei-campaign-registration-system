@@ -138,8 +138,7 @@ export default function StampCard({ logs, totalPoints }: StampCardProps) {
           <p className="text-stone-400 text-xs mt-0.5">每次出席課程獲得 1 枚印章</p>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-bold text-orange-500 leading-none">{totalPoints}</p>
-          <p className="text-[10px] text-stone-400 mt-0.5">累積點數</p>
+          <p className="text-[10px] text-stone-400 tracking-wider">共 {stampedLogs.length} 枚印章</p>
         </div>
       </div>
 
