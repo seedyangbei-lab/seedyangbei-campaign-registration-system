@@ -64,7 +64,7 @@ function ProfileContent() {
       .eq('line_user_id', lineUserId)
       .maybeSingle()
 
-    console.log('[profile] member:', member, 'points:', member?.points)
+    console.log('[profile] lineUserId:', lineUserId, 'member:', member, 'points:', member?.points)
     if (member) {
       setMemberPoints(member.points ?? 0)
       console.log('[profile] setMemberPoints:', member.points ?? 0)
