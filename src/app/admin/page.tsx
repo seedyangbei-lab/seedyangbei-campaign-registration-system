@@ -80,11 +80,14 @@ export default function AdminDashboard() {
   const totalPages = Math.ceil(filtered.length / pageSize)
   const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
-    const handleAttend = async (reg: any) => {
+   const handleAttend = async (reg: any) => {
     const lineId = reg.users?.line_id
     if (!lineId) { alert('此報名者無 LINE ID，無法加點'); return }
-    const { data: member } = await supabase.from('line_members').select('id').eq('line_user_id', lineId).maybeSingle()
+
+    const res = await fetch(`/api/member-points?line_user_id=${encodeURIComponent(lineId)}`)
+    const member = res.ok ? await res.json() : null
     if (!member) { alert('找不到對應的 LINE 會員'); return }
+
     await supabase.from('registrations').update({ status: 'attended' }).eq('id', reg.id)
     await supabase.from('point_logs').insert({
       line_member_id: member.id,
