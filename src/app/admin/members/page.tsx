@@ -34,10 +34,10 @@ export default function MembersPage() {
   const [addPointSaving, setAddPointSaving] = useState(false)
   const supabase = createClient()
 
-  const fetchMembers = async () => {
-    const { data, error } = await supabase.from('line_members').select('*').order('created_at', { ascending: false })
-    console.log('[members] data:', data, 'error:', error)
-    setMembers(data || [])
+   const fetchMembers = async () => {
+    const res = await fetch('/api/admin/members')
+    const data = await res.json()
+    setMembers(Array.isArray(data) ? data : [])
     if (data && data.length > 0) {
       const counts: Record<string, number> = {}
       await Promise.all(data.map(async (m: any) => {
