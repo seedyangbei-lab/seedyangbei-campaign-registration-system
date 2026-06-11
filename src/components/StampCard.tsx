@@ -30,8 +30,7 @@ function StampSlot({ log, index }: { log?: StampLog; index: number }) {
   return (
     <div className="flex flex-col items-center gap-1">
       <div className="relative w-[68px] h-[68px]">
-        <svg viewBox="0 0 68 68" width="68" height="68" xmlns="http://www.w3.org/2000/svg">
-          // 6 種略不規則的手繪花朵 path，依 index 輪替
+        <svg viewBox="0 0 68 68" width="76" height="76" xmlns="http://www.w3.org/2000/svg">
   const flowerPaths = [
     "M34 14 C37 19 42 18 44 14 C47 17 52 16 53 20 C58 20 60 25 57 28 C61 31 61 37 57 39 C60 43 58 48 53 48 C52 52 47 53 44 50 C42 54 37 53 34 50 C31 53 26 54 24 50 C19 53 14 52 13 48 C8 48 6 43 9 39 C5 37 5 31 9 28 C6 25 8 20 13 20 C14 16 19 15 24 14 C26 10 31 11 34 14Z",
     "M34 13 C38 17 43 15 46 12 C50 15 54 14 55 19 C60 19 63 24 59 28 C63 32 62 38 58 40 C61 44 59 50 54 50 C53 55 47 56 43 52 C40 56 35 55 34 51 C31 55 26 56 23 52 C19 56 13 55 12 50 C7 50 5 44 8 40 C4 38 3 32 7 28 C3 24 6 19 11 19 C12 14 16 13 20 12 C23 9 28 11 34 13Z",
