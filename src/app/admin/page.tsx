@@ -13,6 +13,7 @@ export default function AdminDashboard() {
   const [filterCourse, setFilterCourse] = useState('')
   const [filterMonth, setFilterMonth] = useState('')
   const [filterResident, setFilterResident] = useState('')
+  const [filterAttended, setFilterAttended] = useState('')
   const [sortOrder, setSortOrder] = useState<'desc'|'asc'>('desc')
   const [pageSize, setPageSize] = useState(10)
   const [currentPage, setCurrentPage] = useState(1)
@@ -32,22 +33,15 @@ export default function AdminDashboard() {
    const [
       { count: activeCourses },
       { data: regs },
-      { data: cancelledRegs },
+      { data: cancelledData },
       { data: courseList },
     ] = await Promise.all([
       supabase.from('courses').select('*', { count: 'exact', head: true }).eq('is_active', true),
       supabase.from('registrations')
-        .select('*, users(name, room_number, phone, age_group), courses(id, title, date)')
-        .eq('status', 'confirmed')
-        .order('registered_at', { ascending: false }),
-      supabase.from('registrations')
-        .select('*, users(name, room_number, phone, age_group), courses(id, title, date)')
-        .eq('status', 'cancelled')
+        .select('*, users(name, room_number, phone, age_group, line_id), courses(id, title, date)')
+        .in('status', ['confirmed', 'attended'])
         .order('registered_at', { ascending: false }),
       supabase.from('courses').select('id, title, date').order('date', { ascending: false }),
-    ])
-
-    const allRegs = regs || []
     // 正確計算：有報名記錄的不重複 user_id
     const uniqueUserIds = new Set(allRegs.map((r: any) => r.user_id))
 
@@ -57,7 +51,7 @@ export default function AdminDashboard() {
       uniqueRegistrants: uniqueUserIds.size,
     })
     setRegistrations(allRegs)
-    setCancelledRegs(cancelledRegs || [])
+    setCancelledRegs(cancelledData || [])
     setCourses(courseList || [])
     setLoading(false)
   }
@@ -71,6 +65,7 @@ export default function AdminDashboard() {
     .filter(r => filterCourse ? r.course_id === filterCourse : true)
     .filter(r => filterMonth ? r.courses?.date?.startsWith(filterMonth) : true)
     .filter(r => filterResident === '' ? true : filterResident === 'social' ? r.is_social_housing_resident : !r.is_social_housing_resident)
+    .filter(r => filterAttended === '' ? true : filterAttended === 'attended' ? r.status === 'attended' : r.status === 'confirmed')
     .sort((a, b) => sortOrder === 'desc'
       ? new Date(b.registered_at).getTime() - new Date(a.registered_at).getTime()
       : new Date(a.registered_at).getTime() - new Date(b.registered_at).getTime()
@@ -78,6 +73,21 @@ export default function AdminDashboard() {
 
   const totalPages = Math.ceil(filtered.length / pageSize)
   const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+    const handleAttend = async (reg: any) => {
+    const lineId = reg.users?.line_id
+    if (!lineId) { alert('此報名者無 LINE ID，無法加點'); return }
+    const { data: member } = await supabase.from('line_members').select('id').eq('line_user_id', lineId).maybeSingle()
+    if (!member) { alert('找不到對應的 LINE 會員'); return }
+    await supabase.from('registrations').update({ status: 'attended' }).eq('id', reg.id)
+    await supabase.from('point_logs').insert({
+      line_member_id: member.id,
+      delta: 1,
+      reason: `出席課程：${reg.courses?.title}`,
+      related_registration_id: reg.id,
+    })
+    await fetchAll()
+  }
 
   const handleFilterChange = (setter: (v: any) => void) => (e: React.ChangeEvent<HTMLSelectElement>) => {
     setter(e.target.value)
@@ -168,8 +178,17 @@ export default function AdminDashboard() {
                 <option value="other">非社宅居民</option>
               </select>
 
+              {/* 出席狀態篩選 */}
+              <select value={filterAttended} onChange={handleFilterChange(setFilterAttended)}
+                className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
+                <option value="">全部狀態</option>
+                <option value="confirmed">待出席</option>
+                <option value="attended">已出席</option>
+              </select>
+
               {/* 排序 */}
-              <select value={sortOrder} onChange={e => { setSortOrder(e.target.value as 'desc'|'asc'); setCurrentPage(1) }}
+              <select value={sortOrder}
+                onChange={e => { setSortOrder(e.target.value as 'desc'|'asc'); setCurrentPage(1) }}
                 className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
                 <option value="desc">最新優先</option>
                 <option value="asc">最舊優先</option>
@@ -217,7 +236,7 @@ export default function AdminDashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-stone-50 border-b border-stone-100">
-                  {['#','姓名','房號','手機','課程','身份','年齡','報名時間'].map(h => (
+                   {['#','姓名','房號','手機','課程','身份','年齡','報名時間',''].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-stone-500 font-medium text-xs uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -275,6 +294,21 @@ export default function AdminDashboard() {
                     </td>
                     <td className="px-4 py-3 text-stone-500 text-xs whitespace-nowrap">{reg.users?.age_group}</td>
                     <td className="px-4 py-3 text-stone-400 text-xs whitespace-nowrap">{formatDT(reg.registered_at)}</td>
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                      {reg.status === 'attended' ? (
+                        <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                          已出席
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleAttend(reg)}
+                          className="text-xs bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap font-medium"
+                        >
+                          確認出席
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
