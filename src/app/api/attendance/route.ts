@@ -7,13 +7,16 @@ const supabase = createClient(
 )
 
 export async function POST(req: NextRequest) {
-  const { registrationId, courseTitle, lineUserId, action } = await req.json()
+const body = await req.json()
+  const { registrationId, courseTitle, lineUserId, action } = body
   // action: 'attend' | 'unattend'
 
-  const delta = action === 'attend' ? 1 : -1
+  const delta = action === 'attend' ? 1 : action === 'unattend' ? -1 : (body.delta ?? 1)
   const reason = action === 'attend'
     ? `出席課程：${courseTitle}`
-    : `撤銷出席：${courseTitle}`
+    : action === 'unattend'
+    ? `撤銷出席：${courseTitle}`
+    : body.reason || '手動調整'
 
   await supabase.from('registrations')
     .update({ status: action === 'attend' ? 'attended' : 'confirmed' })
