@@ -227,35 +227,33 @@ export default function CoursesPage() {
     setAttendanceLoading(false)
   }
 
-  const saveAttendance = async () => {
+ const saveAttendance = async () => {
     setAttendanceSaving(true)
     for (const reg of attendanceList) {
       const shouldAttend = checkedIds.has(reg.id)
       const isAttended = reg.status === 'attended'
       if (shouldAttend && !isAttended) {
-        await supabase.from('registrations').update({ status: 'attended' }).eq('id', reg.id)
-        const memberRes = await fetch(`/api/member-points?line_user_id=${encodeURIComponent(reg.users?.line_id || '')}`)
-        const member = memberRes.ok ? await memberRes.json() : null
-        if (member) {
-          await supabase.from('point_logs').insert({
-            line_member_id: member.id,
-            delta: 1,
-            reason: `出席課程：${attendanceModal.title}`,
-            related_registration_id: reg.id,
-          })
-        }
+        await fetch('/api/attendance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            registrationId: reg.id,
+            courseTitle: attendanceModal.title,
+            lineUserId: reg.users?.line_id || '',
+            action: 'attend',
+          }),
+        })
       } else if (!shouldAttend && isAttended) {
-        await supabase.from('registrations').update({ status: 'confirmed' }).eq('id', reg.id)
-        const memberRes = await fetch(`/api/member-points?line_user_id=${encodeURIComponent(reg.users?.line_id || '')}`)
-        const member = memberRes.ok ? await memberRes.json() : null
-        if (member) {
-          await supabase.from('point_logs').insert({
-            line_member_id: member.id,
-            delta: -1,
-            reason: `撤銷出席：${attendanceModal.title}`,
-            related_registration_id: reg.id,
-          })
-        }
+        await fetch('/api/attendance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            registrationId: reg.id,
+            courseTitle: attendanceModal.title,
+            lineUserId: reg.users?.line_id || '',
+            action: 'unattend',
+          }),
+        })
       }
     }
     setAttendanceSaving(false)
