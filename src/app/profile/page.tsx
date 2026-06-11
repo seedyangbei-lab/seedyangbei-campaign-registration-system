@@ -19,6 +19,13 @@ function ProfileContent() {
   const [registrations, setRegistrations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedReg, setSelectedReg] = useState<any>(null)
+  const [memberPoints, setMemberPoints] = useState<number | null>(null)
+  const [rewardItems, setRewardItems] = useState<any[]>([])
+  const [myRedemptions, setMyRedemptions] = useState<any[]>([])
+  const [showRedeemModal, setShowRedeemModal] = useState(false)
+  const [selectedReward, setSelectedReward] = useState<any>(null)
+  const [redeeming, setRedeeming] = useState(false)
+  const [redeemSuccess, setRedeemSuccess] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -50,8 +57,59 @@ function ProfileContent() {
         .order('registered_at', { ascending: false })
       setRegistrations(regs || [])
     }
+
+    const { data: member } = await supabase
+      .from('line_members')
+      .select('id, points')
+      .eq('line_user_id', lineUserId)
+      .maybeSingle()
+
+    if (member) {
+      setMemberPoints(member.points ?? 0)
+      const { data: redemptions } = await supabase
+        .from('redemptions')
+        .select('*, reward_items(name, points_required)')
+        .eq('line_member_id', member.id)
+        .order('requested_at', { ascending: false })
+      setMyRedemptions(redemptions || [])
+    }
+
+    const { data: rewards } = await supabase
+      .from('reward_items')
+      .select('*')
+      .eq('is_active', true)
+      .gt('stock', 0)
+      .order('points_required')
+    setRewardItems(rewards || [])
+
     setLoading(false)
   }
+
+  const handleRedeem = async (reward: any) => {
+    if (!lineUser) return
+    setRedeeming(true)
+    const { data: member } = await supabase
+      .from('line_members')
+      .select('id, points')
+      .eq('line_user_id', lineUser.lineUserId)
+      .maybeSingle()
+    if (!member || member.points < reward.points_required) {
+      alert('點數不足，無法兌換')
+      setRedeeming(false)
+      return
+    }
+    await supabase.from('redemptions').insert({
+      line_member_id: member.id,
+      reward_item_id: reward.id,
+      status: 'pending',
+    })
+    setRedeemSuccess(true)
+    setShowRedeemModal(false)
+    await fetchHistory(lineUser.lineUserId)
+    setRedeeming(false)
+    setTimeout(() => setRedeemSuccess(false), 3000)
+  }
+
 
   const handleLogout = () => {
     localStorage.removeItem('line_user')
@@ -98,6 +156,77 @@ function ProfileContent() {
             <span className="text-stone-400 text-sm">共參與 {registrations.length} 堂課程</span>
           </div>
         </div>
+
+        {/* 點數卡 */}
+        {memberPoints !== null && (
+          <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-semibold text-stone-700">我的點數</h2>
+                <p className="text-stone-400 text-xs mt-0.5">每次出席課程獲得 1 點</p>
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-bold text-orange-500">{memberPoints}</p>
+                <p className="text-xs text-stone-400">累積點數</p>
+              </div>
+            </div>
+            {redeemSuccess && (
+              <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 text-sm mb-4 flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                兌換申請已送出，等待管理員審核
+              </div>
+            )}
+            {rewardItems.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-3">可兌換獎勵</p>
+                <div className="space-y-2">
+                  {rewardItems.map(reward => {
+                    const canRedeem = memberPoints >= reward.points_required
+                    const alreadyPending = myRedemptions.some(r => r.reward_items?.name === reward.name && r.status === 'pending')
+                    return (
+                      <div key={reward.id} className="flex items-center justify-between bg-stone-50 rounded-xl px-4 py-3 border border-stone-100">
+                        <div>
+                          <p className="text-stone-700 text-sm font-medium">{reward.name}</p>
+                          {reward.description && <p className="text-stone-400 text-xs mt-0.5">{reward.description}</p>}
+                          <span className="text-xs text-orange-600 font-bold">{reward.points_required} 點</span>
+                        </div>
+                        {alreadyPending ? (
+                          <span className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-lg font-medium">審核中</span>
+                        ) : (
+                          <button
+                            onClick={() => { setSelectedReward(reward); setShowRedeemModal(true) }}
+                            disabled={!canRedeem}
+                            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${canRedeem ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-stone-100 text-stone-400 cursor-not-allowed'}`}>
+                            {canRedeem ? '兌換' : '點數不足'}
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+            {myRedemptions.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-3">兌換記錄</p>
+                <div className="space-y-2">
+                  {myRedemptions.slice(0, 5).map(r => (
+                    <div key={r.id} className="flex items-center justify-between text-sm">
+                      <span className="text-stone-600">{r.reward_items?.name}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        r.status === 'approved' ? 'bg-green-100 text-green-700'
+                        : r.status === 'rejected' ? 'bg-stone-100 text-stone-500'
+                        : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {r.status === 'approved' ? '已核發' : r.status === 'rejected' ? '已拒絕' : '審核中'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 報名記錄 */}
         <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
@@ -237,6 +366,34 @@ function ProfileContent() {
           </div>
         )
       })()}
+    {/* 兌換確認彈窗 */}
+      {showRedeemModal && selectedReward && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center p-0 md:p-4"
+          onClick={e => { if (e.target === e.currentTarget) setShowRedeemModal(false) }}>
+          <div className="bg-white w-full md:max-w-sm md:rounded-2xl rounded-t-3xl shadow-2xl p-6">
+            <div className="flex justify-center mb-1 md:hidden">
+              <div className="w-10 h-1 bg-stone-200 rounded-full mb-4" />
+            </div>
+            <h3 className="font-bold text-stone-800 text-lg mb-1">確認兌換</h3>
+            <p className="text-stone-400 text-sm mb-6">送出後將等待管理員審核，審核通過後扣除點數。</p>
+            <div className="bg-orange-50 border border-orange-100 rounded-xl px-4 py-4 mb-6">
+              <p className="text-stone-700 font-semibold">{selectedReward.name}</p>
+              {selectedReward.description && <p className="text-stone-400 text-sm mt-0.5">{selectedReward.description}</p>}
+              <p className="text-orange-500 font-bold mt-2">{selectedReward.points_required} 點</p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => handleRedeem(selectedReward)} disabled={redeeming}
+                className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3.5 rounded-xl text-sm transition-colors">
+                {redeeming ? '送出中...' : '確認送出申請'}
+              </button>
+              <button onClick={() => setShowRedeemModal(false)}
+                className="px-5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3.5 rounded-xl text-sm transition-colors">
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
