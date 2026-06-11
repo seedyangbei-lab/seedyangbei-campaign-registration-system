@@ -49,8 +49,7 @@ export default function AdminDashboard() {
     ])
 
     const allRegs = regs || []
-     
-    Set(allRegs.map((r: any) => r.user_id))
+    const uniqueUserIds = new Set(allRegs.map((r: any) => r.user_id))
 
     setStats({
       activeCourses: activeCourses ?? 0,
