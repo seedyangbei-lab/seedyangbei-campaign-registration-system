@@ -245,7 +245,7 @@ export default function AdminDashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-stone-50 border-b border-stone-100">
-                   {['#','姓名','房號','手機','課程','身份','年齡','報名時間',''].map(h => (
+                  {['#','姓名','房號','手機','課程','身份','年齡','報名時間','出席狀況'].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-stone-500 font-medium text-xs uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -303,26 +303,16 @@ export default function AdminDashboard() {
                     </td>
                     <td className="px-4 py-3 text-stone-500 text-xs whitespace-nowrap">{reg.users?.age_group}</td>
                     <td className="px-4 py-3 text-stone-400 text-xs whitespace-nowrap">{formatDT(reg.registered_at)}</td>
-                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                      {reg.status === 'attended' ? (
-                        <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                          已出席
-                        </span>
-                      ) : (() => {
-                        const courseDate = reg.courses?.date
-                        const isPast = courseDate ? new Date(courseDate + 'T23:59:59') < new Date() : false
-                        if (!isPast) return <span className="text-xs text-stone-300">未開課</span>
-                        return (
-                          <button
-                            onClick={() => handleAttend(reg)}
-                            className="text-xs bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap font-medium"
-                          >
-                            確認出席
-                          </button>
-                        )
-                      })()}
+                   <td className="px-4 py-3">
+                      {reg.status === 'attended'
+                        ? <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            已出席
+                          </span>
+                        : <span className="text-xs text-stone-300">—</span>
+                      }
                     </td>
+
                   </tr>
                 ))}
               </tbody>
