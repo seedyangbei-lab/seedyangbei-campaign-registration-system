@@ -64,6 +64,7 @@ function ProfileContent() {
       .eq('line_user_id', lineUserId)
       .maybeSingle()
 
+    console.log('[profile] member:', member)
     if (member) {
       setMemberPoints(member.points ?? 0)
       const { data: redemptions } = await supabase
