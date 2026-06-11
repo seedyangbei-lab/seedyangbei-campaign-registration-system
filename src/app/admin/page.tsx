@@ -306,14 +306,19 @@ export default function AdminDashboard() {
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                           已出席
                         </span>
-                      ) : (
-                        <button
-                          onClick={() => handleAttend(reg)}
-                          className="text-xs bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap font-medium"
-                        >
-                          確認出席
-                        </button>
-                      )}
+                      ) : (() => {
+                        const courseDate = reg.courses?.date
+                        const isPast = courseDate ? new Date(courseDate + 'T23:59:59') < new Date() : false
+                        if (!isPast) return <span className="text-xs text-stone-300">未開課</span>
+                        return (
+                          <button
+                            onClick={() => handleAttend(reg)}
+                            className="text-xs bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap font-medium"
+                          >
+                            確認出席
+                          </button>
+                        )
+                      })()}
                     </td>
                   </tr>
                 ))}
