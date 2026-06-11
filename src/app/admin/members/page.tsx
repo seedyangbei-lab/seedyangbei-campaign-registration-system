@@ -150,13 +150,20 @@ export default function MembersPage() {
     setSaving(false)
   }
 
-  const handleAddPoint = async () => {
+   const handleAddPoint = async () => {
     if (!addPointForm.reason.trim()) { alert('請填寫原因'); return }
     setAddPointSaving(true)
-    await supabase.from('point_logs').insert({
-      line_member_id: addPointModal.id,
-      delta: addPointForm.delta,
-      reason: addPointForm.reason,
+    await fetch('/api/attendance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        registrationId: null,
+        courseTitle: '',
+        lineUserId: addPointModal.line_user_id,
+        action: addPointForm.delta > 0 ? 'manual_add' : 'manual_deduct',
+        delta: addPointForm.delta,
+        reason: addPointForm.reason,
+      }),
     })
     setAddPointModal(null)
     setAddPointForm({ delta: 1, reason: '' })
