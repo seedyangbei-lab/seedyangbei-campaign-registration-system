@@ -29,6 +29,9 @@ export default function MembersPage() {
   const [personalChartData, setPersonalChartData] = useState<any[]>([])
   const [selectedMonth, setSelectedMonth] = useState<string>('')
   const [monthBarData, setMonthBarData] = useState<any[]>([])
+  const [addPointModal, setAddPointModal] = useState<any>(null)
+  const [addPointForm, setAddPointForm] = useState({ delta: 1, reason: '' })
+  const [addPointSaving, setAddPointSaving] = useState(false)
   const supabase = createClient()
 
   const fetchMembers = async () => {
@@ -145,6 +148,20 @@ export default function MembersPage() {
     setEditMember(null)
     await fetchMembers()
     setSaving(false)
+  }
+
+  const handleAddPoint = async () => {
+    if (!addPointForm.reason.trim()) { alert('請填寫原因'); return }
+    setAddPointSaving(true)
+    await supabase.from('point_logs').insert({
+      line_member_id: addPointModal.id,
+      delta: addPointForm.delta,
+      reason: addPointForm.reason,
+    })
+    setAddPointModal(null)
+    setAddPointForm({ delta: 1, reason: '' })
+    await fetchMembers()
+    setAddPointSaving(false)
   }
 
   const tagLegend = [
@@ -351,11 +368,21 @@ export default function MembersPage() {
                     <p className="text-stone-500 text-xs">{member.building} {member.unit_number}{member.floor_number && `-${member.floor_number}F`}</p>
                   )}
                   {member.notes && <p className="text-stone-400 text-xs mt-0.5 truncate">{member.notes}</p>}
-                  <p className="text-stone-300 text-xs">加入：{member.created_at?.split('T')[0]}</p>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    <p className="text-stone-300 text-xs">加入：{member.created_at?.split('T')[0]}</p>
+                    {member.points > 0 && (
+                      <span className="text-xs text-orange-500 font-bold">{member.points} 點</span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button onClick={() => openEdit(member)} className="p-2 hover:bg-stone-100 rounded-lg transition-colors text-stone-500">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button onClick={() => { setAddPointModal(member); setAddPointForm({ delta: 1, reason: '' }) }}
+                    className="flex items-center gap-1 text-xs bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 px-2.5 py-1.5 rounded-lg transition-colors font-medium">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    加點
                   </button>
                   <button onClick={() => openHistory(member)}
                     className="flex items-center gap-1.5 text-xs bg-stone-100 hover:bg-stone-200 text-stone-600 px-3 py-1.5 rounded-lg transition-colors">
@@ -418,6 +445,68 @@ export default function MembersPage() {
             </div>
             <div className="px-6 py-4 border-t border-stone-100">
               <p className="text-xs text-stone-400 text-center">共參與 {historyRegs.length} 堂課程</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+       {/* 手動加點彈窗 */}
+      {addPointModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+          onClick={e => { if (e.target === e.currentTarget) setAddPointModal(null) }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="flex items-center justify-between p-6 border-b border-stone-200">
+              <div className="flex items-center gap-3">
+                {addPointModal.picture_url
+                  ? <img src={addPointModal.picture_url} alt="" className="w-9 h-9 rounded-full" />
+                  : <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center"><span className="text-green-600 font-bold text-sm">{addPointModal.display_name?.[0]}</span></div>
+                }
+                <div>
+                  <h3 className="font-bold text-stone-800 text-sm">{addPointModal.display_name}</h3>
+                  <p className="text-stone-400 text-xs">目前 {addPointModal.points ?? 0} 點</p>
+                </div>
+              </div>
+              <button onClick={() => setAddPointModal(null)} className="p-2 hover:bg-stone-100 rounded-xl">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-stone-600 text-sm font-medium mb-2">點數調整</label>
+                <div className="flex gap-2">
+                  {[-3, -2, -1, 1, 2, 3].map(n => (
+                    <button key={n} type="button"
+                      onClick={() => setAddPointForm(f => ({ ...f, delta: n }))}
+                      className={`flex-1 py-2 rounded-xl text-sm font-bold border transition-colors ${addPointForm.delta === n
+                        ? n > 0 ? 'bg-orange-500 text-white border-orange-500' : 'bg-red-500 text-white border-red-500'
+                        : 'bg-white text-stone-600 border-stone-200 hover:border-stone-300'}`}>
+                      {n > 0 ? `+${n}` : n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-stone-600 text-sm font-medium mb-1.5">原因 *</label>
+                <input
+                  value={addPointForm.reason}
+                  onChange={e => setAddPointForm(f => ({ ...f, reason: e.target.value }))}
+                  placeholder="例：現場參與「繪畫央北」"
+                  className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                />
+              </div>
+              <div className="bg-stone-50 rounded-xl px-4 py-3 text-sm text-stone-600">
+                調整後點數：<span className="font-bold text-orange-500">{(addPointModal.points ?? 0) + addPointForm.delta} 點</span>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={handleAddPoint} disabled={addPointSaving || !addPointForm.reason.trim()}
+                  className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
+                  {addPointSaving ? '儲存中...' : '確認調整'}
+                </button>
+                <button onClick={() => setAddPointModal(null)}
+                  className="px-5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-xl text-sm transition-colors">
+                  取消
+                </button>
+              </div>
             </div>
           </div>
         </div>
