@@ -64,9 +64,10 @@ function ProfileContent() {
       .eq('line_user_id', lineUserId)
       .maybeSingle()
 
-    console.log('[profile] member:', member)
+    console.log('[profile] member:', member, 'points:', member?.points)
     if (member) {
       setMemberPoints(member.points ?? 0)
+      console.log('[profile] setMemberPoints:', member.points ?? 0)
       const { data: redemptions } = await supabase
         .from('redemptions')
         .select('*, reward_items(name, points_required)')
@@ -158,8 +159,8 @@ function ProfileContent() {
           </div>
         </div>
 
-        {/* 點數卡 */}
-        {memberPoints !== null && (
+         {/* 點數卡 */}
+        {memberPoints !== null && memberPoints !== undefined && (
           <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div>
