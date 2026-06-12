@@ -137,12 +137,12 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-3 gap-2 md:gap-4 mb-8">
         {statCards.map(s => (
-          <div key={s.label} className={`${s.color} border rounded-2xl p-5`}>
-            <p className="text-stone-600 text-sm font-medium">{s.label}</p>
-            <p className="text-stone-800 text-4xl font-bold mt-1 mb-1">{s.value}</p>
-            <p className="text-stone-400 text-xs">{s.desc}</p>
+         <div key={s.label} className={`${s.color} border rounded-2xl p-3 md:p-5`}>
+            <p className="text-stone-600 text-xs md:text-sm font-medium leading-tight">{s.label}</p>
+            <p className="text-stone-800 text-2xl md:text-4xl font-bold mt-1 mb-1">{s.value}</p>
+            <p className="text-stone-400 text-xs hidden md:block">{s.desc}</p>
           </div>
         ))}
       </div>
