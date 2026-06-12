@@ -20,6 +20,11 @@ function ProfileContent() {
   const [registrations, setRegistrations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedReg, setSelectedReg] = useState<any>(null)
+  const [cancelTarget, setCancelTarget] = useState<any>(null)
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelSuccess, setCancelSuccess] = useState(false)
+  const [regTab, setRegTab] = useState<'upcoming' | 'past'>('upcoming')
+  const [filterPeriod, setFilterPeriod] = useState('all')
   const [memberPoints, setMemberPoints] = useState<number | null>(null)
   const [rewardItems, setRewardItems] = useState<any[]>([])
   const [myRedemptions, setMyRedemptions] = useState<any[]>([])
@@ -119,6 +124,27 @@ function ProfileContent() {
     setTimeout(() => setRedeemSuccess(false), 3000)
   }
 
+
+  const handleCancel = async () => {
+    if (!cancelTarget || !lineUser) return
+    setCancelling(true)
+    const res = await fetch('/api/cancel-registration', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ registrationId: cancelTarget.id, lineUserId: lineUser.lineUserId }),
+    })
+    setCancelling(false)
+    if (res.ok) {
+      setCancelTarget(null)
+      setCancelSuccess(true)
+      setTimeout(() => setCancelSuccess(false), 3000)
+      fetchHistory(lineUser.lineUserId)
+    } else {
+      const err = await res.json()
+      if (err.error === 'course_started') alert('課程已開始，無法取消報名')
+      else alert('取消失敗，請稍後再試')
+    }
+  }
 
   const handleLogout = () => {
     localStorage.removeItem('line_user')
@@ -237,6 +263,13 @@ function ProfileContent() {
             <p className="text-stone-400 text-xs mt-0.5">所有已報名的課程記錄</p>
           </div>
 
+          {cancelSuccess && (
+            <div className="mx-6 mt-4 bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 text-sm flex items-center gap-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              已成功取消報名
+            </div>
+          )}
+
           {loading ? (
             <div className="px-6 py-12 text-center text-stone-400 text-sm">載入中...</div>
           ) : registrations.length === 0 ? (
@@ -247,39 +280,140 @@ function ProfileContent() {
               <p className="text-stone-400 text-sm">尚無報名記錄</p>
               <Link href="/" className="inline-block mt-3 text-orange-500 text-sm hover:underline">去看看課程</Link>
             </div>
-          ) : (
-            <div className="divide-y divide-stone-100">
-              {registrations.map((reg: any, i: number) => {
-                const course = reg.courses
-                const isPast = course?.date ? new Date(course.date + 'T' + (course.time_end || '23:59')) < new Date() : false
-                return (
-                  <button key={reg.id}
-                    onClick={() => setSelectedReg(reg)}
-                    className="w-full text-left px-6 py-4 hover:bg-stone-50 transition-colors active:bg-stone-100">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 text-orange-600 font-bold text-xs">
-                          {i + 1}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-stone-800 truncate">{course?.title}</p>
-                          <p className="text-stone-400 text-xs mt-0.5">
-                            {course?.date} · {course?.time_start?.slice(0,5)}–{course?.time_end?.slice(0,5)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${isPast ? 'bg-stone-100 text-stone-500' : 'bg-green-100 text-green-700'}`}>
-                          {isPast ? '已結束' : '即將開課'}
-                        </span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-stone-300 flex-shrink-0"><polyline points="9 18 15 12 9 6"/></svg>
-                      </div>
+          ) : (() => {
+            const now = new Date()
+            const upcoming = registrations.filter((r: any) =>
+              new Date(r.courses?.date + 'T' + (r.courses?.time_end || '23:59')) >= now
+            ).sort((a: any, b: any) => new Date(a.courses?.date).getTime() - new Date(b.courses?.date).getTime())
+
+            const past = registrations.filter((r: any) =>
+              new Date(r.courses?.date + 'T' + (r.courses?.time_end || '23:59')) < now
+            ).sort((a: any, b: any) => new Date(b.courses?.date).getTime() - new Date(a.courses?.date).getTime())
+
+            // 建立 Dropdown 選項：當年細分月份，去年以前歸年份
+            const currentYear = now.getFullYear()
+            const periodMap = new Map<string, { label: string; year: number; month?: number }>()
+            past.forEach((r: any) => {
+              const d = new Date(r.courses?.date)
+              const y = d.getFullYear()
+              const m = d.getMonth() + 1
+              if (y === currentYear) {
+                const key = `${y}-${String(m).padStart(2,'0')}`
+                if (!periodMap.has(key)) periodMap.set(key, { label: `${m} 月`, year: y, month: m })
+              } else {
+                const key = `${y}`
+                if (!periodMap.has(key)) periodMap.set(key, { label: `${y} 年`, year: y })
+              }
+            })
+            const periodOptions = Array.from(periodMap.entries()).sort((a, b) => b[0].localeCompare(a[0]))
+
+            const filteredPast = filterPeriod === 'all' ? past : past.filter((r: any) => {
+              const d = new Date(r.courses?.date)
+              const y = d.getFullYear()
+              const m = d.getMonth() + 1
+              if (filterPeriod.includes('-')) {
+                return `${y}-${String(m).padStart(2,'0')}` === filterPeriod
+              }
+              return String(y) === filterPeriod
+            })
+
+            const displayList = regTab === 'upcoming' ? upcoming : filteredPast
+
+            return (
+              <>
+                {/* Tab */}
+                <div className="flex gap-1 p-1 mx-6 mt-4 bg-stone-100 rounded-xl w-fit">
+                  {([['upcoming', `即將開課 ${upcoming.length}`], ['past', `已結束 ${past.length}`]] as const).map(([t, label]) => (
+                    <button key={t} onClick={() => setRegTab(t)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${regTab === t ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 已結束：月份/年份篩選 */}
+                {regTab === 'past' && periodOptions.length > 0 && (
+                  <div className="px-6 mt-3">
+                    <select
+                      value={filterPeriod}
+                      onChange={e => setFilterPeriod(e.target.value)}
+                      className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300 w-full"
+                    >
+                      <option value="all">全部紀錄</option>
+                      {(() => {
+                        const thisYearOptions = periodOptions.filter(([, v]) => v.month !== undefined)
+                        const otherYearOptions = periodOptions.filter(([, v]) => v.month === undefined)
+                        return (
+                          <>
+                            {thisYearOptions.length > 0 && (
+                              <optgroup label={`${currentYear} 年`}>
+                                {thisYearOptions.map(([key, v]) => (
+                                  <option key={key} value={key}>{v.label}</option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {otherYearOptions.length > 0 && (
+                              <optgroup label="過去年份">
+                                {otherYearOptions.map(([key, v]) => (
+                                  <option key={key} value={key}>{v.label}</option>
+                                ))}
+                              </optgroup>
+                            )}
+                          </>
+                        )
+                      })()}
+                    </select>
+                  </div>
+                )}
+
+                {/* 列表 */}
+                <div className="divide-y divide-stone-100 mt-3">
+                  {displayList.length === 0 ? (
+                    <div className="px-6 py-10 text-center text-stone-400 text-sm">
+                      {regTab === 'upcoming' ? '目前沒有即將開課的報名' : '此期間無紀錄'}
                     </div>
-                  </button>
-                )
-              })}
-            </div>
-          )}
+                  ) : displayList.map((reg: any, i: number) => {
+                    const course = reg.courses
+                    const isPast = regTab === 'past'
+                    const d = course?.date ? new Date(course.date + 'T00:00:00') : null
+                    const weekdays = ['日','一','二','三','四','五','六']
+                    const dateStr = d ? `${d.getMonth()+1}/${d.getDate()}（${weekdays[d.getDay()]}）` : ''
+                    return (
+                      <div key={reg.id} className="px-6 py-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <button onClick={() => setSelectedReg(reg)} className="flex items-start gap-3 min-w-0 flex-1 text-left">
+                            <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 text-orange-600 font-bold text-xs mt-0.5">
+                              {i + 1}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-stone-800 truncate">{course?.title}</p>
+                              <p className="text-stone-400 text-xs mt-0.5">
+                                {dateStr} · {course?.time_start?.slice(0,5)}–{course?.time_end?.slice(0,5)}
+                              </p>
+                              <p className="text-stone-400 text-xs">{course?.location}</p>
+                            </div>
+                          </button>
+                          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                            <span className={`text-xs px-2 py-1 rounded-full font-medium ${isPast ? 'bg-stone-100 text-stone-500' : 'bg-green-100 text-green-700'}`}>
+                              {isPast ? '已結束' : '即將開課'}
+                            </span>
+                            {!isPast && (
+                              <button
+                                onClick={() => setCancelTarget(reg)}
+                                className="text-xs text-red-400 hover:text-red-600 transition-colors underline underline-offset-2"
+                              >
+                                取消報名
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )
+          })()}
         </div>
 
         {registrations.length > 0 && (
@@ -290,6 +424,47 @@ function ProfileContent() {
           </Link>
         )}
       </div>
+
+       {/* 取消報名確認彈窗 */}
+      {cancelTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center p-0 md:p-4"
+          onClick={e => { if (e.target === e.currentTarget) setCancelTarget(null) }}>
+          <div className="bg-white w-full md:max-w-sm md:rounded-2xl rounded-t-3xl shadow-2xl p-6">
+            <div className="flex justify-center mb-4 md:hidden">
+              <div className="w-10 h-1 bg-stone-200 rounded-full" />
+            </div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-bold text-stone-800">確認取消報名？</h3>
+                <p className="text-stone-400 text-xs mt-0.5">取消後無法自行復原</p>
+              </div>
+            </div>
+            <div className="bg-stone-50 rounded-xl px-4 py-3 mb-5">
+              <p className="text-stone-700 font-semibold text-sm">{cancelTarget.courses?.title}</p>
+              <p className="text-stone-400 text-xs mt-1">
+                {cancelTarget.courses?.date} · {cancelTarget.courses?.time_start?.slice(0,5)}–{cancelTarget.courses?.time_end?.slice(0,5)}
+              </p>
+              <p className="text-stone-400 text-xs">{cancelTarget.courses?.location}</p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={handleCancel} disabled={cancelling}
+                className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-stone-300 text-white font-medium py-3.5 rounded-xl text-sm transition-colors">
+                {cancelling ? '取消中...' : '確認取消報名'}
+              </button>
+              <button onClick={() => setCancelTarget(null)}
+                className="px-5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3.5 rounded-xl text-sm transition-colors">
+                保留
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 課程詳情彈窗 */}
       {selectedReg && (() => {
