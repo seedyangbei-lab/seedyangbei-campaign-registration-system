@@ -197,11 +197,12 @@ export default function HeroSection({ settings: s }: { settings: Record<string, 
         .hero-cutout-float {
           animation: heroFloat 4s ease-in-out infinite;
         }
-        @keyframes heroFloat {
-          0%   { transform: translate(-50%, -50%) translateY(0px); }
-          50%  { transform: translate(-50%, -50%) translateY(-14px); }
-          100% { transform: translate(-50%, -50%) translateY(0px); }
+       @keyframes heroFloat {
+          0%   { transform: translateY(0px); }
+          50%  { transform: translateY(-14px); }
+          100% { transform: translateY(0px); }
         }
+        
         @keyframes dotBounce {
           0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
           40%            { transform: translateY(-6px); opacity: 1; }
