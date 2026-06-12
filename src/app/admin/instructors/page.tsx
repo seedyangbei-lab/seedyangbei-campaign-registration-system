@@ -106,8 +106,8 @@ export default function InstructorsPage() {
                 </div>
               )}
               <div className="flex-1 min-w-0">
+                <p className="text-stone-800 font-semibold mb-1">{inst.name}</p>
                 <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                  <p className="text-stone-800 font-semibold">{inst.name}</p>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${inst.is_active ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-500'}`}>
                     {inst.is_active ? '開課中' : '暫停'}
                   </span>
@@ -123,8 +123,8 @@ export default function InstructorsPage() {
                       {isGroupUrl(inst.line_id) ? '課程群組' : 'LINE'}
                     </a>
                   )}
-                </div>
-                {inst.bio && <p className="text-stone-400 text-sm truncate">{inst.bio}</p>}
+               </div>
+                {inst.bio && <p className="text-stone-400 text-xs truncate">{inst.bio}</p>}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button onClick={() => loadCourses(inst.id)} className="text-xs bg-stone-100 hover:bg-stone-200 text-stone-600 px-3 py-1.5 rounded-lg transition-colors">
