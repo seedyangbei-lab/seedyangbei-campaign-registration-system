@@ -97,9 +97,12 @@ function StampSlot({ log, index }: { log?: StampLog; index: number }) {
   )
 }
 
-export default function StampCard({ logs, totalPoints }: StampCardProps) {
+  export default function StampCard({ logs, totalPoints }: StampCardProps) {
   const stampedLogs = logs.filter(l => l.delta > 0)
-  const totalCards = Math.max(1, Math.ceil(Math.max(stampedLogs.length + 1, STAMPS_PER_CARD) / STAMPS_PER_CARD))
+  // 只有前 totalPoints 筆是有效章（最新的先顯示，舊的被兌換後變空格）
+  const validCount = Math.min(totalPoints, stampedLogs.length)
+  const totalSlots = Math.max(stampedLogs.length, STAMPS_PER_CARD)
+  const totalCards = Math.max(1, Math.ceil(totalSlots / STAMPS_PER_CARD))
   const [currentCard, setCurrentCard] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -126,9 +129,10 @@ export default function StampCard({ logs, totalPoints }: StampCardProps) {
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {Array.from({ length: totalCards }).map((_, cardIdx) => {
-          const slotLogs = Array.from({ length: STAMPS_PER_CARD }).map((_, slotIdx) => {
+         const slotLogs = Array.from({ length: STAMPS_PER_CARD }).map((_, slotIdx) => {
             const logIdx = cardIdx * STAMPS_PER_CARD + slotIdx
-            return stampedLogs[logIdx] || null
+            // 只有 logIdx < validCount 的格子才顯示實心章
+            return logIdx < validCount ? (stampedLogs[logIdx] || null) : null
           })
 
           return (
