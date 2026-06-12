@@ -80,27 +80,33 @@ export default function HeroSection({ settings: s }: { settings: Record<string, 
         <>
           <AnimatedBackground />
           {bgImage && (
-            <img
+           <img
               src={bgImage}
               alt=""
+              fetchPriority="high"
+              decoding="async"
               className="absolute inset-0 w-full h-full object-cover object-center"
-               style={{ opacity: parseFloat(s.hero_bg_opacity || '0.18') }}
+              style={{ opacity: parseFloat(s.hero_bg_opacity || '0.18') }}
             />
           )}
         </>
       )}
 
       {/* 去背人物圖：漂浮，直接壓底，無遮罩 */}
-      {cutoutImage && isMobile !== null && (
-          <img src={cutoutImage} alt=""
-            className="absolute object-contain pointer-events-none hero-cutout-float"
-            style={{
-              top: '50%', left: '50%',
-              transform: 'translate(-50%, -50%)',
-              height: isMobile
-                ? (s.site_title ? '60vh' : '78vh')
-                : (s.site_title ? '72vh' : '84vh'),
-            width: 'auto', maxWidth: '95%',
+      {cutoutImage && (
+        <img src={cutoutImage} alt=""
+          fetchPriority="high"
+          decoding="async"
+          className="absolute object-contain pointer-events-none hero-cutout-float"
+          style={{
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            height: s.site_title
+              ? 'clamp(55vh, 65vh, 72vh)'
+              : 'clamp(70vh, 78vh, 84vh)',
+            width: 'auto',
+            maxWidth: '95%',
           }}
         />
       )}
