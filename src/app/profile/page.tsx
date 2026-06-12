@@ -79,12 +79,12 @@ function ProfileContent() {
         .order('requested_at', { ascending: false })
       setMyRedemptions(redemptions || [])
 
-      const { data: logs } = await supabase
+     const { data: logs } = await supabase
         .from('point_logs')
         .select('id, delta, reason, created_at')
         .eq('line_member_id', member.id)
         .gt('delta', 0)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
       setPointLogs(logs || [])
     }
 
