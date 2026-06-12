@@ -12,12 +12,18 @@ export default async function HomePage() {
       .select('*, instructors(id, name, phone, line_id), course_categories(id, name, color)')
       .eq('is_active', true)
       .gte('date', new Date().toISOString().split('T')[0])
-      .order('date', { ascending: true }),
+      .order('date', { ascending: true })
+      .order('time_start', { ascending: true }),
     supabase.from('course_categories').select('*').order('created_at'),
   ])
 
+  const now = new Date()
+  const activeCourses = (courses || []).filter((c: any) => {
+    const endDt = new Date(`${c.date}T${c.time_end}`)
+    return endDt > now
+  })
   const s = Object.fromEntries((settings || []).map((x: any) => [x.key, x.value]))
-
+  
   return (
     <main className="min-h-screen bg-stone-50">
       <HeroSection settings={s} />
@@ -51,10 +57,10 @@ export default async function HomePage() {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-stone-700">近期課程活動</h2>
           {courses && courses.length > 0 && (
-            <span className="text-sm text-stone-400">{courses.length} 個課程開放報名</span>
+             <span className="text-sm text-stone-400">{activeCourses.length} 個課程開放報名</span>
           )}
         </div>
-        {!courses || courses.length === 0 ? (
+        {!activeCourses || activeCourses.length === 0 ? (
           <div className="text-center py-24 text-stone-400">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-4 opacity-30">
               <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/>
@@ -64,8 +70,8 @@ export default async function HomePage() {
             <p className="text-sm mt-1">請稍後再回來查看</p>
           </div>
         ) : (
-        <CourseCard courses={courses as any} categories={categories || []} lineCommunityUrl={s.line_community_url || ''} />
-      )}
+    <CourseCard courses={activeCourses as any} categories={categories || []} lineCommunityUrl={s.line_community_url || ''} />
+    )}
       </section>
 
       <footer className="border-t border-stone-200 py-10 px-6">
