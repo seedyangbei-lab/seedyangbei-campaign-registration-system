@@ -119,7 +119,7 @@ function StampSlot({ log, index }: { log?: StampLog; index: number }) {
           <h2 className="font-semibold text-stone-700 text-sm">我的集點卡</h2>
           <p className="text-stone-400 text-xs mt-0.5">每次出席課程獲得 1 枚印章</p>
         </div>
-        <p className="text-[10px] text-stone-400 tracking-wider">共 {stampedLogs.length} 枚印章</p>
+      <p className="text-[10px] text-stone-400 tracking-wider">共 {validCount} 枚印章</p>
       </div>
 
       <div
