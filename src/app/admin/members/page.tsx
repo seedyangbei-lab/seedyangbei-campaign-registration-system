@@ -135,11 +135,26 @@ export default function MembersPage() {
     setHistoryLoading(false)
   }
 
-  const openEdit = (member: any) => {
+ const openEdit = async (member: any) => {
     setEditMember(member)
-    setEditForm({ building: member.building || '', unit_number: member.unit_number || '', floor_number: member.floor_number || '', notes: member.notes || '' })
+    // 先用 line_members 資料帶入
+    let building = member.building || ''
+    let unit_number = member.unit_number || ''
+    let floor_number = member.floor_number || ''
+    // 若 line_members 沒有，嘗試從 users 表解析 room_number
+    if (!building && member.line_user_id) {
+      const { data: user } = await supabase.from('users').select('room_number').eq('line_id', member.line_user_id).maybeSingle()
+      if (user?.room_number) {
+        const match = user.room_number.match(/^([A-Z]棟)\s+(\d+)-(\d+)F-(\d+)$/)
+        if (match) {
+          building = match[1]
+          unit_number = match[2]
+          floor_number = match[3]
+        }
+      }
+    }
+    setEditForm({ building, unit_number, floor_number, notes: member.notes || '' })
   }
-
   const handleSave = async () => {
     setSaving(true)
     await supabase.from('line_members').update({
@@ -371,32 +386,33 @@ export default function MembersPage() {
                     <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ color: tag.color, backgroundColor: tag.bg }}>
                       {tag.label}
                     </span>
+                    {member.points > 0 && (
+                      <span className="text-xs text-orange-500 font-bold">{member.points} 點</span>
+                    )}
                   </div>
                   {hasLocation && (
                     <p className="text-stone-500 text-xs">{member.building} {member.unit_number}{member.floor_number && `-${member.floor_number}F`}</p>
                   )}
                   {member.notes && <p className="text-stone-400 text-xs mt-0.5 truncate">{member.notes}</p>}
-                  <div className="flex items-center gap-3 mt-0.5">
-                    <p className="text-stone-300 text-xs">加入：{member.created_at?.split('T')[0]}</p>
-                    {member.points > 0 && (
-                      <span className="text-xs text-orange-500 font-bold">{member.points} 點</span>
-                    )}
-                  </div>
+                  <p className="text-stone-300 text-xs mt-0.5">加入：{member.created_at?.split('T')[0]}</p>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                 <div className="flex items-center gap-1">
                   <button onClick={() => openEdit(member)} className="p-2 hover:bg-stone-100 rounded-lg transition-colors text-stone-500">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </button>
                   <button onClick={() => { setAddPointModal(member); setAddPointForm({ delta: 1, reason: '' }) }}
                     className="flex items-center gap-1 text-xs bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 px-2.5 py-1.5 rounded-lg transition-colors font-medium">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    加點
+                    調整點數
+
                   </button>
-                  <button onClick={() => openHistory(member)}
+                 <button onClick={() => openHistory(member)}
                     className="flex items-center gap-1.5 text-xs bg-stone-100 hover:bg-stone-200 text-stone-600 px-3 py-1.5 rounded-lg transition-colors">
                     課程記錄
                     <span className="bg-orange-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">{count}</span>
                   </button>
+                  </div>
                 </div>
               </div>
             </div>
