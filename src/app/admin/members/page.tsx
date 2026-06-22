@@ -37,20 +37,27 @@ export default function MembersPage() {
    const fetchMembers = async () => {
     const res = await fetch('/api/admin/members')
     const data = await res.json()
-    setMembers(Array.isArray(data) ? data : [])
-    if (data && data.length > 0) {
-      const counts: Record<string, number> = {}
-      await Promise.all(data.map(async (m: any) => {
-        const { data: user } = await supabase.from('users').select('id').eq('line_id', m.line_user_id).maybeSingle()
-        if (user) {
-          const { count } = await supabase.from('registrations').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'confirmed')
-          counts[m.id] = count ?? 0
-        } else {
-          counts[m.id] = 0
-        }
-      }))
-      setRegCounts(counts)
+    if (!Array.isArray(data)) { setMembers([]); return }
+    setMembers(data)
+
+    // 批次撈所有 confirmed 報名，一次 query 取代 N 次
+    const { data: allRegs } = await supabase
+      .from('registrations')
+      .select('user_id, users!inner(line_id)')
+      .eq('status', 'confirmed')
+
+    const counts: Record<string, number> = {}
+    if (allRegs) {
+      const lineIdToCount: Record<string, number> = {}
+      allRegs.forEach((r: any) => {
+        const lid = r.users?.line_id
+        if (lid) lineIdToCount[lid] = (lineIdToCount[lid] || 0) + 1
+      })
+      data.forEach((m: any) => {
+        counts[m.id] = lineIdToCount[m.line_user_id] || 0
+      })
     }
+    setRegCounts(counts)
   }
 
   useEffect(() => { fetchMembers(); fetchOverallChart() }, [])
