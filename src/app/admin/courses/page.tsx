@@ -133,6 +133,7 @@ export default function CoursesPage() {
   const [filterMonth, setFilterMonth] = useState('')
   const [uploading, setUploading] = useState(false)
   const [timeError, setTimeError] = useState('')
+  const [pageLoading, setPageLoading] = useState(true)
   const [attendanceModal, setAttendanceModal] = useState<any>(null)
   const [attendanceList, setAttendanceList] = useState<any[]>([])
   const [attendanceLoading, setAttendanceLoading] = useState(false)
@@ -152,6 +153,7 @@ export default function CoursesPage() {
       const map = Object.fromEntries(siteSettings.map((s: any) => [s.key, s.value || '']))
       setScheduleSettings(map)
     }
+    setPageLoading(false)
   }
   useEffect(() => { fetchAll() }, [])
 
@@ -342,7 +344,17 @@ export default function CoursesPage() {
         </div>
       )}
       {mainTab === 'courses' && <div className="space-y-3">
-        {displayCourses.length === 0 && <div className="bg-white border border-stone-200 rounded-2xl p-12 text-center text-stone-400"><p>尚無課程</p></div>}
+        {pageLoading && Array.from({length: 3}).map((_, i) => (
+          <div key={i} className="bg-white border border-stone-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm animate-pulse">
+            <div className="w-14 h-14 rounded-xl bg-stone-100 flex-shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3 bg-stone-100 rounded w-1/4" />
+              <div className="h-4 bg-stone-100 rounded w-1/2" />
+              <div className="h-3 bg-stone-100 rounded w-2/3" />
+            </div>
+          </div>
+        ))}
+        {!pageLoading && displayCourses.length === 0 && <div className="bg-white border border-stone-200 rounded-2xl p-12 text-center text-stone-400"><p>尚無課程</p></div>}
         {displayCourses.map((course: any) => {
           const expired = isExpired(course)
           return (
