@@ -17,7 +17,7 @@ const emptyForm = {
   period_start: 'AM', hour_start: '09', min_start: '00',
   period_end: 'AM', hour_end: '10', min_end: '00',
   location: '', custom_location: '', max_seats: 20,
-  poster_url: '', instructor_id: '', category_id: '',
+  poster_url: '', instructor_id: '', instructor_ids: [] as string[], category_id: '',
   notes: '', suitable_age: '全年齡',
 }
 
@@ -87,26 +87,14 @@ function TimePicker({
 }) {
   return (
     <div className="grid grid-cols-[72px_1fr_1fr] gap-1.5 w-full">
-      <select
-        value={period}
-        onChange={e => { const f = {...form, [`period_${prefix}`]: e.target.value}; setForm(f); validateTimes(f) }}
-        className="w-full border border-stone-300 rounded-xl px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white"
-      >
+      <select value={period} onChange={e => { const f = {...form, [`period_${prefix}`]: e.target.value}; setForm(f); validateTimes(f) }} className="w-full border border-stone-300 rounded-xl px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
         <option value="AM">上午</option>
         <option value="PM">下午</option>
       </select>
-      <select
-        value={hour}
-        onChange={e => { const f = {...form, [`hour_${prefix}`]: e.target.value}; setForm(f); validateTimes(f) }}
-        className="w-full border border-stone-300 rounded-xl px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white"
-      >
+      <select value={hour} onChange={e => { const f = {...form, [`hour_${prefix}`]: e.target.value}; setForm(f); validateTimes(f) }} className="w-full border border-stone-300 rounded-xl px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
         {HOURS.map(h => <option key={h} value={h}>{h} 時</option>)}
       </select>
-      <select
-        value={min}
-        onChange={e => { const f = {...form, [`min_${prefix}`]: e.target.value}; setForm(f); validateTimes(f) }}
-        className="w-full border border-stone-300 rounded-xl px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white"
-      >
+      <select value={min} onChange={e => { const f = {...form, [`min_${prefix}`]: e.target.value}; setForm(f); validateTimes(f) }} className="w-full border border-stone-300 rounded-xl px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
         {MINUTES.map(m => <option key={m} value={m}>{m} 分</option>)}
       </select>
     </div>
@@ -142,13 +130,23 @@ export default function CoursesPage() {
   const supabase = createClient()
 
   const fetchAll = async () => {
-  const [{ data: c }, { data: i }, { data: cat }, { data: siteSettings }] = await Promise.all([
-      supabase.from('courses').select('*, instructors(name), course_categories(name, color)').order('date', { ascending: false }),
-      supabase.from('instructors').select('id, name').eq('is_active', true),
+    const [{ data: c }, { data: i }, { data: cat }, { data: siteSettings }] = await Promise.all([
+      supabase.from('courses').select('*, instructors(name), course_categories(name, color), instructor_ids').order('date', { ascending: false }),
+      supabase.from('instructors').select('id, name').eq('is_active', true).order('created_at'),
       supabase.from('course_categories').select('*').order('created_at'),
       supabase.from('site_settings').select('key, value'),
     ])
-    setCourses((c as any) || []); setInstructors(i || []); setCategories(cat || [])
+    const instructorsData = i || []
+    const coursesData = (c as any) || []
+    const enriched = coursesData.map((course: any) => ({
+      ...course,
+      instructor_names: (course.instructor_ids || [])
+        .map((id: string) => instructorsData.find((inst: any) => inst.id === id)?.name)
+        .filter(Boolean),
+    }))
+    setCourses(enriched)
+    setInstructors(instructorsData)
+    setCategories(cat || [])
     if (siteSettings) {
       const map = Object.fromEntries(siteSettings.map((s: any) => [s.key, s.value || '']))
       setScheduleSettings(map)
@@ -165,6 +163,7 @@ export default function CoursesPage() {
   }
 
   const openAdd = () => { setEditTarget(null); setForm(emptyForm); setTimeError(''); setShowModal(true) }
+
   const openEdit = (course: any) => {
     setEditTarget(course)
     const s = fromTime(course.time_start); const e = fromTime(course.time_end)
@@ -175,7 +174,27 @@ export default function CoursesPage() {
       location: LOCATIONS.includes(course.location) ? course.location : '其他',
       custom_location: LOCATIONS.includes(course.location) ? '' : course.location,
       max_seats: course.max_seats, poster_url: course.poster_url || '',
-      instructor_id: course.instructor_id || '', category_id: course.category_id || '',
+      instructor_id: course.instructor_id || '',
+      instructor_ids: course.instructor_ids || (course.instructor_id ? [course.instructor_id] : []),
+      category_id: course.category_id || '',
+      notes: course.notes || '', suitable_age: course.suitable_age || '全年齡',
+    })
+    setTimeError(''); setShowModal(true)
+  }
+
+  const openCopy = (course: any) => {
+    const tS = fromTime(course.time_start); const tE = fromTime(course.time_end)
+    setEditTarget(null)
+    setForm({
+      title: course.title, description: course.description || '', date: '',
+      period_start: tS.period, hour_start: tS.hour, min_start: tS.min,
+      period_end: tE.period, hour_end: tE.hour, min_end: tE.min,
+      location: LOCATIONS.includes(course.location) ? course.location : '其他',
+      custom_location: LOCATIONS.includes(course.location) ? '' : course.location,
+      max_seats: course.max_seats, poster_url: course.poster_url || '',
+      instructor_id: course.instructor_id || '',
+      instructor_ids: course.instructor_ids || (course.instructor_id ? [course.instructor_id] : []),
+      category_id: course.category_id || '',
       notes: course.notes || '', suitable_age: course.suitable_age || '全年齡',
     })
     setTimeError(''); setShowModal(true)
@@ -192,15 +211,18 @@ export default function CoursesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!validateTimes(form)) return; setLoading(true)
     const location = form.location === '其他' ? form.custom_location : form.location
+    const resolvedInstructorIds = form.instructor_ids.length > 0 ? form.instructor_ids : (form.instructor_id ? [form.instructor_id] : [])
     const payload = {
       title: form.title, description: form.description, date: form.date,
       time_start: toTime(form.period_start, form.hour_start, form.min_start),
       time_end: toTime(form.period_end, form.hour_end, form.min_end),
       location, max_seats: form.max_seats, poster_url: form.poster_url || null,
-      instructor_id: form.instructor_id || null, category_id: form.category_id || null,
+      instructor_id: resolvedInstructorIds[0] || null,
+      instructor_ids: resolvedInstructorIds,
+      category_id: form.category_id || null,
       notes: form.notes || null, suitable_age: form.suitable_age || '全年齡',
     }
-   if (editTarget) {
+    if (editTarget) {
       const { error } = await supabase.from('courses').update(payload).eq('id', editTarget.id)
       if (error) { alert('更新失敗：' + error.message); setLoading(false); return }
     } else {
@@ -229,33 +251,15 @@ export default function CoursesPage() {
     setAttendanceLoading(false)
   }
 
- const saveAttendance = async () => {
+  const saveAttendance = async () => {
     setAttendanceSaving(true)
     for (const reg of attendanceList) {
       const shouldAttend = checkedIds.has(reg.id)
       const isAttended = reg.status === 'attended'
       if (shouldAttend && !isAttended) {
-        await fetch('/api/attendance', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            registrationId: reg.id,
-            courseTitle: attendanceModal.title,
-            lineUserId: reg.users?.line_id || '',
-            action: 'attend',
-          }),
-        })
+        await fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ registrationId: reg.id, courseTitle: attendanceModal.title, lineUserId: reg.users?.line_id || '', action: 'attend' }) })
       } else if (!shouldAttend && isAttended) {
-        await fetch('/api/attendance', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            registrationId: reg.id,
-            courseTitle: attendanceModal.title,
-            lineUserId: reg.users?.line_id || '',
-            action: 'unattend',
-          }),
-        })
+        await fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ registrationId: reg.id, courseTitle: attendanceModal.title, lineUserId: reg.users?.line_id || '', action: 'unattend' }) })
       }
     }
     setAttendanceSaving(false)
@@ -265,16 +269,11 @@ export default function CoursesPage() {
 
   const now = new Date()
   const isExpired = (course: any) => new Date(`${course.date}T${course.time_end}`) < now
-
   const endedCourses = courses.filter((c: any) => isExpired(c))
-  const availableMonths = Array.from(
-    new Set(endedCourses.map((c: any) => c.date?.slice(0, 7)).filter(Boolean))
-  ).sort().reverse() as string[]
-
+  const availableMonths = Array.from(new Set(endedCourses.map((c: any) => c.date?.slice(0, 7)).filter(Boolean))).sort().reverse() as string[]
   const displayCourses = courseTab === 'active'
     ? courses.filter((c: any) => c.is_active && !isExpired(c))
     : endedCourses.filter((c: any) => filterMonth ? c.date?.startsWith(filterMonth) : true)
-
   const notesCount = form.notes.length
   const notesOver = notesCount > NOTES_MAX
 
@@ -282,13 +281,13 @@ export default function CoursesPage() {
     <div className="p-6 md:p-8">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-stone-800 text-2xl font-bold">課程管理</h2>
-       {mainTab === 'courses' ? (
+        {mainTab === 'courses' ? (
           <div className="flex items-center gap-2">
             <CourseScheduleExporter courses={courses} scheduleSettings={scheduleSettings} />
-          <button onClick={openAdd} className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            新增課程
-          </button>
+            <button onClick={openAdd} className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              新增課程
+            </button>
           </div>
         ) : (
           <button onClick={() => { setEditCat(null); setCatForm({ name: '', color: '#e11d48' }); setShowCatModal(true) }}
@@ -309,172 +308,191 @@ export default function CoursesPage() {
         ))}
       </div>
 
-      {/* 課程列表次級篩選 */}
+      {/* 課程列表 */}
       {mainTab === 'courses' && (
-      <div className="flex gap-1 p-1 bg-stone-50 border border-stone-200 rounded-lg mb-4 w-fit">
-        {([['active', '開放中'], ['ended', '已結束']] as const).map(([t, label]) => (
-          <button key={t} onClick={() => { setCourseTab(t); setFilterMonth('') }}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${courseTab === t ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400 hover:text-stone-600'}`}>
-            {label}
-            <span className={`ml-1 text-xs px-1 py-0.5 rounded-full ${courseTab === t ? 'bg-stone-100 text-stone-500' : 'bg-stone-100 text-stone-400'}`}>
-              {t === 'active' ? courses.filter((c: any) => c.is_active && !isExpired(c)).length : endedCourses.length}
-            </span>
-          </button>
-        ))}
-      </div>
-      )}
-      
-      {/* 已結束：月份篩選 */}
-      {courseTab === 'ended' && availableMonths.length > 0 && (
-        <div className="flex items-center gap-2 mb-4 flex-wrap">
-          <span className="text-xs text-stone-400 font-medium">篩選月份</span>
-          <button onClick={() => setFilterMonth('')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterMonth === '' ? 'bg-stone-700 text-white' : 'bg-white border border-stone-200 text-stone-500 hover:bg-stone-50'}`}>
-            全部
-          </button>
-          {availableMonths.map(m => {
-            const [y, mo] = m.split('-')
-            return (
-              <button key={m} onClick={() => setFilterMonth(m)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterMonth === m ? 'bg-stone-700 text-white' : 'bg-white border border-stone-200 text-stone-500 hover:bg-stone-50'}`}>
-                {y}/{parseInt(mo)}月
+        <>
+          <div className="flex gap-1 p-1 bg-stone-50 border border-stone-200 rounded-lg mb-4 w-fit">
+            {([['active', '開放中'], ['ended', '已結束']] as const).map(([t, label]) => (
+              <button key={t} onClick={() => { setCourseTab(t); setFilterMonth('') }}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${courseTab === t ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400 hover:text-stone-600'}`}>
+                {label}
+                <span className={`ml-1 text-xs px-1 py-0.5 rounded-full ${courseTab === t ? 'bg-stone-100 text-stone-500' : 'bg-stone-100 text-stone-400'}`}>
+                  {t === 'active' ? courses.filter((c: any) => c.is_active && !isExpired(c)).length : endedCourses.length}
+                </span>
               </button>
-            )
-          })}
-        </div>
-      )}
-      {mainTab === 'courses' && <div className="space-y-3">
-        {pageLoading && Array.from({length: 3}).map((_, i) => (
-          <div key={i} className="bg-white border border-stone-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm animate-pulse">
-            <div className="w-14 h-14 rounded-xl bg-stone-100 flex-shrink-0" />
-            <div className="flex-1 space-y-2">
-              <div className="h-3 bg-stone-100 rounded w-1/4" />
-              <div className="h-4 bg-stone-100 rounded w-1/2" />
-              <div className="h-3 bg-stone-100 rounded w-2/3" />
-            </div>
-          </div>
-        ))}
-        {!pageLoading && displayCourses.length === 0 && <div className="bg-white border border-stone-200 rounded-2xl p-12 text-center text-stone-400"><p>尚無課程</p></div>}
-        {displayCourses.map((course: any) => {
-          const expired = isExpired(course)
-          return (
-            <div key={course.id} className="bg-white border border-stone-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
-              {course.poster_url && <img src={course.poster_url} alt={course.title} className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  {expired ? <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-stone-100 text-stone-500">已結束</span>
-                    : <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${course.is_active ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-500'}`}>{course.is_active ? '開放報名' : '已關閉'}</span>}
-                  {course.course_categories && <span className="text-xs px-2 py-0.5 rounded-full text-white font-medium" style={{ backgroundColor: course.course_categories.color }}>{course.course_categories.name}</span>}
-                </div>
-                <p className="text-stone-800 font-semibold truncate">{course.title}</p>
-                <p className="text-stone-400 text-sm mt-0.5">{course.date} · {course.time_start?.slice(0,5)}–{course.time_end?.slice(0,5)} · {course.location}{course.instructors && <span className="ml-2">· {course.instructors.name}</span>}</p>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {!expired ? (
-                  <>
-                    <button onClick={() => openEdit(course)}
-                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 transition-colors font-medium">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      編輯課程
-                    </button>
-                    <button
-                      onClick={() => toggleActive(course.id, course.is_active)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${course.is_active ? 'bg-orange-500' : 'bg-stone-200'}`}
-                      title={course.is_active ? '關閉報名' : '開放報名'}
-                    >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${course.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
-                    </button>
-                    <button onClick={() => handleDelete(course.id)} className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-400 hover:text-red-600">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button onClick={() => openAttendance(course)}
-                      className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
-                      出席紀錄
-                    </button>
-                    <button onClick={() => {
-                      const s = fromTime(course.time_start); const e = fromTime(course.time_end)
-                      setEditTarget(null)
-                      setForm({
-                        title: course.title, description: course.description || '', date: '',
-                        period_start: s.period, hour_start: s.hour, min_start: s.min,
-                        period_end: e.period, hour_end: e.hour, min_end: e.min,
-                        location: LOCATIONS.includes(course.location) ? course.location : '其他',
-                        custom_location: LOCATIONS.includes(course.location) ? '' : course.location,
-                        max_seats: course.max_seats, poster_url: course.poster_url || '',
-                        instructor_id: course.instructor_id || '', category_id: course.category_id || '',
-                        notes: course.notes || '', suitable_age: course.suitable_age || '全年齡',
-                      })
-                      setTimeError(''); setShowModal(true)
-                    }}
-                      className="flex items-center gap-1.5 text-xs bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                      複製課程
-                    </button>
-                  </>
-                )}
-              </div>
-              </div>
             ))}
           </div>
 
-          {showCatModal && (
-            <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setShowCatModal(false) }}>
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
-                <div className="flex items-center justify-between p-6 border-b border-stone-200">
-                  <h3 className="text-stone-800 font-bold">{editCat ? '編輯類別' : '新增類別'}</h3>
-                  <button onClick={() => setShowCatModal(false)} className="p-2 hover:bg-stone-100 rounded-xl">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          {courseTab === 'ended' && availableMonths.length > 0 && (
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
+              <span className="text-xs text-stone-400 font-medium">篩選月份</span>
+              <button onClick={() => setFilterMonth('')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterMonth === '' ? 'bg-stone-700 text-white' : 'bg-white border border-stone-200 text-stone-500 hover:bg-stone-50'}`}>
+                全部
+              </button>
+              {availableMonths.map(m => {
+                const [y, mo] = m.split('-')
+                return (
+                  <button key={m} onClick={() => setFilterMonth(m)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterMonth === m ? 'bg-stone-700 text-white' : 'bg-white border border-stone-200 text-stone-500 hover:bg-stone-50'}`}>
+                    {y}/{parseInt(mo)}月
                   </button>
-                </div>
-                <div className="p-6 space-y-4">
-                  <div>
-                    <label className="block text-stone-600 text-sm font-medium mb-1.5">類別名稱 *</label>
-                    <input required value={catForm.name} onChange={e => setCatForm({...catForm, name: e.target.value})}
-                      placeholder="例：AI 學習相關"
-                      className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-                  </div>
-                  <div>
-                    <label className="block text-stone-600 text-sm font-medium mb-2">標籤顏色</label>
-                    <div className="flex flex-wrap gap-2">
-                      {PRESET_COLORS.map(color => (
-                        <button key={color} type="button" onClick={() => setCatForm({...catForm, color})}
-                          className={`w-8 h-8 rounded-full transition-transform ${catForm.color === color ? 'scale-125 ring-2 ring-offset-2 ring-stone-400' : 'hover:scale-110'}`}
-                          style={{ backgroundColor: color }} />
-                      ))}
-                    </div>
-                    <div className="mt-3 flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full" style={{ backgroundColor: catForm.color }} />
-                      <span className="text-xs px-3 py-1.5 rounded-full text-white font-medium" style={{ backgroundColor: catForm.color }}>{catForm.name || '預覽'}</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-3 pt-2">
-                <button type="submit" disabled={loading || !form.date || !!timeError || notesOver} className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
-                  {loading ? '儲存中...' : editTarget ? '更新課程' : '新增課程'}
-                </button>
-                <button type="button" onClick={() => { setShowModal(false); setShowCalendar(false) }} className="px-6 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-xl text-sm transition-colors">取消</button>
-              </div>
-              {editTarget && (
-                <button type="button" onClick={async () => {
-                  if (!confirm('確定要刪除這個課程嗎？')) return
-                  setShowModal(false)
-                  await handleDelete(editTarget.id)
-                }} className="w-full text-center text-xs text-red-400 hover:text-red-600 transition-colors pt-1">
-                  刪除此課程
-                </button>
-              )}
-                </div>
-              </div>
+                )
+              })}
             </div>
           )}
+
+          <div className="space-y-3">
+            {pageLoading && Array.from({length: 3}).map((_, i) => (
+              <div key={i} className="bg-white border border-stone-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm animate-pulse">
+                <div className="w-14 h-14 rounded-xl bg-stone-100 flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 bg-stone-100 rounded w-1/4" />
+                  <div className="h-4 bg-stone-100 rounded w-1/2" />
+                  <div className="h-3 bg-stone-100 rounded w-2/3" />
+                </div>
+              </div>
+            ))}
+            {!pageLoading && displayCourses.length === 0 && (
+              <div className="bg-white border border-stone-200 rounded-2xl p-12 text-center text-stone-400"><p>尚無課程</p></div>
+            )}
+            {displayCourses.map((course: any) => {
+              const expired = isExpired(course)
+              const displayInstructors = course.instructor_names?.length > 0
+                ? course.instructor_names.join('、')
+                : course.instructors?.name || ''
+              return (
+                <div key={course.id} className="bg-white border border-stone-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
+                  {course.poster_url && <img src={course.poster_url} alt={course.title} className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      {expired
+                        ? <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-stone-100 text-stone-500">已結束</span>
+                        : <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${course.is_active ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-500'}`}>{course.is_active ? '開放報名' : '已關閉'}</span>}
+                      {course.course_categories && <span className="text-xs px-2 py-0.5 rounded-full text-white font-medium" style={{ backgroundColor: course.course_categories.color }}>{course.course_categories.name}</span>}
+                    </div>
+                    <p className="text-stone-800 font-semibold truncate">{course.title}</p>
+                    <p className="text-stone-400 text-sm mt-0.5">
+                      {course.date} · {course.time_start?.slice(0,5)}–{course.time_end?.slice(0,5)} · {course.location}
+                      {displayInstructors && <span className="ml-2">· {displayInstructors}</span>}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {!expired ? (
+                      <>
+                        <button onClick={() => openEdit(course)}
+                          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 transition-colors font-medium">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          編輯課程
+                        </button>
+                        <button onClick={() => toggleActive(course.id, course.is_active)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${course.is_active ? 'bg-orange-500' : 'bg-stone-200'}`}
+                          title={course.is_active ? '關閉報名' : '開放報名'}>
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${course.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                        <button onClick={() => handleDelete(course.id)} className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-400 hover:text-red-600">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => openAttendance(course)}
+                          className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                          出席紀錄
+                        </button>
+                        <button onClick={() => openCopy(course)}
+                          className="flex items-center gap-1.5 text-xs bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                          複製課程
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+
+      {/* 課程類別 Tab */}
+      {mainTab === 'categories' && (
+        <div>
+          <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
+            {categories.length === 0 && <div className="p-12 text-center text-stone-400">尚無類別</div>}
+            {categories.map((cat, i) => (
+              <div key={cat.id} className={`flex items-center justify-between px-5 py-4 ${i < categories.length - 1 ? 'border-b border-stone-100' : ''}`}>
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
+                  <span className="text-stone-700 font-medium">{cat.name}</span>
+                  <span className="text-xs px-2.5 py-1 rounded-full text-white font-medium" style={{ backgroundColor: cat.color }}>{cat.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => { setEditCat(cat); setCatForm({ name: cat.name, color: cat.color }); setShowCatModal(true) }}
+                    className="p-2 hover:bg-stone-100 rounded-lg transition-colors text-stone-500">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button onClick={async () => { if (!confirm('確定要刪除這個類別嗎？')) return; await supabase.from('course_categories').delete().eq('id', cat.id); fetchAll() }}
+                    className="p-2 hover:bg-red-50 rounded-lg transition-colors text-stone-400 hover:text-red-500">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-       {attendanceModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
-          onClick={e => { if (e.target === e.currentTarget) setAttendanceModal(null) }}>
+      {/* 課程類別彈窗 */}
+      {showCatModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setShowCatModal(false) }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="flex items-center justify-between p-6 border-b border-stone-200">
+              <h3 className="text-stone-800 font-bold">{editCat ? '編輯類別' : '新增類別'}</h3>
+              <button onClick={() => setShowCatModal(false)} className="p-2 hover:bg-stone-100 rounded-xl">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-stone-600 text-sm font-medium mb-1.5">類別名稱 *</label>
+                <input required value={catForm.name} onChange={e => setCatForm({...catForm, name: e.target.value})}
+                  placeholder="例：AI 學習相關"
+                  className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
+              </div>
+              <div>
+                <label className="block text-stone-600 text-sm font-medium mb-2">標籤顏色</label>
+                <div className="flex flex-wrap gap-2">
+                  {PRESET_COLORS.map(color => (
+                    <button key={color} type="button" onClick={() => setCatForm({...catForm, color})}
+                      className={`w-8 h-8 rounded-full transition-transform ${catForm.color === color ? 'scale-125 ring-2 ring-offset-2 ring-stone-400' : 'hover:scale-110'}`}
+                      style={{ backgroundColor: color }} />
+                  ))}
+                </div>
+                <div className="mt-3 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full" style={{ backgroundColor: catForm.color }} />
+                  <span className="text-xs px-3 py-1.5 rounded-full text-white font-medium" style={{ backgroundColor: catForm.color }}>{catForm.name || '預覽'}</span>
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button disabled={catLoading || !catForm.name} onClick={async () => {
+                  setCatLoading(true)
+                  if (editCat) await supabase.from('course_categories').update({ name: catForm.name, color: catForm.color }).eq('id', editCat.id)
+                  else await supabase.from('course_categories').insert({ name: catForm.name, color: catForm.color })
+                  setShowCatModal(false); await fetchAll(); setCatLoading(false)
+                }} className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
+                  {catLoading ? '儲存中...' : '儲存'}
+                </button>
+                <button onClick={() => setShowCatModal(false)} className="px-5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-xl text-sm transition-colors">取消</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 出席紀錄彈窗 */}
+      {attendanceModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setAttendanceModal(null) }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
             <div className="flex items-center justify-between p-6 border-b border-stone-200">
               <div>
@@ -495,16 +513,9 @@ export default function CoursesPage() {
                   <p className="text-xs text-stone-400 mb-4">勾選代表已出席，取消勾選代表撤銷出席（點數同步調整）</p>
                   {attendanceList.map((reg: any) => (
                     <label key={reg.id} className="flex items-center gap-3 bg-stone-50 rounded-xl px-4 py-3 border border-stone-100 cursor-pointer hover:bg-orange-50 hover:border-orange-200 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={checkedIds.has(reg.id)}
-                        onChange={e => {
-                          const next = new Set(checkedIds)
-                          e.target.checked ? next.add(reg.id) : next.delete(reg.id)
-                          setCheckedIds(next)
-                        }}
-                        className="w-4 h-4 accent-orange-500 cursor-pointer"
-                      />
+                      <input type="checkbox" checked={checkedIds.has(reg.id)}
+                        onChange={e => { const next = new Set(checkedIds); e.target.checked ? next.add(reg.id) : next.delete(reg.id); setCheckedIds(next) }}
+                        className="w-4 h-4 accent-orange-500 cursor-pointer" />
                       <div className="flex-1 min-w-0">
                         <p className="text-stone-700 text-sm font-medium">{reg.users?.name}</p>
                         <p className="text-stone-400 text-xs">{reg.users?.room_number}</p>
@@ -523,12 +534,8 @@ export default function CoursesPage() {
             <div className="px-6 py-4 border-t border-stone-100 flex items-center justify-between">
               <p className="text-xs text-stone-400">已勾選 {checkedIds.size} / {attendanceList.length} 人</p>
               <div className="flex gap-2">
-                <button onClick={() => setAttendanceModal(null)}
-                  className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 text-sm rounded-xl transition-colors">
-                  取消
-                </button>
-                <button onClick={saveAttendance} disabled={attendanceSaving}
-                  className="px-5 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white text-sm font-medium rounded-xl transition-colors">
+                <button onClick={() => setAttendanceModal(null)} className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 text-sm rounded-xl transition-colors">取消</button>
+                <button onClick={saveAttendance} disabled={attendanceSaving} className="px-5 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white text-sm font-medium rounded-xl transition-colors">
                   {attendanceSaving ? '儲存中...' : '儲存出席紀錄'}
                 </button>
               </div>
@@ -537,11 +544,14 @@ export default function CoursesPage() {
         </div>
       )}
 
+      {/* 新增/編輯課程彈窗 */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) { setShowModal(false); setShowCalendar(false) }}}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-stone-200 sticky top-0 bg-white z-10">
-              <h3 className="text-stone-800 font-bold text-lg">{editTarget ? '編輯課程' : '新增課程'}</h3>
+              <h3 className="text-stone-800 font-bold text-lg">
+                {editTarget ? '編輯課程' : form.title ? `複製課程` : '新增課程'}
+              </h3>
               <button onClick={() => { setShowModal(false); setShowCalendar(false) }} className="p-2 hover:bg-stone-100 rounded-xl">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
@@ -557,11 +567,29 @@ export default function CoursesPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-stone-600 text-sm font-medium mb-1.5">講師</label>
-                  <select value={form.instructor_id} onChange={e => setForm({...form, instructor_id: e.target.value})} className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-                    <option value="">選擇講師</option>
-                    {instructors.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
-                  </select>
+                  <label className="block text-stone-600 text-sm font-medium mb-1.5">
+                    講師 <span className="text-stone-400 font-normal">（可多選）</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {instructors.map(inst => {
+                      const selected = form.instructor_ids.includes(inst.id)
+                      return (
+                        <button key={inst.id} type="button"
+                          onClick={() => {
+                            const ids = selected
+                              ? form.instructor_ids.filter(id => id !== inst.id)
+                              : [...form.instructor_ids, inst.id]
+                            setForm({...form, instructor_ids: ids, instructor_id: ids[0] || ''})
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-sm border transition-colors ${selected ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-stone-600 border-stone-300 hover:border-orange-300'}`}>
+                          {inst.name}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {form.instructor_ids.length === 0 && (
+                    <p className="text-xs text-stone-400 mt-1.5">點擊選擇一或多位講師</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-stone-600 text-sm font-medium mb-1.5">課程類別</label>
@@ -585,28 +613,20 @@ export default function CoursesPage() {
                 </button>
                 {showCalendar && <div className="absolute top-full left-0 mt-1 z-20"><CalendarPicker value={form.date} onChange={v => { setForm({...form, date: v}); setShowCalendar(false) }} /></div>}
               </div>
-
               <div>
                 <label className="block text-stone-600 text-sm font-medium mb-2">時間 *</label>
                 <div className="grid grid-cols-2 gap-3 w-full">
                   <div className="min-w-0">
                     <p className="text-xs text-stone-400 mb-1.5">開始</p>
-                    <TimePicker
-                      period={form.period_start} hour={form.hour_start} min={form.min_start}
-                      prefix="start" form={form} setForm={setForm} validateTimes={validateTimes}
-                    />
+                    <TimePicker period={form.period_start} hour={form.hour_start} min={form.min_start} prefix="start" form={form} setForm={setForm} validateTimes={validateTimes} />
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-stone-400 mb-1.5">結束</p>
-                    <TimePicker
-                      period={form.period_end} hour={form.hour_end} min={form.min_end}
-                      prefix="end" form={form} setForm={setForm} validateTimes={validateTimes}
-                    />
+                    <TimePicker period={form.period_end} hour={form.hour_end} min={form.min_end} prefix="end" form={form} setForm={setForm} validateTimes={validateTimes} />
                   </div>
                 </div>
                 {timeError && <p className="text-red-500 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-2">{timeError}</p>}
               </div>
-
               <div>
                 <label className="block text-stone-600 text-sm font-medium mb-1.5">地點 *</label>
                 <select required value={form.location} onChange={e => setForm({...form, location: e.target.value})} className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
@@ -615,47 +635,25 @@ export default function CoursesPage() {
                 </select>
               </div>
               {form.location === '其他' && <input required value={form.custom_location} onChange={e => setForm({...form, custom_location: e.target.value})} placeholder="請填寫實際地點" className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />}
-
               <div>
                 <label className="block text-stone-600 text-sm font-medium mb-1.5">名額上限 *</label>
                 <input required type="number" min="1"
                   value={form.max_seats === 0 ? '' : form.max_seats}
-                  onChange={e => {
-                    const val = e.target.value
-                    setForm({...form, max_seats: val === '' ? 0 : Math.max(1, parseInt(val) || 0)})
-                  }}
-                  onBlur={e => {
-                    if (!e.target.value || parseInt(e.target.value) < 1) setForm({...form, max_seats: 1})
-                  }}
+                  onChange={e => { const val = e.target.value; setForm({...form, max_seats: val === '' ? 0 : Math.max(1, parseInt(val) || 0)}) }}
+                  onBlur={e => { if (!e.target.value || parseInt(e.target.value) < 1) setForm({...form, max_seats: 1}) }}
                   className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
               </div>
-              
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-stone-600 text-sm font-medium">
-                    注意事項 <span className="text-stone-400 font-normal">（選填，最多顯示兩行）</span>
-                  </label>
-                  <span className={`text-xs font-medium tabular-nums ${notesOver ? 'text-red-500' : notesCount >= NOTES_MAX * 0.8 ? 'text-orange-500' : 'text-stone-400'}`}>
-                    {notesCount} / {NOTES_MAX}
-                  </span>
+                  <label className="text-stone-600 text-sm font-medium">注意事項 <span className="text-stone-400 font-normal">（選填，最多顯示兩行）</span></label>
+                  <span className={`text-xs font-medium tabular-nums ${notesOver ? 'text-red-500' : notesCount >= NOTES_MAX * 0.8 ? 'text-orange-500' : 'text-stone-400'}`}>{notesCount} / {NOTES_MAX}</span>
                 </div>
-                <textarea
-                  value={form.notes}
-                  onChange={e => {
-                    const newVal = e.target.value
-                    if (newVal.length <= NOTES_MAX || newVal.length < form.notes.length) {
-                      setForm({...form, notes: newVal})
-                    }
-                  }}
-                  rows={2}
-                  placeholder="例：閱覽室內書籍僅供室內閱讀，不可私自帶離。"
-                  className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 resize-none transition-colors ${notesOver ? 'border-red-400 focus:ring-red-300 bg-red-50' : 'border-stone-300 focus:ring-orange-300'}`}
-                />
-                {notesOver && (
-                  <p className="text-red-500 text-xs mt-1">已達字數上限（{NOTES_MAX} 字），請刪減內容</p>
-                )}
+                <textarea value={form.notes}
+                  onChange={e => { const newVal = e.target.value; if (newVal.length <= NOTES_MAX || newVal.length < form.notes.length) setForm({...form, notes: newVal}) }}
+                  rows={2} placeholder="例：閱覽室內書籍僅供室內閱讀，不可私自帶離。"
+                  className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 resize-none transition-colors ${notesOver ? 'border-red-400 focus:ring-red-300 bg-red-50' : 'border-stone-300 focus:ring-orange-300'}`} />
+                {notesOver && <p className="text-red-500 text-xs mt-1">已達字數上限（{NOTES_MAX} 字），請刪減內容</p>}
               </div>
-
               <div>
                 <label className="block text-stone-600 text-sm font-medium mb-1.5">課程海報</label>
                 <p className="text-stone-400 text-xs mb-2">建議尺寸：A4 比例（595 × 842px），小於 2MB，JPG / PNG</p>
@@ -673,13 +671,21 @@ export default function CoursesPage() {
                   </div>
                 )}
               </div>
-
               <div className="flex gap-3 pt-2">
                 <button type="submit" disabled={loading || !form.date || !!timeError || notesOver} className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
                   {loading ? '儲存中...' : editTarget ? '更新課程' : '新增課程'}
                 </button>
                 <button type="button" onClick={() => { setShowModal(false); setShowCalendar(false) }} className="px-6 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-xl text-sm transition-colors">取消</button>
               </div>
+              {editTarget && (
+                <button type="button" onClick={async () => {
+                  if (!confirm('確定要刪除這個課程嗎？')) return
+                  setShowModal(false)
+                  await handleDelete(editTarget.id)
+                }} className="w-full text-center text-xs text-red-400 hover:text-red-600 transition-colors pt-1">
+                  刪除此課程
+                </button>
+              )}
             </form>
           </div>
         </div>
