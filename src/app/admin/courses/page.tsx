@@ -604,9 +604,18 @@ export default function CoursesPage() {
 
               <div>
                 <label className="block text-stone-600 text-sm font-medium mb-1.5">名額上限 *</label>
-                <input required type="number" min="1" value={form.max_seats} onChange={e => setForm({...form, max_seats: Number(e.target.value)})} className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                <input required type="number" min="1"
+                  value={form.max_seats === 0 ? '' : form.max_seats}
+                  onChange={e => {
+                    const val = e.target.value
+                    setForm({...form, max_seats: val === '' ? 0 : Math.max(1, parseInt(val) || 0)})
+                  }}
+                  onBlur={e => {
+                    if (!e.target.value || parseInt(e.target.value) < 1) setForm({...form, max_seats: 1})
+                  }}
+                  className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
               </div>
-
+              
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-stone-600 text-sm font-medium">
