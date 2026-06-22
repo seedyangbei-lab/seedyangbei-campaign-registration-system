@@ -370,42 +370,52 @@ export default function CoursesPage() {
                 <p className="text-stone-400 text-sm mt-0.5">{course.date} · {course.time_start?.slice(0,5)}–{course.time_end?.slice(0,5)} · {course.location}{course.instructors && <span className="ml-2">· {course.instructors.name}</span>}</p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <button onClick={() => openEdit(course)} className="p-2 hover:bg-stone-100 rounded-lg transition-colors text-stone-500">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                </button>
-                {!expired && <button onClick={() => toggleActive(course.id, course.is_active)} className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${course.is_active ? 'bg-stone-100 hover:bg-stone-200 text-stone-600' : 'bg-green-50 hover:bg-green-100 text-green-700'}`}>{course.is_active ? '關閉' : '開放'}</button>}
-                {expired && <button onClick={() => openAttendance(course)} className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg transition-colors font-medium">出席紀錄</button>}
-                <button onClick={() => handleDelete(course.id)} className="p-2 hover:bg-red-50 rounded-lg transition-colors text-stone-400 hover:text-red-500">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-                </button>
+                {!expired ? (
+                  <>
+                    <button onClick={() => openEdit(course)}
+                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 transition-colors font-medium">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      編輯課程
+                    </button>
+                    <button
+                      onClick={() => toggleActive(course.id, course.is_active)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${course.is_active ? 'bg-orange-500' : 'bg-stone-200'}`}
+                      title={course.is_active ? '關閉報名' : '開放報名'}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${course.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                    <button onClick={() => handleDelete(course.id)} className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-400 hover:text-red-600">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => openAttendance(course)}
+                      className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                      出席紀錄
+                    </button>
+                    <button onClick={() => {
+                      const s = fromTime(course.time_start); const e = fromTime(course.time_end)
+                      setEditTarget(null)
+                      setForm({
+                        title: course.title, description: course.description || '', date: '',
+                        period_start: s.period, hour_start: s.hour, min_start: s.min,
+                        period_end: e.period, hour_end: e.hour, min_end: e.min,
+                        location: LOCATIONS.includes(course.location) ? course.location : '其他',
+                        custom_location: LOCATIONS.includes(course.location) ? '' : course.location,
+                        max_seats: course.max_seats, poster_url: course.poster_url || '',
+                        instructor_id: course.instructor_id || '', category_id: course.category_id || '',
+                        notes: course.notes || '', suitable_age: course.suitable_age || '全年齡',
+                      })
+                      setTimeError(''); setShowModal(true)
+                    }}
+                      className="flex items-center gap-1.5 text-xs bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                      複製課程
+                    </button>
+                  </>
+                )}
               </div>
-            </div>
-          )
-        })}
-      </div>}
-
-      {/* 課程類別 Tab 內容 */}
-      {mainTab === 'categories' && (
-        <div>
-          <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
-            {categories.length === 0 && <div className="p-12 text-center text-stone-400">尚無類別</div>}
-            {categories.map((cat, i) => (
-              <div key={cat.id} className={`flex items-center justify-between px-5 py-4 ${i < categories.length - 1 ? 'border-b border-stone-100' : ''}`}>
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
-                  <span className="text-stone-700 font-medium">{cat.name}</span>
-                  <span className="text-xs px-2.5 py-1 rounded-full text-white font-medium" style={{ backgroundColor: cat.color }}>{cat.name}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => { setEditCat(cat); setCatForm({ name: cat.name, color: cat.color }); setShowCatModal(true) }}
-                    className="p-2 hover:bg-stone-100 rounded-lg transition-colors text-stone-500">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                  </button>
-                  <button onClick={async () => { if (!confirm('確定要刪除這個類別嗎？')) return; await supabase.from('course_categories').delete().eq('id', cat.id); fetchAll() }}
-                    className="p-2 hover:bg-red-50 rounded-lg transition-colors text-stone-400 hover:text-red-500">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-                  </button>
-                </div>
               </div>
             ))}
           </div>
@@ -441,16 +451,20 @@ export default function CoursesPage() {
                     </div>
                   </div>
                   <div className="flex gap-3 pt-2">
-                    <button disabled={catLoading || !catForm.name} onClick={async () => {
-                      setCatLoading(true)
-                      if (editCat) await supabase.from('course_categories').update({ name: catForm.name, color: catForm.color }).eq('id', editCat.id)
-                      else await supabase.from('course_categories').insert({ name: catForm.name, color: catForm.color })
-                      setShowCatModal(false); await fetchAll(); setCatLoading(false)
-                    }} className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
-                      {catLoading ? '儲存中...' : '儲存'}
-                    </button>
-                    <button onClick={() => setShowCatModal(false)} className="px-5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-xl text-sm transition-colors">取消</button>
-                  </div>
+                <button type="submit" disabled={loading || !form.date || !!timeError || notesOver} className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
+                  {loading ? '儲存中...' : editTarget ? '更新課程' : '新增課程'}
+                </button>
+                <button type="button" onClick={() => { setShowModal(false); setShowCalendar(false) }} className="px-6 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-xl text-sm transition-colors">取消</button>
+              </div>
+              {editTarget && (
+                <button type="button" onClick={async () => {
+                  if (!confirm('確定要刪除這個課程嗎？')) return
+                  setShowModal(false)
+                  await handleDelete(editTarget.id)
+                }} className="w-full text-center text-xs text-red-400 hover:text-red-600 transition-colors pt-1">
+                  刪除此課程
+                </button>
+              )}
                 </div>
               </div>
             </div>
