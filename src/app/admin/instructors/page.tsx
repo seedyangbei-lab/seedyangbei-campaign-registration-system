@@ -18,11 +18,13 @@ export default function InstructorsPage() {
   const [loading, setLoading] = useState(false)
   const [coursesByInstructor, setCoursesByInstructor] = useState<Record<string, any[]>>({})
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [pageLoading, setPageLoading] = useState(true)
   const supabase = createClient()
 
   const fetchInstructors = async () => {
     const { data } = await supabase.from('instructors').select('*').order('created_at', { ascending: true })
     setInstructors(data || [])
+    setPageLoading(false)
   }
   useEffect(() => { fetchInstructors() }, [])
 
@@ -92,7 +94,16 @@ export default function InstructorsPage() {
       </div>
 
       <div className="space-y-3">
-        {instructors.length === 0 && (
+        {pageLoading && Array.from({length: 3}).map((_, i) => (
+          <div key={i} className="bg-white border border-stone-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm animate-pulse">
+            <div className="w-12 h-12 rounded-full bg-stone-100 flex-shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-stone-100 rounded w-1/4" />
+              <div className="h-3 bg-stone-100 rounded w-1/3" />
+            </div>
+          </div>
+        ))}
+        {!pageLoading && instructors.length === 0 && (
           <div className="bg-white border border-stone-200 rounded-2xl p-12 text-center text-stone-400"><p>尚無講師資料</p></div>
         )}
         {instructors.map(inst => (
