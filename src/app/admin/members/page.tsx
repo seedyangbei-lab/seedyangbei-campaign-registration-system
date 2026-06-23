@@ -90,10 +90,10 @@ export default function MembersPage() {
       : `${y}-${String(nextMonth).padStart(2, '0')}-01`
     const { data: regs } = await supabase
       .from('registrations')
-      .select('course_id, courses(title)')
+      .select('course_id, courses!inner(title, date)')
       .eq('status', 'confirmed')
-      .gte('registered_at', startDate)
-      .lt('registered_at', endDate)
+      .gte('courses.date', startDate)
+      .lt('courses.date', endDate)
     if (!regs) { setMonthBarData([]); return }
     const countMap: Record<string, { title: string; count: number }> = {}
     regs.forEach((r: any) => {
@@ -294,18 +294,19 @@ export default function MembersPage() {
                   {monthBarData.length === 0 ? (
                     <div className="text-center py-6 text-stone-400 text-sm">此月無報名資料</div>
                   ) : (
-                    <ResponsiveContainer width="100%" height={220}>
+                    <ResponsiveContainer width="100%" height={280}>
                       <BarChart
                         data={monthBarData}
-                        margin={{ top: 10, right: 10, left: -10, bottom: 60 }}
+                        margin={{ top: 10, right: 10, left: -10, bottom: 80 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f4" vertical={false} />
                         <XAxis
                           dataKey="title"
                           tick={{ fontSize: 11, fill: '#57534e' }}
-                          angle={-35}
+                          angle={-45}
                           textAnchor="end"
                           interval={0}
+                          dy={4}
                         />
                         <YAxis tick={{ fontSize: 11, fill: '#78716c' }} allowDecimals={false} />
                         <Tooltip
