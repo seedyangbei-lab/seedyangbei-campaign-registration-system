@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
   import { createClient } from '@/lib/supabase'
 import CourseScheduleExporter from '@/components/CourseScheduleExporter'
+import CoursePosterEditor from '@/components/CoursePosterEditor'
 
 interface Instructor { id: string; name: string }
 interface Category { id: string; name: string; color: string }
@@ -179,7 +180,7 @@ export default function CoursesPage() {
   const [attendanceModal, setAttendanceModal] = useState<any>(null)
   const [attendanceList, setAttendanceList] = useState<any[]>([])
   const [attendanceLoading, setAttendanceLoading] = useState(false)
-  const [attendanceSaving, setAttendanceSaving] = useState(false)
+  const [posterEditorCourse, setPosterEditorCourse] = useState<any>(null)
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const supabase = createClient()
 
@@ -458,6 +459,11 @@ export default function CoursesPage() {
                           className="flex items-center gap-1.5 text-xs bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                           複製課程
+                        </button>
+                        <button onClick={() => setPosterEditorCourse(course)}
+                          className="flex items-center gap-1.5 text-xs bg-stone-50 hover:bg-stone-100 text-stone-500 border border-stone-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                          製作海報
                         </button>
                       </>
                     )}
@@ -745,6 +751,22 @@ export default function CoursesPage() {
             </form>
           </div>
         </div>
+      )}
+   {posterEditorCourse && (
+        <CoursePosterEditor
+          course={{
+            title: posterEditorCourse.title,
+            instructor: posterEditorCourse.instructor_names?.join('、') || posterEditorCourse.instructors?.name || '',
+            date: posterEditorCourse.date,
+            timeStart: posterEditorCourse.time_start?.slice(0, 5),
+            timeEnd: posterEditorCourse.time_end?.slice(0, 5),
+            location: posterEditorCourse.location,
+            suitableAge: posterEditorCourse.suitable_age,
+            notes: posterEditorCourse.notes,
+            posterUrl: posterEditorCourse.poster_url,
+          }}
+          onClose={() => setPosterEditorCourse(null)}
+        />
       )}
     </div>
   )
