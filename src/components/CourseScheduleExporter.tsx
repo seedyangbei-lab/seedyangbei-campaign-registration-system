@@ -262,7 +262,7 @@ function DownloadPage({ data }: { data: PageData }) {
     <div style={{ position: 'relative', width: W, height: H, overflow: 'hidden', fontFamily: '"Noto Sans TC","GenSenRounded2TW",sans-serif' }}>
       <div style={{ position: 'absolute', inset: 0, background: '#fdf4ea' }} />
       {e.bgImage && (
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundImage: `url(${e.bgImage})`, backgroundSize: 'cover',  backgroundPosition: isLandscape ? `${e.bgPositionX}% ${e.bgPositionY}%` : `${e.bgPositionXP}% ${e.bgPositionYP}%`,, opacity: e.bgOpacity }} />
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundImage: `url(${e.bgImage})`, backgroundSize: 'cover',  backgroundPosition: isLandscape ? `${e.bgPositionX}% ${e.bgPositionY}%` : `${e.bgPositionXP}% ${e.bgPositionYP}%`, opacity: e.bgOpacity }} />
       )}
 
       {/* 品牌列 */}
