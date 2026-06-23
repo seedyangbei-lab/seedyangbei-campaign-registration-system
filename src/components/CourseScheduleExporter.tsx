@@ -616,29 +616,43 @@ function BgCropPicker({ imgSrc, posX, posY, isLandscape, onChange }: {
   onChange: (x: number, y: number) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [dragging, setDragging] = useState(false)
-  const frameW = isLandscape ? 1.414 : 1 / 1.414
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
   const CONTAINER_W = 192
   const CONTAINER_H = 108
 
-  const getXY = (clientX: number, clientY: number) => {
+  const getXY = useCallback((clientX: number, clientY: number) => {
     if (!containerRef.current) return
     const rect = containerRef.current.getBoundingClientRect()
     const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100))
     const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100))
-    onChange(Math.round(x), Math.round(y))
-  }
+    onChangeRef.current(Math.round(x), Math.round(y))
+  }, [])
 
-  const onMouseDown = (e: React.MouseEvent) => { setDragging(true); getXY(e.clientX, e.clientY) }
+  const onMouseDown = (e: React.MouseEvent) => { getXY(e.clientX, e.clientY) }
   useEffect(() => {
-    if (!dragging) return
-    const onMove = (e: MouseEvent) => getXY(e.clientX, e.clientY)
-    const onUp = () => setDragging(false)
+    let active = false
+    const onDown = () => { active = true }
+    const onMove = (e: MouseEvent) => { if (active) getXY(e.clientX, e.clientY) }
+    const onUp = () => { active = false }
+    const el = containerRef.current
+    el?.addEventListener('mousedown', onDown)
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-  }, [dragging])
+    return () => {
+      el?.removeEventListener('mousedown', onDown)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+  }, [getXY])
 
+  const onTouchStart = (e: React.TouchEvent) => { getXY(e.touches[0].clientX, e.touches[0].clientY) }
+  useEffect(() => {
+    const el = containerRef.current
+    const onMove = (e: TouchEvent) => { e.preventDefault(); getXY(e.touches[0].clientX, e.touches[0].clientY) }
+    el?.addEventListener('touchmove', onMove, { passive: false })
+    return () => { el?.removeEventListener('touchmove', onMove) }
+  }, [getXY])
   const onTouchStart = (e: React.TouchEvent) => { setDragging(true); getXY(e.touches[0].clientX, e.touches[0].clientY) }
   useEffect(() => {
     if (!dragging) return
@@ -651,6 +665,7 @@ function BgCropPicker({ imgSrc, posX, posY, isLandscape, onChange }: {
 
   const dotX = (posX / 100) * CONTAINER_W
   const dotY = (posY / 100) * CONTAINER_H
+  // (no change needed here)
 
   return (
     <div>
