@@ -42,7 +42,7 @@ function getLuminance(hex: string) {
 function getTextColor(bg: string) {
   try {
     return getLuminance(bg) > 0.35 ? '#1a1a1a' : '#ffffff'
-  } catch {
+  } catch (_e) {
     return '#ffffff'
   }
 }
