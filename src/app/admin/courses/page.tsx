@@ -156,7 +156,6 @@ function InstructorDropdown({ instructors, selectedIds, onChange }: {
 }
 
 export default function CoursesPage() {
-export default function CoursesPage() {
   const [courses, setCourses] = useState<any[]>([])
   const [instructors, setInstructors] = useState<Instructor[]>([])
   const [categories, setCategories] = useState<Category[]>([])
