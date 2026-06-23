@@ -608,6 +608,7 @@ function PreviewPage({
 interface PanelProps {
   editor: EditorState
   set: (key: keyof EditorState, val: any) => void
+  setEditor: React.Dispatch<React.SetStateAction<EditorState>>
   handleImgUpload: (key: keyof EditorState) => (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
 }
   function BgCropPicker({ imgSrc, posX, posY, isLandscape, onChange }: {
@@ -693,8 +694,8 @@ interface PanelProps {
   )
 }
 
-function PanelContent({ editor, set, handleImgUpload }: PanelProps): React.ReactElement {
-  const e = editor
+function PanelContent({ editor, set, setEditor, handleImgUpload }: PanelProps): React.ReactElement {
+const e = editor
   return (
     <div className="p-4 space-y-5" onWheel={ev => ev.stopPropagation()}>
       {/* 標題文字 */}
@@ -867,12 +868,12 @@ function PanelContent({ editor, set, handleImgUpload }: PanelProps): React.React
           <div>
             <p className="text-xs text-stone-500 font-medium mb-1.5">橫式位置</p>
             <BgCropPicker imgSrc={e.bgImage} posX={e.bgPositionX} posY={e.bgPositionY} isLandscape={true}
-              onChange={(x, y) => { set('bgPositionX', x); set('bgPositionY', y) }} />
+              onChange={(x, y) => { setEditor(prev => ({ ...prev, bgPositionX: x, bgPositionY: y })) }} />
           </div>
           <div>
             <p className="text-xs text-stone-500 font-medium mb-1.5">直式位置</p>
             <BgCropPicker imgSrc={e.bgImage} posX={e.bgPositionXP} posY={e.bgPositionYP} isLandscape={false}
-              onChange={(x, y) => { set('bgPositionXP', x); set('bgPositionYP', y) }} />
+              onChange={(x, y) => { setEditor(prev => ({ ...prev, bgPositionXP: x, bgPositionYP: y })) }} />
           </div>
         </div>
       </div>
@@ -1702,7 +1703,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
           className="hidden md:block w-64 bg-white border-r border-stone-200"
           style={{ overflowY: 'auto', flex: '0 0 256px', alignSelf: 'stretch' }}
         >
-          <PanelContent editor={editor} set={set} handleImgUpload={handleImgUpload} />
+          <PanelContent editor={editor} set={set} setEditor={setEditor} handleImgUpload={handleImgUpload} />
         </div>
         <div className="flex-1 overflow-auto p-4 md:p-6 flex items-start justify-center bg-stone-100">
           <div className="flex flex-col items-center gap-3">
@@ -1734,7 +1735,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-            <PanelContent editor={editor} set={set} handleImgUpload={handleImgUpload} />
+            <PanelContent editor={editor} set={set} setEditor={setEditor} handleImgUpload={handleImgUpload} />
           </div>
         </div>
       )}
