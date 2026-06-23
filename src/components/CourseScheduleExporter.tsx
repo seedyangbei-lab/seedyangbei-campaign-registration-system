@@ -59,6 +59,10 @@ interface EditorState {
   gapQrToContact: number
   bgPositionX: number
   bgPositionY: number
+  bgPositionXP: number
+  bgPositionYP: number
+  registrationQrMode: 'auto' | 'upload'
+  registrationQrUpload: string
   pTitleFontSize: number
   pSubtitleFontSize: number
   pMonthFontSize: number
@@ -90,7 +94,11 @@ const DEFAULT_EDITOR: EditorState = {
   gapQrToContact: 12,
   bgPositionX: 50,
   bgPositionY: 50,
-  pTitleFontSize: 22,
+  bgPositionXP: 50,
+  bgPositionYP: 50,
+  registrationQrMode: 'auto',
+  registrationQrUpload: '',
+  pTitleFontSize:
   pSubtitleFontSize: 18,
   pMonthFontSize: 36,
   pQrSize: 80,
@@ -254,7 +262,7 @@ function DownloadPage({ data }: { data: PageData }) {
     <div style={{ position: 'relative', width: W, height: H, overflow: 'hidden', fontFamily: '"Noto Sans TC","GenSenRounded2TW",sans-serif' }}>
       <div style={{ position: 'absolute', inset: 0, background: '#fdf4ea' }} />
       {e.bgImage && (
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundImage: `url(${e.bgImage})`, backgroundSize: 'cover', backgroundPosition: `${e.bgPositionX}% ${e.bgPositionY}%`, opacity: e.bgOpacity }} />
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundImage: `url(${e.bgImage})`, backgroundSize: 'cover', backgroundPosition: orientation === 'portrait' ? `${e.bgPositionXP}% ${e.bgPositionYP}%` : `${e.bgPositionX}% ${e.bgPositionY}%`, opacity: e.bgOpacity }} />
       )}
 
       {/* 品牌列 */}
@@ -293,10 +301,10 @@ function DownloadPage({ data }: { data: PageData }) {
           <div style={{ height: e.gapTitleToQr }} />
           <div style={{ display: 'flex', gap: 8 }}>
             {[
-              { label:'活動報名', color: e.accentColor, img: QR_API(SITE_URL,200), sub:'線上報名' },
+              { label:'活動報名', color: e.accentColor, img: e.registrationQrMode === 'upload' && e.registrationQrUpload ? e.registrationQrUpload : QR_API(SITE_URL,200), sub:'線上報名' },
               { label:'種子社區大學', color:'#06C755', img: e.communityQr, sub:'加入社群' },
             ].map((qr,qi) => (
-              <div key={qi} style={{ flex: 1, background: '#ffffff', borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <div key={qi} style={{ flex: 1,background: '#ffffff', borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                 <span style={{ color: qr.color, fontSize: 9, fontWeight: 800, lineHeight: 1.4, display: 'block', textAlign: 'center' }}>{qr.label}</span>
                 {qr.img
                   ? <img src={qr.img} alt="" crossOrigin="anonymous" style={{ width: qrSize, height: qrSize, objectFit: 'contain' }} />
@@ -335,7 +343,7 @@ function DownloadPage({ data }: { data: PageData }) {
           </div>
           <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
             {[
-              { label:'活動報名', color: e.accentColor, img: QR_API(SITE_URL,200), sub:'線上報名' },
+             { label:'活動報名', color: e.accentColor, img: e.registrationQrMode === 'upload' && e.registrationQrUpload ? e.registrationQrUpload : QR_API(SITE_URL,200), sub:'線上報名' },
               { label:'種子社區大學', color:'#06C755', img: e.communityQr, sub:'加入社群' },
             ].map((qr,qi) => (
               <div key={qi} style={{ background: '#ffffff', borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', padding: '10px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
@@ -461,7 +469,7 @@ function PreviewPage({
     <div style={{ width: W, height: H, fontFamily: '"Noto Sans TC","GenSenRounded2TW",sans-serif', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}>
       <div style={{ position: 'absolute', inset: 0, background: '#fdf4ea', zIndex: 0 }}>
         {e.bgImage && (
-          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundImage: `url(${e.bgImage})`, backgroundSize: 'cover', backgroundPosition: `${e.bgPositionX}% ${e.bgPositionY}%`, opacity: e.bgOpacity }} />
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundImage: `url(${e.bgImage})`, backgroundSize: 'cover', backgroundPosition: isLandscape ? `${e.bgPositionX}% ${e.bgPositionY}%` : `${e.bgPositionXP}% ${e.bgPositionYP}%`, opacity: e.bgOpacity }} />
         )}
       </div>
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -499,7 +507,7 @@ function PreviewPage({
                 <p style={{ margin: 0, fontSize: 11, color: '#9ca3af' }}>（數量有限，額滿為止）</p>
                 <div style={{ height: e.gapTitleToQr }} />
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <QrBox label="活動報名" color={e.accentColor} imgSrc={QR_API(SITE_URL,200)} sub="線上報名" />
+                  <QrBox label="活動報名" color={e.accentColor} imgSrc={e.registrationQrMode === 'upload' && e.registrationQrUpload ? e.registrationQrUpload : QR_API(SITE_URL,200)} sub="線上報名" />
                   <QrBox label="種子社區大學" color="#06C755" imgSrc={e.communityQr} sub="加入社群" />
                 </div>
                 <div style={{ height: e.gapQrToContact }} />
@@ -530,13 +538,13 @@ function PreviewPage({
                   ))}
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                  <QrBox label="活動報名" color={e.accentColor} imgSrc={QR_API(SITE_URL,200)} sub="線上報名" />
+                 <QrBox label="活動報名" color={e.accentColor} imgSrc={e.registrationQrMode === 'upload' && e.registrationQrUpload ? e.registrationQrUpload : QR_API(SITE_URL,200)} sub="線上報名" />
                   <QrBox label="種子社區大學" color="#06C755" imgSrc={e.communityQr} sub="加入社群" />
                 </div>
               </div>
             )}
           </div>
-
+          
           {/* 右側課表 */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: rightBg, backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', minWidth: 0, minHeight: 0 }}>
             <div style={{ display: 'grid', gridTemplateColumns: gridCols, background: e.accentColor, flexShrink: 0 }}>
@@ -601,6 +609,88 @@ interface PanelProps {
   editor: EditorState
   set: (key: keyof EditorState, val: any) => void
   handleImgUpload: (key: keyof EditorState) => (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
+}
+
+function BgCropPicker({ imgSrc, posX, posY, isLandscape, onChange }: {
+  imgSrc: string; posX: number; posY: number; isLandscape: boolean
+  onChange: (x: number, y: number) => void
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [dragging, setDragging] = useState(false)
+  const frameW = isLandscape ? 1.414 : 1 / 1.414
+  const CONTAINER_W = 192
+  const CONTAINER_H = 108
+
+  const getXY = (clientX: number, clientY: number) => {
+    if (!containerRef.current) return
+    const rect = containerRef.current.getBoundingClientRect()
+    const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100))
+    const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100))
+    onChange(Math.round(x), Math.round(y))
+  }
+
+  const onMouseDown = (e: React.MouseEvent) => { setDragging(true); getXY(e.clientX, e.clientY) }
+  useEffect(() => {
+    if (!dragging) return
+    const onMove = (e: MouseEvent) => getXY(e.clientX, e.clientY)
+    const onUp = () => setDragging(false)
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+  }, [dragging])
+
+  const onTouchStart = (e: React.TouchEvent) => { setDragging(true); getXY(e.touches[0].clientX, e.touches[0].clientY) }
+  useEffect(() => {
+    if (!dragging) return
+    const onMove = (e: TouchEvent) => { e.preventDefault(); getXY(e.touches[0].clientX, e.touches[0].clientY) }
+    const onUp = () => setDragging(false)
+    window.addEventListener('touchmove', onMove, { passive: false })
+    window.addEventListener('touchend', onUp)
+    return () => { window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onUp) }
+  }, [dragging])
+
+  const dotX = (posX / 100) * CONTAINER_W
+  const dotY = (posY / 100) * CONTAINER_H
+
+  return (
+    <div>
+      <div
+        ref={containerRef}
+        onMouseDown={onMouseDown}
+        onTouchStart={onTouchStart}
+        style={{
+          width: CONTAINER_W, height: CONTAINER_H, borderRadius: 8, overflow: 'hidden',
+          position: 'relative', cursor: dragging ? 'grabbing' : 'crosshair',
+          border: '1.5px solid #e7e5e4', userSelect: 'none',
+          backgroundImage: imgSrc ? `url(${imgSrc})` : undefined,
+          backgroundSize: 'cover',
+          backgroundPosition: `${posX}% ${posY}%`,
+          backgroundColor: imgSrc ? undefined : '#f3f4f6',
+        }}
+      >
+        {!imgSrc && <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#a8a29e' }}>尚未上傳底圖</span>}
+        <div style={{
+          position: 'absolute',
+          left: dotX - 10, top: dotY - 10,
+          width: 20, height: 20,
+          borderRadius: '50%',
+          background: 'white',
+          border: '2.5px solid #f97316',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+          pointerEvents: 'none',
+        }} />
+        <div style={{
+          position: 'absolute',
+          left: Math.max(0, Math.min(CONTAINER_W - 40, dotX - 20)),
+          top: Math.max(0, Math.min(CONTAINER_H - 14, dotY + 12)),
+          fontSize: 10, color: 'white', background: 'rgba(0,0,0,0.55)',
+          borderRadius: 4, padding: '1px 5px', pointerEvents: 'none',
+          whiteSpace: 'nowrap',
+        }}>{posX}% / {posY}%</div>
+      </div>
+      <p className="text-xs text-stone-400 mt-1.5">在縮圖上點擊或拖曳，調整背景顯示位置</p>
+    </div>
+  )
 }
 
 function PanelContent({ editor, set, handleImgUpload }: PanelProps): React.ReactElement {
@@ -773,16 +863,16 @@ function PanelContent({ editor, set, handleImgUpload }: PanelProps): React.React
           <input type="range" min="0" max="1" step="0.05" value={e.bgOpacity}
             onChange={ev => set('bgOpacity', parseFloat(ev.target.value))} className="w-full accent-orange-500" />
         </div>
-        <div className="mt-2.5 space-y-2">
+        <div className="mt-3 space-y-3">
           <div>
-            <label className="text-xs text-stone-400">水平位置 {e.bgPositionX}%</label>
-            <input type="range" min="0" max="100" step="5" value={e.bgPositionX}
-              onChange={ev => set('bgPositionX', parseInt(ev.target.value))} className="w-full accent-orange-500" />
+            <p className="text-xs text-stone-500 font-medium mb-1.5">橫式位置</p>
+            <BgCropPicker imgSrc={e.bgImage} posX={e.bgPositionX} posY={e.bgPositionY} isLandscape={true}
+              onChange={(x, y) => { set('bgPositionX', x); set('bgPositionY', y) }} />
           </div>
           <div>
-            <label className="text-xs text-stone-400">垂直位置 {e.bgPositionY}%</label>
-            <input type="range" min="0" max="100" step="5" value={e.bgPositionY}
-              onChange={ev => set('bgPositionY', parseInt(ev.target.value))} className="w-full accent-orange-500" />
+            <p className="text-xs text-stone-500 font-medium mb-1.5">直式位置</p>
+            <BgCropPicker imgSrc={e.bgImage} posX={e.bgPositionXP} posY={e.bgPositionYP} isLandscape={false}
+              onChange={(x, y) => { set('bgPositionXP', x); set('bgPositionYP', y) }} />
           </div>
         </div>
       </div>
@@ -792,9 +882,36 @@ function PanelContent({ editor, set, handleImgUpload }: PanelProps): React.React
         <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">QR Code</p>
         <div className="space-y-3">
           <div>
-            <p className="text-xs text-stone-400 mb-1.5">報名 QR（自動生成）</p>
-            <img src={QR_API(SITE_URL, 80)} alt="" className="w-14 h-14 rounded-lg border border-stone-200" />
+          <p className="text-xs text-stone-500 font-medium mb-2">報名 QR</p>
+          <div className="flex gap-1 p-0.5 bg-stone-100 rounded-lg mb-2.5">
+            {([['auto','自動生成'] as const, ['upload','手動上傳'] as const]).map(([v, label]) => (
+              <button key={v} onClick={() => set('registrationQrMode', v)}
+                className={`flex-1 py-1 rounded-md text-xs font-medium transition-colors ${e.registrationQrMode === v ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400'}`}>
+                {label}
+              </button>
+            ))}
           </div>
+          {e.registrationQrMode === 'auto' ? (
+            <div className="flex items-center gap-2">
+              <img src={QR_API(SITE_URL, 80)} alt="" className="w-14 h-14 rounded-lg border border-stone-200" />
+              <span className="text-xs text-stone-400 leading-relaxed">自動依平台網址<br/>生成 QR Code</span>
+            </div>
+          ) : (
+            <>
+              <label className="flex items-center gap-2 border border-dashed border-stone-300 hover:border-orange-300 rounded-lg py-2 px-3 cursor-pointer transition-colors text-xs text-stone-500">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                {e.registrationQrUpload ? '已上傳，點擊替換' : '上傳報名 QR'}
+                <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload('registrationQrUpload')} />
+              </label>
+              {e.registrationQrUpload && (
+                <div className="mt-2 flex items-center gap-2">
+                  <img src={e.registrationQrUpload} alt="" className="w-14 h-14 object-contain rounded-lg border border-stone-200" />
+                  <button onClick={() => set('registrationQrUpload', '')} className="text-xs text-red-400 hover:text-red-600">移除</button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
           <div>
             <p className="text-xs text-stone-400 mb-1.5">社群 QR Code</p>
             <label className="flex items-center gap-2 border border-dashed border-stone-300 hover:border-orange-300 rounded-lg py-2 px-3 cursor-pointer transition-colors text-xs text-stone-500">
@@ -924,6 +1041,10 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       gapQrToContact: parseInt(ss.schedule_gap_qr_contact||'') || 12,
       bgPositionX: parseInt(ss.schedule_bg_pos_x||'') || 50,
       bgPositionY: parseInt(ss.schedule_bg_pos_y||'') || 50,
+      bgPositionXP: parseInt(ss.schedule_bg_pos_xp||'') || 50,
+      bgPositionYP: parseInt(ss.schedule_bg_pos_yp||'') || 50,
+      registrationQrMode: (ss.schedule_reg_qr_mode as 'auto'|'upload') || 'auto',
+      registrationQrUpload: ss.schedule_reg_qr_upload || '',
       pTitleFontSize: parseInt(ss.schedule_p_title_fs||'') || 22,
       pSubtitleFontSize: parseInt(ss.schedule_p_sub_fs||'') || 18,
       pMonthFontSize: parseInt(ss.schedule_p_month_fs||'') || 36,
@@ -973,6 +1094,10 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
       schedule_gap_qr_contact: String(editor.gapQrToContact),
       schedule_bg_pos_x: String(editor.bgPositionX),
       schedule_bg_pos_y: String(editor.bgPositionY),
+      schedule_bg_pos_xp: String(editor.bgPositionXP),
+      schedule_bg_pos_yp: String(editor.bgPositionYP),
+      schedule_reg_qr_mode: editor.registrationQrMode,
+      schedule_reg_qr_upload: editor.registrationQrUpload,
       schedule_p_title_fs: String(editor.pTitleFontSize),
       schedule_p_sub_fs: String(editor.pSubtitleFontSize),
       schedule_p_month_fs: String(editor.pMonthFontSize),
@@ -1071,8 +1196,10 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
         const ratio = Math.max(W / bgImg.width, H / bgImg.height)
         const dw = bgImg.width * ratio
         const dh = bgImg.height * ratio
-        const dx = (W - dw) * (e.bgPositionX / 100)
-        const dy = (H - dh) * (e.bgPositionY / 100)
+        const bpx = isLandscape ? e.bgPositionX : e.bgPositionXP
+        const bpy = isLandscape ? e.bgPositionY : e.bgPositionYP
+        const dx = (W - dw) * (bpx / 100)
+        const dy = (H - dh) * (bpy / 100)
         ctx.drawImage(bgImg, dx, dy, dw, dh)
         ctx.globalAlpha = 1
         ctx.restore()
@@ -1135,7 +1262,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
         e.hours ? `時間：${e.hours}` : '',
       ].filter(Boolean)
       const qrItems = [
-        { label: '活動報名', color: e.accentColor, src: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(SITE_URL)}`, sub: '線上報名' },
+        { label: '活動報名', color: e.accentColor, src: e.registrationQrMode === 'upload' && e.registrationQrUpload ? e.registrationQrUpload : `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(SITE_URL)}`, sub: '線上報名' },
         { label: '種子社區大學', color: '#06C755', src: e.communityQr, sub: '加入社群' },
       ]
 
@@ -1496,7 +1623,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
           <div>
             <label className="block text-stone-400 text-xs font-bold uppercase tracking-widest mb-3">每頁列數</label>
             <div className="flex gap-2">
-              {[2,3,4,5,6].map(n => (
+              {[2,3,4,5,6,8].map(n => (
                 <button key={n} onClick={() => setRowsPerPage(n)}
                   className={`flex-1 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${rowsPerPage===n?'bg-orange-500 text-white border-orange-500':'text-stone-600 border-stone-200 hover:border-orange-300'}`}>{n}</button>
               ))}
