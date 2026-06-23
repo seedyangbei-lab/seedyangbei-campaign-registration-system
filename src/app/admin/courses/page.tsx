@@ -619,11 +619,11 @@ export default function CoursesPage() {
                 <label className="block text-stone-600 text-sm font-medium mb-1.5">課程說明</label>
                 <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} rows={2} className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="relative">
-                <label className="block text-stone-600 text-sm font-medium mb-1.5">
-                  講師 <span className="text-stone-400 font-normal">（可多選）</span>
-                </label>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-stone-600 text-sm font-medium mb-1.5">
+                    講師 <span className="text-stone-400 font-normal">（可多選）</span>
+                  </label>
                 <InstructorDropdown
                   instructors={instructors}
                   selectedIds={form.instructor_ids}
