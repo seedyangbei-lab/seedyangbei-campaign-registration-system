@@ -610,8 +610,7 @@ interface PanelProps {
   set: (key: keyof EditorState, val: any) => void
   handleImgUpload: (key: keyof EditorState) => (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
 }
-
-function BgCropPicker({ imgSrc, posX, posY, isLandscape, onChange }: {
+function BgCropPicker({ imgSrc, posX, posY, onChange }: {
   imgSrc: string; posX: number; posY: number; isLandscape: boolean
   onChange: (x: number, y: number) => void
 }) {
@@ -629,53 +628,39 @@ function BgCropPicker({ imgSrc, posX, posY, isLandscape, onChange }: {
     onChangeRef.current(Math.round(x), Math.round(y))
   }, [])
 
-  const onMouseDown = (e: React.MouseEvent) => { getXY(e.clientX, e.clientY) }
   useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
     let active = false
-    const onDown = () => { active = true }
+    const onDown = (e: MouseEvent) => { active = true; getXY(e.clientX, e.clientY) }
     const onMove = (e: MouseEvent) => { if (active) getXY(e.clientX, e.clientY) }
     const onUp = () => { active = false }
-    const el = containerRef.current
-    el?.addEventListener('mousedown', onDown)
+    const onTouchStart = (e: TouchEvent) => { getXY(e.touches[0].clientX, e.touches[0].clientY) }
+    const onTouchMove = (e: TouchEvent) => { e.preventDefault(); getXY(e.touches[0].clientX, e.touches[0].clientY) }
+    el.addEventListener('mousedown', onDown)
+    el.addEventListener('touchstart', onTouchStart)
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
     return () => {
-      el?.removeEventListener('mousedown', onDown)
+      el.removeEventListener('mousedown', onDown)
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
     }
   }, [getXY])
 
-  const onTouchStart = (e: React.TouchEvent) => { getXY(e.touches[0].clientX, e.touches[0].clientY) }
-  useEffect(() => {
-    const el = containerRef.current
-    const onMove = (e: TouchEvent) => { e.preventDefault(); getXY(e.touches[0].clientX, e.touches[0].clientY) }
-    el?.addEventListener('touchmove', onMove, { passive: false })
-    return () => { el?.removeEventListener('touchmove', onMove) }
-  }, [getXY])
-  const onTouchStart = (e: React.TouchEvent) => { setDragging(true); getXY(e.touches[0].clientX, e.touches[0].clientY) }
-  useEffect(() => {
-    if (!dragging) return
-    const onMove = (e: TouchEvent) => { e.preventDefault(); getXY(e.touches[0].clientX, e.touches[0].clientY) }
-    const onUp = () => setDragging(false)
-    window.addEventListener('touchmove', onMove, { passive: false })
-    window.addEventListener('touchend', onUp)
-    return () => { window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onUp) }
-  }, [dragging])
-
   const dotX = (posX / 100) * CONTAINER_W
   const dotY = (posY / 100) * CONTAINER_H
-  // (no change needed here)
 
   return (
     <div>
       <div
         ref={containerRef}
-        onMouseDown={onMouseDown}
-        onTouchStart={onTouchStart}
         style={{
           width: CONTAINER_W, height: CONTAINER_H, borderRadius: 8, overflow: 'hidden',
-          position: 'relative', cursor: dragging ? 'grabbing' : 'crosshair',
+          position: 'relative', cursor: 'crosshair',
           border: '1.5px solid #e7e5e4', userSelect: 'none',
           backgroundImage: imgSrc ? `url(${imgSrc})` : undefined,
           backgroundSize: 'cover',
