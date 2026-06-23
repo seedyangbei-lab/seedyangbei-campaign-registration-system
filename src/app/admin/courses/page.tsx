@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase'
+import React, { useEffect, useState } from 'react'
+  import { createClient } from '@/lib/supabase'
 import CourseScheduleExporter from '@/components/CourseScheduleExporter'
 
 interface Instructor { id: string; name: string }
@@ -101,6 +101,61 @@ function TimePicker({
   )
 }
 
+function InstructorDropdown({ instructors, selectedIds, onChange }: {
+  instructors: Instructor[]
+  selectedIds: string[]
+  onChange: (ids: string[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const selectedNames = instructors.filter(i => selectedIds.includes(i.id)).map(i => i.name)
+
+  return (
+    <div ref={ref} className="relative">
+      <button type="button" onClick={() => setOpen(v => !v)}
+        className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
+        <span className={selectedIds.length ? 'text-stone-800' : 'text-stone-400'}>
+          {selectedIds.length ? selectedNames.join('、') : '選擇講師'}
+        </span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+          className={`text-stone-400 transition-transform flex-shrink-0 ${open ? 'rotate-180' : ''}`}>
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-stone-200 rounded-xl shadow-lg z-20 max-h-56 overflow-y-auto">
+          {instructors.map(inst => {
+            const checked = selectedIds.includes(inst.id)
+            return (
+              <label key={inst.id}
+                className="flex items-center gap-3 px-4 py-2.5 hover:bg-stone-50 cursor-pointer transition-colors">
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${checked ? 'bg-orange-500 border-orange-500' : 'border-stone-300'}`}>
+                  {checked && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>}
+                </div>
+                <span className="text-sm text-stone-700">{inst.name}</span>
+                <input type="checkbox" className="hidden" checked={checked} onChange={() => {
+                  const next = checked ? selectedIds.filter(id => id !== inst.id) : [...selectedIds, inst.id]
+                  onChange(next)
+                }} />
+              </label>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function CoursesPage() {
 export default function CoursesPage() {
   const [courses, setCourses] = useState<any[]>([])
   const [instructors, setInstructors] = useState<Instructor[]>([])
@@ -566,38 +621,40 @@ export default function CoursesPage() {
                 <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} rows={2} className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none" />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-stone-600 text-sm font-medium mb-1.5">
-                    講師 <span className="text-stone-400 font-normal">（可多選）</span>
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {instructors.map(inst => {
-                      const selected = form.instructor_ids.includes(inst.id)
-                      return (
-                        <button key={inst.id} type="button"
-                          onClick={() => {
-                            const ids = selected
-                              ? form.instructor_ids.filter(id => id !== inst.id)
-                              : [...form.instructor_ids, inst.id]
-                            setForm({...form, instructor_ids: ids, instructor_id: ids[0] || ''})
-                          }}
-                          className={`px-3 py-1.5 rounded-xl text-sm border transition-colors ${selected ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-stone-600 border-stone-300 hover:border-orange-300'}`}>
-                          {inst.name}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  {form.instructor_ids.length === 0 && (
-                    <p className="text-xs text-stone-400 mt-1.5">點擊選擇一或多位講師</p>
-                  )}
+                <div className="relative">
+                <label className="block text-stone-600 text-sm font-medium mb-1.5">
+                  講師 <span className="text-stone-400 font-normal">（可多選）</span>
+                </label>
+                <InstructorDropdown
+                  instructors={instructors}
+                  selectedIds={form.instructor_ids}
+                  onChange={ids => setForm({...form, instructor_ids: ids, instructor_id: ids[0] || ''})}
+                />
+              </div>
+              <div>
+                <label className="block text-stone-600 text-sm font-medium mb-1.5">課程類別</label>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button"
+                    onClick={() => setForm({...form, category_id: ''})}
+                    className={`px-3 py-1.5 rounded-xl text-sm border transition-colors ${!form.category_id ? 'bg-stone-700 text-white border-stone-700' : 'bg-white text-stone-500 border-stone-300 hover:border-stone-400'}`}>
+                    不分類
+                  </button>
+                  {categories.map(c => {
+                    const selected = form.category_id === c.id
+                    return (
+                      <button key={c.id} type="button"
+                        onClick={() => setForm({...form, category_id: selected ? '' : c.id})}
+                        className="px-3 py-1.5 rounded-xl text-sm border font-medium transition-colors"
+                        style={selected
+                          ? { backgroundColor: c.color, borderColor: c.color, color: 'white' }
+                          : { backgroundColor: 'white', borderColor: '#d6d3d1', color: '#57534e' }}>
+                        {c.name}
+                      </button>
+                    )
+                  })}
                 </div>
-                <div>
-                  <label className="block text-stone-600 text-sm font-medium mb-1.5">課程類別</label>
-                  <select value={form.category_id} onChange={e => setForm({...form, category_id: e.target.value})} className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-                    <option value="">選擇類別</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
+              </div>
+                    
               </div>
               <div>
                 <label className="block text-stone-600 text-sm font-medium mb-1.5">適合年齡</label>
@@ -664,7 +721,7 @@ export default function CoursesPage() {
                 </label>
                 {form.poster_url && (
                   <div className="mt-2 relative">
-                    <img src={form.poster_url} alt="海報預覽" className="w-full h-32 object-cover rounded-xl" />
+                    <img src={form.poster_url} alt="海報預覽" className="w-full rounded-xl object-contain" style={{ maxHeight: '480px' }} />
                     <button type="button" onClick={() => setForm({...form, poster_url: ''})} className="absolute top-2 right-2 bg-white rounded-full p-1 shadow">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
