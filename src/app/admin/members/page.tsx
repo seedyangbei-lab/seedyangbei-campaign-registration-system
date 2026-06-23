@@ -65,12 +65,13 @@ export default function MembersPage() {
   const fetchOverallChart = async () => {
     const { data: regs } = await supabase
       .from('registrations')
-      .select('registered_at')
+      .select('course_id, courses!inner(date)')
       .eq('status', 'confirmed')
     if (!regs) return
     const monthMap: Record<string, number> = {}
     regs.forEach((r: any) => {
-      const m = r.registered_at?.slice(0, 7)
+      const date = (r.courses as any)?.date
+      const m = date?.slice(0, 7)
       if (m) monthMap[m] = (monthMap[m] || 0) + 1
     })
     const sorted = Object.keys(monthMap).sort()
@@ -88,23 +89,40 @@ export default function MembersPage() {
     const endDate = nextMonth > 12
       ? `${parseInt(y) + 1}-01-01`
       : `${y}-${String(nextMonth).padStart(2, '0')}-01`
+
+    // 先撈出該月份的課程 id 清單
+    const { data: monthlyCourses } = await supabase
+      .from('courses')
+      .select('id, title')
+      .gte('date', startDate)
+      .lt('date', endDate)
+
+    if (!monthlyCourses || monthlyCourses.length === 0) { setMonthBarData([]); return }
+
+    const courseIds = monthlyCourses.map((c: any) => c.id)
+
+    // 再撈這些課程的 confirmed 報名數
     const { data: regs } = await supabase
       .from('registrations')
-      .select('course_id, courses!inner(title, date)')
+      .select('course_id')
       .eq('status', 'confirmed')
-      .gte('courses.date', startDate)
-      .lt('courses.date', endDate)
-    if (!regs) { setMonthBarData([]); return }
-    const countMap: Record<string, { title: string; count: number }> = {}
-    regs.forEach((r: any) => {
-      const id = r.course_id
-      const title = r.courses?.title || id
-      if (!countMap[id]) countMap[id] = { title, count: 0 }
-      countMap[id].count++
-    })
-    setMonthBarData(Object.values(countMap).sort((a, b) => b.count - a.count))
-  }
+      .in('course_id', courseIds)
 
+    if (!regs) { setMonthBarData([]); return }
+
+    const countMap: Record<string, { title: string; count: number }> = {}
+    monthlyCourses.forEach((c: any) => {
+      countMap[c.id] = { title: c.title, count: 0 }
+    })
+    regs.forEach((r: any) => {
+      if (countMap[r.course_id]) countMap[r.course_id].count++
+    })
+    setMonthBarData(
+      Object.values(countMap)
+        .filter(c => c.count > 0)
+        .sort((a, b) => b.count - a.count)
+    )
+  }
   const fetchPersonalChart = async (member: any) => {
     setSelectedMemberForChart(member)
     const { data: user } = await supabase.from('users').select('id').eq('line_id', member.line_user_id).maybeSingle()
