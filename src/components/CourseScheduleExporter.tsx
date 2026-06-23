@@ -98,7 +98,7 @@ const DEFAULT_EDITOR: EditorState = {
   bgPositionYP: 50,
   registrationQrMode: 'auto',
   registrationQrUpload: '',
-  pTitleFontSize:
+  pTitleFontSize:22,
   pSubtitleFontSize: 18,
   pMonthFontSize: 36,
   pQrSize: 80,
