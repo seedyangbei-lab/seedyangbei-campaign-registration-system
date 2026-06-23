@@ -181,6 +181,7 @@ export default function CoursesPage() {
   const [attendanceList, setAttendanceList] = useState<any[]>([])
   const [attendanceLoading, setAttendanceLoading] = useState(false)
   const [posterEditorCourse, setPosterEditorCourse] = useState<any>(null)
+  const [posterInitialImage, setPosterInitialImage] = useState<string | null>(null)
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const supabase = createClient()
 
@@ -440,11 +441,7 @@ export default function CoursesPage() {
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                           編輯課程
                         </button>
-                        <button onClick={() => setPosterEditorCourse(course)}
-                          className="flex items-center gap-1.5 text-xs bg-stone-50 hover:bg-stone-100 text-stone-500 border border-stone-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                          製作海報
-                        </button>
+                    
                         <button onClick={() => toggleActive(course.id, course.is_active)}
                           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${course.is_active ? 'bg-orange-500' : 'bg-stone-200'}`}
                           title={course.is_active ? '關閉報名' : '開放報名'}>
@@ -740,6 +737,15 @@ export default function CoursesPage() {
                 </button>
                 <button type="button" onClick={() => { setShowModal(false); setShowCalendar(false) }} className="px-6 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-xl text-sm transition-colors">取消</button>
               </div>
+              <button type="button" onClick={() => {
+                setShowModal(false)
+                setPosterEditorCourse(editTarget || { title: form.title, time_start: toTime(form.period_start, form.hour_start, form.min_start), time_end: toTime(form.period_end, form.hour_end, form.min_end), location: form.location === '其他' ? form.custom_location : form.location, suitable_age: form.suitable_age, notes: form.notes, instructor_names: form.instructor_ids.map((id: string) => instructors.find((i: any) => i.id === id)?.name).filter(Boolean) })
+                setPosterInitialImage(form.poster_url || null)
+              }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-stone-300 hover:border-orange-400 text-stone-500 hover:text-orange-500 text-sm transition-colors">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                製作課程海報
+              </button>
               {editTarget && (
                 <button type="button" onClick={async () => {
                   if (!confirm('確定要刪除這個課程嗎？')) return
@@ -764,11 +770,17 @@ export default function CoursesPage() {
             location: posterEditorCourse.location,
             suitableAge: posterEditorCourse.suitable_age,
             notes: posterEditorCourse.notes,
-            posterUrl: posterEditorCourse.poster_url,
           }}
-          onClose={() => setPosterEditorCourse(null)}
+          initialImage={posterInitialImage}
+          onClose={() => {
+            setPosterEditorCourse(null)
+            setPosterInitialImage(null)
+            if (editTarget) openEdit(editTarget)
+          }}
         />
       )}
+
+
     </div>
   )
 }
