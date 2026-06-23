@@ -29,6 +29,7 @@ export default function AdminSidebar() {
         {navItems.map(item => (
           <li key={item.href}>
             <Link href={item.href} onClick={() => setMobileOpen(false)}
+             prefetch={true}
               className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${pathname === item.href ? 'bg-orange-50 text-orange-600' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'}`}>
               <span className={pathname === item.href ? 'text-orange-500' : 'text-stone-400'}>{item.icon}</span>
               <span>{item.label}</span>
