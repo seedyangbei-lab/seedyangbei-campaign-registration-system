@@ -166,7 +166,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
       a.href = canvas.toDataURL('image/png')
       a.download = `${course.title || 'poster'}.png`
       a.click()
-    } catch { /* silent */ }
+     } catch (_e) { /* silent */ }
     setIsExporting(false)
   }
 
