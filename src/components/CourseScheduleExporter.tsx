@@ -610,15 +610,15 @@ interface PanelProps {
   set: (key: keyof EditorState, val: any) => void
   handleImgUpload: (key: keyof EditorState) => (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
 }
-  function BgCropPicker({ imgSrc, posX, posY, onChange }: {
+  function BgCropPicker({ imgSrc, posX, posY, isLandscape, onChange }: {
   imgSrc: string; posX: number; posY: number; isLandscape: boolean
   onChange: (x: number, y: number) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
-  const CONTAINER_W = 192
-  const CONTAINER_H = 108
+  const CONTAINER_W = isLandscape ? 192 : 136
+  const CONTAINER_H = isLandscape ? 136 : 192
 
   const getXY = useCallback((clientX: number, clientY: number) => {
     if (!containerRef.current) return
