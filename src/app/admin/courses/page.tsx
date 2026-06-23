@@ -440,6 +440,11 @@ export default function CoursesPage() {
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                           編輯課程
                         </button>
+                        <button onClick={() => setPosterEditorCourse(course)}
+                          className="flex items-center gap-1.5 text-xs bg-stone-50 hover:bg-stone-100 text-stone-500 border border-stone-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                          製作海報
+                        </button>
                         <button onClick={() => toggleActive(course.id, course.is_active)}
                           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${course.is_active ? 'bg-orange-500' : 'bg-stone-200'}`}
                           title={course.is_active ? '關閉報名' : '開放報名'}>
@@ -460,11 +465,7 @@ export default function CoursesPage() {
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                           複製課程
                         </button>
-                        <button onClick={() => setPosterEditorCourse(course)}
-                          className="flex items-center gap-1.5 text-xs bg-stone-50 hover:bg-stone-100 text-stone-500 border border-stone-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                          製作海報
-                        </button>
+                  
                       </>
                     )}
                   </div>
