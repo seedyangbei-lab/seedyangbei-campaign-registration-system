@@ -469,7 +469,7 @@ function PreviewPage({
     <div style={{ width: W, height: H, fontFamily: '"Noto Sans TC","GenSenRounded2TW",sans-serif', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}>
       <div style={{ position: 'absolute', inset: 0, background: '#fdf4ea', zIndex: 0 }}>
         {e.bgImage && (
-          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundImage: `url(${e.bgImage})`, backgroundSize: 'cover', backgroundPosition: isLandscape ? `${e.bgPositionX}% ${e.bgPositionY}%` : `${e.bgPositionXP}% ${e.bgPositionYP}%`, opacity: e.bgOpacity }} />
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundSize: 'cover', backgroundPosition: isLandscape ? `${e.bgPositionX}% ${e.bgPositionY}%` :}} />
         )}
       </div>
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
