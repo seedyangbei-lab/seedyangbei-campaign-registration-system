@@ -208,9 +208,9 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
         <button
           onClick={onClose}
           aria-label="關閉"
-          className="absolute top-3 right-3 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+           className="absolute top-3 right-3 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-stone-100 hover:bg-stone-200 transition-colors"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M18 6L6 18M6 6l12 12" />
           </svg>
         </button>
@@ -261,9 +261,11 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                     left: '50%',
                     top: '50%',
                     transform: `translate(calc(-50% + ${imgOffset.x}px), calc(-50% + ${imgOffset.y}px)) scale(${imgScale})`,
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    width: 'auto',
+                    height: 'auto',
+                    objectFit: 'contain',
                     userSelect: 'none',
                     pointerEvents: 'none',
                   }}
@@ -340,11 +342,11 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
           )}
         </div>
 
-        {/* Right: controls */}
-        <div className="w-full md:w-64 flex-shrink-0 flex flex-col gap-5 p-5 border-t md:border-t-0 md:border-l border-white/[0.08] overflow-y-auto">
+         {/* Right: controls */}
+        <div className="w-full md:w-64 flex-shrink-0 flex flex-col gap-5 p-5 border-t md:border-t-0 md:border-l border-stone-200 bg-white overflow-y-auto">
           {/* Theme presets */}
           <div>
-            <p className="text-[10px] tracking-widest text-white/40 uppercase mb-2.5">底色</p>
+            <p className="text-[10px] tracking-widest text-stone-400 uppercase mb-2.5">底色</p>
             <div className="grid grid-cols-6 md:grid-cols-3 gap-2 mb-3">
               {PRESET_THEMES.map((t, i) => (
                 <button
@@ -359,8 +361,8 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
               ))}
             </div>
             <div className="flex items-center gap-2">
-              <label className="flex items-center gap-2 cursor-pointer flex-1">
-                <div className="relative w-9 h-9 rounded-lg overflow-hidden border-2 border-white/20 flex-shrink-0">
+             <label className="flex items-center gap-2 cursor-pointer flex-1">
+                <div className="relative w-9 h-9 rounded-lg overflow-hidden border-2 border-stone-200 flex-shrink-0">
                   <div className="absolute inset-0" style={{ backgroundColor: bgColor }} />
                   <input
                     type="color"
@@ -369,28 +371,27 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                     className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                   />
                 </div>
-                <span className="text-xs text-white/40">自訂顏色</span>
+              <span className="text-xs text-stone-500">自訂顏色</span>
               </label>
-              <span className="text-xs text-white/20 font-mono">{bgColor}</span>
+              <span className="text-xs text-stone-400 font-mono">{bgColor}</span>
             </div>
-            <p className="text-[10px] text-white/20 mt-1.5">深底色自動配白字，淺底色配深字</p>
+           <p className="text-[10px] text-stone-400 mt-1.5">深底色自動配白字，淺底色配深字</p>
           </div>
 
-          {/* Image controls */}
+           {/* Image controls */}
           {uploadedImage && (
             <div>
-              <p className="text-[10px] tracking-widest text-white/40 uppercase mb-2.5">圖片</p>
+              <p className="text-[10px] tracking-widest text-stone-400 uppercase mb-2.5">圖片</p>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full py-2 rounded-lg border border-white/[0.12] text-white/60 text-xs hover:bg-white/5 transition-colors flex items-center justify-center gap-1.5 mb-3"
-              >
+                className="w-full py-2 rounded-lg border border-stone-200 text-stone-500 text-xs hover:bg-stone-50 transition-colors flex items-center justify-center gap-1.5 mb-3">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
                 </svg>
                 換圖片
               </button>
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
-              <p className="text-[10px] text-white/25 mb-2">在預覽上拖曳移動·滾輪或滑桿縮放</p>
+              <p className="text-[10px] text-stone-400 mb-2">在預覽上拖曳移動·滾輪或滑桿縮放</p>
               <input
                 type="range"
                 min={0.3}
@@ -400,7 +401,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                 onChange={(e) => setImgScale(parseFloat(e.target.value))}
                 className="w-full accent-orange-500"
               />
-              <div className="flex justify-between text-[10px] text-white/25 mt-1">
+               <div className="flex justify-between text-[10px] text-stone-400 mt-1">
                 <span>縮小</span>
                 <span>{Math.round(imgScale * 100)}%</span>
                 <span>放大</span>
