@@ -132,6 +132,55 @@ const MASKS: MaskShape[] = [
 
 // ── border-text paths (A4 210×297 space) ─────────────────────────────────
 const BORDER_TEXT = 'YANGBEI COMMUNITY · SEED COURSE · YANGBEI · SEED COURSE · '
+// ── MaskThumb: isolated SVG per mask to avoid id collision ───────────────
+function MaskThumb({ maskId, fill }: { maskId: string; fill: string }) {
+  const uid = `thumb-${maskId}`
+  if (maskId === 'none') {
+    return <div style={{ position: 'absolute', inset: 0, background: fill, opacity: 0.5 }} />
+  }
+  if (maskId === 'drift') return (
+    <svg viewBox="0 0 210 297" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+      <defs><mask id={uid}>
+        <rect width="210" height="297" fill="white"/>
+        <ellipse cx="-18" cy="95" rx="118" ry="108" fill="black" transform="rotate(-12 -18 95)"/>
+        <ellipse cx="188" cy="235" rx="72" ry="62" fill="black" transform="rotate(18 188 235)"/>
+      </mask></defs>
+      <rect width="210" height="297" fill={fill} mask={`url(#${uid})`} opacity="0.82"/>
+    </svg>
+  )
+  if (maskId === 'arc') return (
+    <svg viewBox="0 0 210 297" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+      <defs><mask id={uid}>
+        <rect width="210" height="297" fill="white"/>
+        <ellipse cx="105" cy="-52" rx="145" ry="108" fill="black"/>
+        <ellipse cx="38" cy="268" rx="82" ry="68" fill="black" transform="rotate(-8 38 268)"/>
+      </mask></defs>
+      <rect width="210" height="297" fill={fill} mask={`url(#${uid})`} opacity="0.82"/>
+    </svg>
+  )
+  if (maskId === 'tower') return (
+    <svg viewBox="0 0 210 297" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+      <defs><mask id={uid}>
+        <rect width="210" height="297" fill="white"/>
+        <ellipse cx="42" cy="128" rx="72" ry="145" fill="black" transform="rotate(-6 42 128)"/>
+        <ellipse cx="185" cy="58" rx="92" ry="72" fill="black" transform="rotate(14 185 58)"/>
+      </mask></defs>
+      <rect width="210" height="297" fill={fill} mask={`url(#${uid})`} opacity="0.82"/>
+    </svg>
+  )
+  if (maskId === 'scatter') return (
+    <svg viewBox="0 0 210 297" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+      <defs><mask id={uid}>
+        <rect width="210" height="297" fill="white"/>
+        <ellipse cx="28" cy="62" rx="68" ry="58" fill="black" transform="rotate(-20 28 62)"/>
+        <ellipse cx="195" cy="148" rx="52" ry="78" fill="black" transform="rotate(10 195 148)"/>
+        <ellipse cx="72" cy="268" rx="82" ry="52" fill="black" transform="rotate(-8 72 268)"/>
+      </mask></defs>
+      <rect width="210" height="297" fill={fill} mask={`url(#${uid})`} opacity="0.82"/>
+    </svg>
+  )
+  return null
+}
 
 export default function CoursePosterEditor({ course, initialImage, onClose }: Props) {
   // image state
@@ -270,14 +319,16 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
         </button>
 
         {/* ── LEFT: poster preview ── */}
-        <div className="md:w-[340px] flex-shrink-0 flex items-center justify-center bg-stone-100 p-6">
+        <div className="md:w-[340px] flex-shrink-0 flex flex-col items-center justify-center bg-stone-100 p-6 gap-3">
           {/* A4 ratio = 1:√2 ≈ 210:297 */}
           <div
             ref={posterRef}
-            className="relative overflow-hidden rounded-sm select-none"
+            className="relative overflow-hidden rounded-sm select-none flex-shrink-0"
             style={{
               width: '210px',
               height: '297px',
+              minWidth: '210px',
+              minHeight: '297px',
               backgroundColor: activeBg,
               cursor: imgSrc ? (isDragging ? 'grabbing' : 'grab') : 'default',
             }}
@@ -395,8 +446,8 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
           </div>
 
           {/* zoom slider */}
-          <div className="mt-4 w-[210px] flex items-center gap-2">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-stone-400">
+          <div className="w-[210px] flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-stone-400">
               <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M8 11h6"/>
             </svg>
             <input
@@ -487,19 +538,9 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                     outline: maskId === m.id ? '1.5px solid #f97316' : '1.5px solid #e7e5e4',
                   }}
                 >
-                  {/* mini preview */}
+                 {/* mini preview — each gets unique id to avoid SVG mask collision */}
                   <div className="w-8 h-[45px] rounded-sm overflow-hidden relative" style={{ background: activeBg }}>
-                    {m.id !== 'none' ? (
-                      <svg viewBox="0 0 210 297" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}
-                        dangerouslySetInnerHTML={{
-                          __html: m.svgContent
-                            .replace(/FILL/g, activeMk)
-                            .replace(/OPACITY/g, '0.82')
-                        }}
-                      />
-                    ) : (
-                      <div style={{ position: 'absolute', inset: 0, background: activeMk, opacity: 0.5 }} />
-                    )}
+                    <MaskThumb maskId={m.id} fill={activeMk} />
                   </div>
                   <span className="text-[8.5px] text-stone-500 leading-none">{m.label}</span>
                 </button>
