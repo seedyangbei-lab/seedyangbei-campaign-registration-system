@@ -9,8 +9,10 @@ interface Course {
   time_start: string; time_end: string; location: string
   notes?: string; suitable_age?: string
   instructors?: { name: string } | null
+  instructor_names?: string[]
   course_categories?: { name: string; color: string } | null
 }
+
 interface Props {
   courses: Course[]
   scheduleSettings: Record<string, string>
@@ -380,7 +382,7 @@ function DownloadPage({ data }: { data: PageData }) {
               if (ci === 0) return <div key={ci} style={cs}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}><span style={{ fontSize: 16, fontWeight: 800, color: '#18120a', lineHeight: 1 }}>{cm}/{day}</span><span style={{ fontWeight: 800, fontSize: 12, color: e.accentColor, lineHeight: 1 }}>{weekday}</span></div></div>
               if (ci === 1) return <div key={ci} style={cs}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}><span style={{ fontSize: 13, fontWeight: 700, color: '#18120a', lineHeight: 1 }}>{course.time_start?.slice(0,5)}</span><span style={{ fontSize: 10, color: `${e.accentColor}80`, lineHeight: 1.2 }}>|</span><span style={{ fontSize: 13, fontWeight: 700, color: '#18120a', lineHeight: 1 }}>{course.time_end?.slice(0,5)}</span></div></div>
               if (ci === 2) return <div key={ci} style={{ ...cs, justifyContent: 'center' }}><span style={{ fontSize: 14, fontWeight: 700, color: '#18120a', lineHeight: 1.4, textAlign: 'center', wordBreak: 'break-word' }}>{course.title}</span></div>
-              if (ci === 3) return <div key={ci} style={cs}>{course.instructors?.name && <span style={{ color: e.accentColor, fontWeight: 700, fontSize: 12, lineHeight: 1 }}>{course.instructors.name}</span>}</div>
+              if (ci === 3) return <div key={ci} style={cs}>{(course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name) && <span style={{ color: e.accentColor, fontWeight: 700, fontSize: 12, lineHeight: 1 }}>{course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name}</span>}</div>
               if (ci === 4) return <div key={ci} style={{ ...cs, padding: '0 6px' }}><span style={{ fontSize: 12, color: '#374151', lineHeight: 1.4, textAlign: 'center', wordBreak: 'break-word' }}>{course.location}</span></div>
               if (ci === 5) return <div key={ci} style={cs}><span style={{ fontSize: 11, color: '#374151', lineHeight: 1.4, textAlign: 'center' }}>{course.suitable_age||'全年齡'}</span></div>
               if (ci === 6) return <div key={ci} style={cs}><span style={{ fontSize: 13, fontWeight: 800, color: e.accentColor, lineHeight: 1 }}>免費</span></div>
@@ -568,7 +570,7 @@ function PreviewPage({
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 10px', textAlign: 'center' }}><span style={{ fontSize: 14, fontWeight: 700, color: '#18120a', lineHeight: 1.4 }}>{course.title}</span></div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 6px' }}>
-                      {course.instructors?.name && <span style={{ color: e.accentColor, fontWeight: 700, fontSize: 12, lineHeight: 1 }}>{course.instructors.name}</span>}
+                      {(course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name) && <span style={{ color: e.accentColor, fontWeight: 700, fontSize: 12, lineHeight: 1 }}>{course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name}</span>}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 6px', textAlign: 'center' }}><span style={{ fontSize: 12, color: '#374151', lineHeight: 1.4 }}>{course.location}</span></div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', textAlign: 'center' }}><span style={{ fontSize: 11, color: '#374151', lineHeight: 1.4 }}>{course.suitable_age||'全年齡'}</span></div>
@@ -1476,9 +1478,10 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
             ctx.fillText(line, col.x + col.w/2, startY + li * lineH)
           })
         } else if (ci === 3) {
-          if (course.instructors?.name) {
+          const instructorText = course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name || ''
+          if (instructorText) {
             ctx.font = font(12, 700); ctx.fillStyle = e.accentColor
-            ctx.fillText(course.instructors.name, col.x + col.w/2, cy + 5)
+            ctx.fillText(instructorText, col.x + col.w/2, cy + 5)
           }
         } else if (ci === 4) {
           ctx.font = font(12, 400); ctx.fillStyle = '#374151'
