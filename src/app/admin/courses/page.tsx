@@ -187,7 +187,7 @@ export default function CoursesPage() {
 
   const fetchAll = async () => {
     const [{ data: c }, { data: i }, { data: cat }, { data: siteSettings }] = await Promise.all([
-      supabase.from('courses').select('*, instructors(name), course_categories(name, color), instructor_ids').order('date', { ascending: false }),
+      supabase.from('courses').select('*, course_categories(name, color), instructor_ids').order('date', { ascending: false }),
       supabase.from('instructors').select('id, name').eq('is_active', true).order('created_at'),
       supabase.from('course_categories').select('*').order('created_at'),
       supabase.from('site_settings').select('key, value'),
