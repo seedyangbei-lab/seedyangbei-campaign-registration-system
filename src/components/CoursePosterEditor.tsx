@@ -747,31 +747,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
               </div>
             )}
           </section>
-            <div className="grid grid-cols-5 gap-1.5">
-              {DECO_SHAPES.map(d => (
-                <button key={d.id} onClick={() => setDecoId(d.id)}
-                  className="flex flex-col items-center gap-1 rounded-lg p-1.5 transition-all"
-                  style={{
-                    background: decoId===d.id ? '#fff7ed' : 'transparent',
-                    outline: decoId===d.id ? '1.5px solid #f97316' : '1.5px solid #e7e5e4'
-                  }}>
-                  <div className="w-9 h-[52px] rounded-sm overflow-hidden relative">
-                    <div style={{ position:'absolute', inset:0, background:'linear-gradient(160deg,#94a3b8 0%,#cbd5e1 100%)' }}/>
-                    <DecoSvg shapeId={d.id} fill={activeBg} opacity={decoOp} uid={`thumb-${d.id}`}/>
-                  </div>
-                  <span className="text-[8.5px] text-stone-500 leading-none">{d.label}</span>
-                </button>
-              ))}
-            </div>
-            {decoId !== 'none' && (
-              <div className="mt-2.5 flex items-center gap-2">
-                <span className="text-[10px] text-stone-400 flex-shrink-0 w-8">強度</span>
-                <input type="range" min="10" max="100" step="1" value={decoOp}
-                  onChange={e => setDecoOp(parseInt(e.target.value))} className="flex-1 accent-orange-500"/>
-                <span className="text-[10px] text-stone-400 w-8 text-right">{decoOp}%</span>
-              </div>
-            )}
-          </section>
+            
 
           {/* text colour */}
           <section>
