@@ -166,13 +166,10 @@ function renderDotShape(shape: DotShape, customChar: string, x: number, y: numbe
 
 function DotPattern({
 
-  shape, customChar, color, size, density, coverage, totalHeight, photoHeight
+  shape, customChar, color, opacity, size, density, coverage, totalHeight, photoHeight
 
 }: {
   shape: DotShape; customChar: string; color: string; opacity: number
-  size: number; density: number; coverage: DotCoverage
-  totalHeight: number; photoHeight: number
-
 }) {
 
   const W = 210
@@ -402,7 +399,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
   const [dotSize, setDotSize]     = useState(6)
   const [dotDensity, setDotDensity] = useState(50)
   const [dotCoverage, setDotCoverage] = useState<DotCoverage>('photo')
-  const [dotOn, setDotOn]         = useState(false)
+  const [dotOn, setDotOn]         = useState(true)
   const [textColorOverride, setTextColorOverride] = useState('')  
   const [borderOn, setBorderOn]   = useState(true)
 
@@ -490,8 +487,8 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
   return (
     <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm">
       <div className="relative w-full md:max-w-4xl md:mx-4 flex flex-col md:flex-row bg-white md:rounded-2xl rounded-t-2xl overflow-hidden shadow-2xl"
-        style={{ maxHeight: '95dvh' }}>
-
+        style={{ maxHeight: '95dvh', height: '95dvh' }}>
+        
         {/* close */}
         <button onClick={onClose} aria-label="關閉"
           className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-black/10 hover:bg-black/20 transition-colors">
