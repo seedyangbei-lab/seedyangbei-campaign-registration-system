@@ -72,8 +72,162 @@ const EN_FONTS = [
   { label: 'Cormorant Garamond',value:"'Cormorant Garamond', serif",    gf: 'Cormorant+Garamond:wght@300;400;500;700', tag: '展示' },
 ]
 
-// ── deco shape SVG (viewBox 0 0 210 180, photo zone) ──────────────────────
-// Each shape: additive colour overlay. Photo shows through open areas.
+// ── dot pattern ──────────────────────────────────────────────────────────────
+
+type DotShape = 'circle' | 'star' | 'triangle' | 'heart' | 'custom'
+
+type DotCoverage = 'photo' | 'full'
+
+const DOT_SHAPES: { id: DotShape; label: string; symbol: string }[] = [
+
+  { id: 'circle',   label: '圓',   symbol: '●' },
+
+  { id: 'star',     label: '星',   symbol: '★' },
+
+  { id: 'triangle', label: '三角', symbol: '▲' },
+
+  { id: 'heart',    label: '愛心', symbol: '♥' },
+
+  { id: 'custom',   label: '文字', symbol: 'A' },
+
+]
+
+function renderDotShape(shape: DotShape, customChar: string, x: number, y: number, size: number, fill: string, opacity: number, key: string) {
+
+  const op = opacity / 100
+
+  if (shape === 'circle') {
+
+    return <circle key={key} cx={x} cy={y} r={size / 2} fill={fill} opacity={op}/>
+
+  }
+
+  if (shape === 'star') {
+
+    const pts = Array.from({length:5}).map((_,i) => {
+
+      const a = (i * 72 - 90) * Math.PI / 180
+
+      const b = (i * 72 - 90 + 36) * Math.PI / 180
+
+      const ro = size / 2, ri = size / 4.5
+
+      return `${x + ro*Math.cos(a)},${y + ro*Math.sin(a)} ${x + ri*Math.cos(b)},${y + ri*Math.sin(b)}`
+
+    }).join(' ')
+
+    return <polygon key={key} points={pts} fill={fill} opacity={op}/>
+
+  }
+
+  if (shape === 'triangle') {
+
+    const h = size * 0.866
+
+    const pts = `${x},${y - h/2} ${x - size/2},${y + h/2} ${x + size/2},${y + h/2}`
+
+    return <polygon key={key} points={pts} fill={fill} opacity={op}/>
+
+  }
+
+  if (shape === 'heart') {
+
+    const s = size / 16
+
+    return (
+
+      <path key={key} transform={`translate(${x},${y}) scale(${s})`}
+
+        d="M0-4 C0-9-8-9-8-4 C-8 0 0 7 0 7 C0 7 8 0 8-4 C8-9 0-9 0-4Z"
+
+        fill={fill} opacity={op}/>
+
+    )
+
+  }
+
+  // custom text
+
+  const char = customChar.charAt(0) || 'A'
+
+  return (
+
+    <text key={key} x={x} y={y} textAnchor="middle" dominantBaseline="central"
+
+      fontSize={size} fill={fill} opacity={op} style={{userSelect:'none'}}>
+
+      {char}
+
+    </text>
+
+  )
+
+}
+
+function DotPattern({
+
+  shape, customChar, color, size, density, coverage, totalHeight, photoHeight
+
+}: {
+  shape: DotShape; customChar: string; color: string; opacity: number
+  size: number; density: number; coverage: DotCoverage
+  totalHeight: number; photoHeight: number
+
+}) {
+
+  const W = 210
+
+  const H = coverage === 'full' ? totalHeight : photoHeight
+
+  const gap = Math.max(size * 1.2, (100 - density) * 0.8 + size)
+
+  const cols = Math.ceil(W / gap) + 1
+
+  const rows = Math.ceil(H / gap) + 1
+
+  const dots: JSX.Element[] = []
+
+  for (let r = 0; r < rows; r++) {
+
+    for (let c = 0; c < cols; c++) {
+
+      const offsetX = r % 2 === 0 ? 0 : gap / 2
+
+      const x = c * gap + offsetX - gap / 2
+
+      const y = r * gap - gap / 2
+
+      dots.push(renderDotShape(shape, customChar, x, y, size, color, opacity, `d-${r}-${c}`))
+
+    }
+
+  }
+
+  return (
+
+    <svg viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg"
+
+      style={{
+
+        position: 'absolute',
+
+        left: 0, right: 0, top: 0,
+
+        width: '100%',
+
+        height: coverage === 'full' ? `${totalHeight}px` : `${photoHeight}px`,
+
+        pointerEvents: 'none'
+
+      }}>
+
+      {dots}
+
+    </svg>
+
+  )
+
+}// Each shape: additive colour overlay. Photo shows through open areas.
 // uid prefix prevents mask-id collision.
 type DecoId = 'none' | 'drift' | 'arc' | 'tower' | 'scatter'
 const DECO_SHAPES: { id: DecoId; label: string }[] = [
@@ -241,8 +395,15 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
 
   const [scheme, setScheme]       = useState(SCHEMES[2])
   const [customBg, setCustomBg]   = useState('')
-  const [decoId, setDecoId]       = useState<DecoId>('drift')
-  const [decoOp, setDecoOp]       = useState(45)
+  const [dotShape, setDotShape]   = useState<DotShape>('circle')
+  const [dotCustomChar, setDotCustomChar] = useState('央')
+  const [dotColor, setDotColor]   = useState('')          // '' = 跟著 textCol(activeBg)
+  const [dotOpacity, setDotOpacity] = useState(30)
+  const [dotSize, setDotSize]     = useState(6)
+  const [dotDensity, setDotDensity] = useState(50)
+  const [dotCoverage, setDotCoverage] = useState<DotCoverage>('photo')
+  const [dotOn, setDotOn]         = useState(false)
+  const [textColorOverride, setTextColorOverride] = useState('')  
   const [borderOn, setBorderOn]   = useState(true)
 
   // fonts
@@ -256,7 +417,8 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
   const fileRef   = useRef<HTMLInputElement>(null)
 
   const activeBg  = customBg || scheme.bg
-  const tc        = textCol(activeBg)
+  const tc        = textColorOverride || textCol(activeBg)
+  const dotFill   = dotColor || (lum(activeBg) > 0.35 ? '#111111' : '#ffffff')
   const zhFont    = ZH_FONTS[zhFontIdx]
   const enFont    = EN_FONTS[enFontIdx]
 
@@ -362,25 +524,26 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                 </div>
               )}
 
-              {/* deco shapes */}
-              <DecoSvg shapeId={decoId} fill={activeBg} opacity={decoOp} uid="poster"/>
+              {/* dot pattern */}
+              {dotOn && (
+                <DotPattern
+                  shape={dotShape} customChar={dotCustomChar}
+                  color={dotFill} size={dotSize} density={dotDensity}
+                  coverage={dotCoverage} totalHeight={297} photoHeight={178}
+                  opacity={dotOpacity}
+                />
+              )}
 
               {/* border text: top + sides */}
               {borderOn && (
                 <svg viewBox="0 0 210 178" xmlns="http://www.w3.org/2000/svg"
                   style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none' }}>
                   <defs>
-                    <path id="bte3" d="M 9,10 H 201"/>
-                    <path id="bre3" d="M 203,10 V 168"/>
-                    <path id="ble3" d="M 7,168 V 10"/>
+                    <path id="ring3" d="M 105,10 m -88,0 a 88,88 0 1,1 176,0 a 88,88 0 1,1 -176,0"/>
                   </defs>
-                  {(['bte3','bre3','ble3'] as const).map((id, i) => (
-                    <text key={id} fontSize="5.5" letterSpacing="3" fill={tc} opacity="0.42" fontFamily={enFont.value}>
-                      <textPath href={`#${id}`} {...(i===2?{side:'right'}:{})}>
-                        {BORDER_TEXT.repeat(6)}
-                      </textPath>
-                    </text>
-                  ))}
+                  <text fontSize="5.5" letterSpacing="3.2" fill={tc} opacity="0.42" fontFamily={enFont.value}>
+                    <textPath href="#ring3">{BORDER_TEXT.repeat(8)}</textPath>
+                  </text>
                 </svg>
               )}
             </div>
@@ -390,7 +553,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
 
             {/* LOWER ZONE: info (178px → 297px) */}
             <div className="absolute left-0 right-0 bottom-0 flex flex-col justify-end"
-              style={{ top:'178px', padding:'12px 14px 14px', pointerEvents:'none' }}>
+              style={{ top:'178px', padding:'16px 16px 18px', pointerEvents:'none' }}>
 
               {/* tag */}
               <div style={{
@@ -496,9 +659,94 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
             </div>
           </section>
 
-          {/* deco shapes */}
+         {/* dot pattern */}
           <section>
-            <p className="text-[10px] font-medium text-stone-400 tracking-widest uppercase mb-2">上半部裝飾形狀</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-medium text-stone-400 tracking-widest uppercase">裝飾點</p>
+              <button onClick={() => setDotOn(v => !v)} aria-label="切換裝飾點"
+                className="relative rounded-full transition-colors flex-shrink-0"
+                style={{ height:'18px', width:'30px', background: dotOn ? '#f97316' : '#d1d5db' }}>
+                <span className="absolute top-0.5 rounded-full bg-white transition-all"
+                  style={{ width:'14px', height:'14px', left: dotOn ? '14px' : '2px' }}/>
+              </button>
+            </div>
+            {dotOn && (
+              <div className="space-y-3">
+                {/* shape */}
+                <div className="grid grid-cols-5 gap-1">
+                  {DOT_SHAPES.map(d => (
+                    <button key={d.id} onClick={() => setDotShape(d.id)}
+                      className="flex flex-col items-center gap-0.5 py-2 rounded-lg border transition-all"
+                      style={{
+                        border: dotShape===d.id ? '1.5px solid #f97316' : '1px solid #e7e5e4',
+                        background: dotShape===d.id ? '#fff7ed' : 'transparent'
+                      }}>
+                      <span className="text-base leading-none">{d.symbol}</span>
+                      <span className="text-[8px] text-stone-400">{d.label}</span>
+                    </button>
+                  ))}
+                </div>
+                {/* custom char input */}
+                {dotShape === 'custom' && (
+                  <input
+                    type="text" maxLength={1} value={dotCustomChar}
+                    onChange={e => setDotCustomChar(e.target.value)}
+                    placeholder="輸入一個字"
+                    className="w-full border border-stone-200 rounded-lg px-3 py-1.5 text-sm text-center focus:outline-none focus:border-orange-400"
+                  />
+                )}
+                {/* coverage */}
+                <div className="grid grid-cols-2 gap-1.5">
+                  {([['photo','照片上'],['full','滿版']] as const).map(([v, label]) => (
+                    <button key={v} onClick={() => setDotCoverage(v)}
+                      className="py-1.5 rounded-lg border text-[11px] transition-all"
+                      style={{
+                        border: dotCoverage===v ? '1.5px solid #f97316' : '1px solid #e7e5e4',
+                        background: dotCoverage===v ? '#fff7ed' : 'transparent',
+                        color: '#374151'
+                      }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {/* color */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-stone-400 flex-shrink-0 w-8">顏色</span>
+                  <label className="relative w-7 h-7 rounded-full border border-stone-200 overflow-hidden cursor-pointer flex-shrink-0">
+                    <div className="w-full h-full" style={{ background: dotFill }}/>
+                    <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                      value={dotFill} onChange={e => setDotColor(e.target.value)}/>
+                  </label>
+                  {dotColor && (
+                    <button onClick={() => setDotColor('')} className="text-[9px] text-stone-400 hover:text-orange-500 transition-colors">
+                      重設
+                    </button>
+                  )}
+                </div>
+                {/* opacity */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-stone-400 flex-shrink-0 w-8">透明</span>
+                  <input type="range" min="5" max="100" step="1" value={dotOpacity}
+                    onChange={e => setDotOpacity(parseInt(e.target.value))} className="flex-1 accent-orange-500"/>
+                  <span className="text-[10px] text-stone-400 w-8 text-right">{dotOpacity}%</span>
+                </div>
+                {/* size */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-stone-400 flex-shrink-0 w-8">大小</span>
+                  <input type="range" min="2" max="24" step="0.5" value={dotSize}
+                    onChange={e => setDotSize(parseFloat(e.target.value))} className="flex-1 accent-orange-500"/>
+                  <span className="text-[10px] text-stone-400 w-8 text-right">{dotSize}px</span>
+                </div>
+                {/* density */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-stone-400 flex-shrink-0 w-8">密度</span>
+                  <input type="range" min="10" max="90" step="1" value={dotDensity}
+                    onChange={e => setDotDensity(parseInt(e.target.value))} className="flex-1 accent-orange-500"/>
+                  <span className="text-[10px] text-stone-400 w-8 text-right">{dotDensity}</span>
+                </div>
+              </div>
+            )}
+          </section>
             <div className="grid grid-cols-5 gap-1.5">
               {DECO_SHAPES.map(d => (
                 <button key={d.id} onClick={() => setDecoId(d.id)}
@@ -523,6 +771,24 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                 <span className="text-[10px] text-stone-400 w-8 text-right">{decoOp}%</span>
               </div>
             )}
+          </section>
+
+          {/* text colour */}
+          <section>
+            <p className="text-[10px] font-medium text-stone-400 tracking-widest uppercase mb-2">文字顏色</p>
+            <div className="flex items-center gap-3">
+              <label className="relative w-7 h-7 rounded-full border border-stone-200 overflow-hidden cursor-pointer flex-shrink-0">
+                <div className="w-full h-full" style={{ background: tc }}/>
+                <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  value={tc} onChange={e => setTextColorOverride(e.target.value)}/>
+              </label>
+              <span className="text-[10px] text-stone-500">{tc.toUpperCase()}</span>
+              {textColorOverride && (
+                <button onClick={() => setTextColorOverride('')} className="text-[9px] text-stone-400 hover:text-orange-500 transition-colors ml-auto">
+                  重設自動
+                </button>
+              )}
+            </div>
           </section>
 
           {/* border */}
