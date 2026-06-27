@@ -48,8 +48,10 @@ const SCHEMES = [
 
 // ── Google Fonts ─────────────────────────────────────────────────────────────
 const ZH_FONTS = [
-  { label: 'Noto Sans TC（黑體）',  value: "'Noto Sans TC', sans-serif",  gf: 'Noto+Sans+TC:wght@300;400;500;700' },
-  { label: 'Noto Serif TC（明體）', value: "'Noto Serif TC', serif",       gf: 'Noto+Serif+TC:wght@300;400;500;700' },
+  { label: 'Noto Sans TC',  value: "'Noto Sans TC', sans-serif",          gf: 'Noto+Sans+TC:wght@300;400;500;700' },
+  { label: 'Noto Serif TC', value: "'Noto Serif TC', serif",               gf: 'Noto+Serif+TC:wght@300;400;500;700' },
+  { label: 'Zen Kaku Gothic New（粗黑）', value: "'Zen Kaku Gothic New', sans-serif", gf: 'Zen+Kaku+Gothic+New:wght@400;500;700;900' },
+  { label: 'Zen Maru Gothic（圓體）',     value: "'Zen Maru Gothic', sans-serif",     gf: 'Zen+Maru+Gothic:wght@300;400;500;700' },
 ]
 const EN_FONTS = [
   { label: 'DM Sans',           value: "'DM Sans', sans-serif",          gf: 'DM+Sans:wght@300;400;500;700',           tag: '現代' },
@@ -67,11 +69,12 @@ const EN_FONTS = [
 ]
 
 // ── dot pattern ───────────────────────────────────────────────────────────────
-type DotShape = 'circle' | 'star' | 'triangle' | 'heart' | 'custom'
+type DotShape = 'none' | 'circle' | 'star' | 'triangle' | 'heart' | 'custom'
 type DotCoverage = 'photo' | 'full'
 type DotArrangement = 'grid' | 'random'
 
 const DOT_SHAPES: { id: DotShape; label: string; symbol: string }[] = [
+  { id: 'none',     label: '無',   symbol: '○' },
   { id: 'circle',   label: '圓',   symbol: '●' },
   { id: 'star',     label: '星',   symbol: '★' },
   { id: 'triangle', label: '三角', symbol: '▲' },
@@ -214,7 +217,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
   const [customBg, setCustomBg] = useState('')
 
   // dot state
-  const [dotOn, setDotOn]               = useState(true)
   const [dotShape, setDotShape]         = useState<DotShape>('circle')
   const [dotCustomChar, setDotCustomChar] = useState('央')
   const [dotColor, setDotColor]         = useState('')
@@ -239,6 +241,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
 
   const activeBg = customBg || scheme.bg
   const tc       = textColorOverride || textCol(activeBg)
+  const dotOn    = dotShape !== 'none'
   const dotFill  = dotColor || (lum(activeBg) > 0.35 ? '#111111' : '#ffffff')
   const zhFont   = ZH_FONTS[zhFontIdx]
   const enFont   = EN_FONTS[enFontIdx]
@@ -315,8 +318,14 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
           const i = new Image(); i.crossOrigin = 'anonymous'
           i.onload = () => res(i); i.onerror = rej; i.src = imgSrc
         })
-        const sw = imgScale * W, sh = imgScale * PH
-        ctx.drawImage(img, imgPos.x, imgPos.y, sw, sh)
+        // cover-fit: scale image so it fills the zone while maintaining aspect ratio
+        const iw = img.naturalWidth, ih = img.naturalHeight
+        const baseScale = Math.max(W / iw, PH / ih)
+        const sw = iw * baseScale * imgScale
+        const sh = ih * baseScale * imgScale
+        const ox = imgPos.x + (W - iw * baseScale) / 2
+        const oy = imgPos.y + (PH - ih * baseScale) / 2
+        ctx.drawImage(img, ox, oy, sw, sh)
       } else {
         ctx.fillStyle = '#d6d3d1'
         ctx.fillRect(0, 0, W, PH)
@@ -325,11 +334,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
       // ── dots on photo ──
       if (dotOn && dotCoverage === 'photo') {
         drawDotsCanvas(ctx, dotShape, dotCustomChar, dotFill, dotOpacity, dotSize, dotDensity, dotArrangement, dotSeed, W, PH)
-      }
-
-      // ── border text (4 sides) ──
-      if (borderOn) {
-        drawBorderText(ctx, BORDER_TEXT, tc, enFont.value, W, PH)
       }
 
       ctx.restore()
@@ -430,12 +434,12 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
         ctx.globalAlpha = 1
       }
 
-      // bottom border text
+      // bottom border text strip
       if (borderOn) {
-        const bText = BORDER_TEXT.repeat(5)
+        const bText = BORDER_TEXT.repeat(12)
         ctx.font = `400 5.5px ${enFont.value}`
-        ctx.fillStyle = tc; ctx.globalAlpha = 0.32; ctx.textAlign = 'left'
-        ctx.fillText(bText, 14, H - 8)
+        ctx.fillStyle = tc; ctx.globalAlpha = 0.42; ctx.textAlign = 'left'
+        ctx.fillText(bText, 6, H - 8)
         ctx.globalAlpha = 1
       }
 
@@ -469,10 +473,11 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
         </button>
 
         {/* ── LEFT: poster preview ── */}
-        <div className="md:w-[340px] flex-shrink-0 flex flex-col items-center justify-center bg-stone-100 p-6 gap-3">
-          {/* poster */}
+        <div className="md:w-[340px] flex-shrink-0 flex flex-col items-center justify-center bg-stone-100 p-4 gap-3 overflow-hidden">
+          {/* poster — scaled to always fit vertically */}
+          <div style={{ transform: 'scale(0.92)', transformOrigin: 'top center', flexShrink: 0 }}>
           <div
-            className="relative overflow-hidden rounded-sm select-none flex-shrink-0"
+            className="relative overflow-hidden rounded-sm select-none"
             style={{ width: `${POSTER_W}px`, height: `${POSTER_H}px`, minWidth: `${POSTER_W}px`, minHeight: `${POSTER_H}px`, backgroundColor: activeBg }}
           >
             {/* UPPER: photo zone */}
@@ -506,10 +511,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                 />
               )}
 
-              {/* border text: 4 sides via SVG */}
-              {borderOn && (
-                <BorderTextSvg tc={tc} enFontValue={enFont.value} W={POSTER_W} H={PHOTO_H} />
-              )}
+              {/* border text moved to info zone bottom */}
             </div>
 
             {/* dots full */}
@@ -590,14 +592,15 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                 </div>
               )}
 
-              {/* bottom border text */}
+              {/* bottom border text — full-width strip, seamlessly repeating */}
               {borderOn && (
                 <div style={{
-                  position: 'absolute', bottom: '6px', left: '14px', right: '14px',
+                  position: 'absolute', bottom: '6px', left: 0, right: 0,
                   fontFamily: enFont.value, fontSize: '5.5px', letterSpacing: '3px',
-                  color: tc, opacity: 0.32, whiteSpace: 'nowrap', overflow: 'hidden',
+                  color: tc, opacity: 0.42, whiteSpace: 'nowrap', overflow: 'hidden',
+                  paddingLeft: '6px',
                 }}>
-                  {BORDER_TEXT.repeat(5)}
+                  {BORDER_TEXT.repeat(12)}
                 </div>
               )}
             </div>
@@ -609,7 +612,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
             <input type="range" min="0.5" max="3" step="0.05" value={imgScale} onChange={e => setImgScale(parseFloat(e.target.value))} className="flex-1 accent-orange-500" />
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-stone-400 flex-shrink-0"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35M11 8v6M8 11h6" /></svg>
           </div>
-        </div>
+          </div>
 
         {/* ── RIGHT: controls ── */}
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
@@ -628,24 +631,28 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
           {/* colour */}
           <section>
             <p className="text-[10px] font-medium text-stone-400 tracking-widest uppercase mb-2">下半部色彩</p>
-            <div className="grid grid-cols-4 gap-1.5">
+            <div className="grid grid-cols-8 gap-1">
               {SCHEMES.map(s => (
                 <button key={s.id} title={s.label} aria-label={s.label}
                   onClick={() => { setScheme(s); setCustomBg('') }}
-                  className="relative rounded overflow-hidden aspect-square transition-transform hover:scale-105"
-                  style={{ outline: (!customBg && scheme.id === s.id) ? '2px solid #f97316' : '2px solid transparent', outlineOffset: '2px' }}>
-                  <div style={{ background: s.bg, width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ marginTop: 'auto', padding: '2px 3px' }}>
-                      <span style={{ fontSize: '6.5px', color: textCol(s.bg), fontFamily: 'Arial' }}>{s.label}</span>
-                    </div>
-                  </div>
+                  className="relative rounded overflow-hidden transition-transform hover:scale-105"
+                  style={{
+                    height: '28px',
+                    outline: (!customBg && scheme.id === s.id) ? '2px solid #f97316' : '2px solid transparent',
+                    outlineOffset: '2px',
+                    background: s.bg,
+                  }}>
                 </button>
               ))}
-              <label className="relative rounded overflow-hidden aspect-square cursor-pointer transition-transform hover:scale-105 border border-stone-200"
-                style={{ outline: customBg ? '2px solid #f97316' : '2px solid transparent', outlineOffset: '2px' }}>
-                <div className="w-full h-full flex items-center justify-center" style={{ background: customBg || '#ffffff' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={customBg ? textCol(customBg) : '#888'} strokeWidth="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" /></svg>
-                </div>
+              <label className="relative rounded overflow-hidden cursor-pointer transition-transform hover:scale-105 border border-stone-200"
+                style={{
+                  height: '28px',
+                  outline: customBg ? '2px solid #f97316' : '2px solid transparent',
+                  outlineOffset: '2px',
+                  background: customBg || '#ffffff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={customBg ? textCol(customBg) : '#888'} strokeWidth="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" /></svg>
                 <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                   value={customBg || scheme.bg} onChange={e => setCustomBg(e.target.value)} />
               </label>
@@ -656,29 +663,22 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
           <section>
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-medium text-stone-400 tracking-widest uppercase">裝飾點</p>
-              <button onClick={() => setDotOn(v => !v)} aria-label="切換裝飾點"
-                className="relative rounded-full transition-colors flex-shrink-0"
-                style={{ height: '18px', width: '30px', background: dotOn ? '#f97316' : '#d1d5db' }}>
-                <span className="absolute top-0.5 rounded-full bg-white transition-all"
-                  style={{ width: '14px', height: '14px', left: dotOn ? '14px' : '2px' }} />
-              </button>
             </div>
-            {dotOn && (
-              <div className="space-y-3">
-                {/* shape */}
-                <div className="grid grid-cols-5 gap-1">
-                  {DOT_SHAPES.map(d => (
-                    <button key={d.id} onClick={() => setDotShape(d.id)}
-                      className="flex flex-col items-center gap-0.5 py-2 rounded-lg border transition-all"
-                      style={{
-                        border: dotShape === d.id ? '1.5px solid #f97316' : '1px solid #e7e5e4',
-                        background: dotShape === d.id ? '#fff7ed' : 'transparent',
-                      }}>
-                      <span className="text-base leading-none">{d.symbol}</span>
-                      <span className="text-[8px] text-stone-400">{d.label}</span>
-                    </button>
-                  ))}
-                </div>
+            <div className="space-y-3">
+              {/* shape — 6 options including none */}
+              <div className="grid grid-cols-6 gap-1">
+                {DOT_SHAPES.map(d => (
+                  <button key={d.id} onClick={() => setDotShape(d.id)}
+                    className="flex flex-col items-center gap-0.5 py-2 rounded-lg border transition-all"
+                    style={{
+                      border: dotShape === d.id ? '1.5px solid #f97316' : '1px solid #e7e5e4',
+                      background: dotShape === d.id ? '#fff7ed' : 'transparent',
+                    }}>
+                    <span className="text-sm leading-none">{d.symbol}</span>
+                    <span className="text-[8px] text-stone-400">{d.label}</span>
+                  </button>
+                ))}
+              </div>
 
                 {/* custom char */}
                 {dotShape === 'custom' && (
@@ -727,7 +727,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                 {/* color */}
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-stone-400 flex-shrink-0 w-8">顏色</span>
-                  <label className="relative w-7 h-7 rounded-full border border-stone-200 overflow-hidden cursor-pointer flex-shrink-0">
+                  <label className="relative w-5 h-5 rounded border border-stone-200 overflow-hidden cursor-pointer flex-shrink-0">
                     <div className="w-full h-full" style={{ background: dotFill }} />
                     <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                       value={dotFill} onChange={e => setDotColor(e.target.value)} />
@@ -761,7 +761,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                   <span className="text-[10px] text-stone-400 w-8 text-right">{dotDensity}</span>
                 </div>
               </div>
-            )}
+            </div>
           </section>
 
           {/* text colour */}
@@ -873,45 +873,21 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
   )
 }
 
-// ── BorderTextSvg: 4-side border text (preview only) ─────────────────────────
+// ── BorderTextSvg: bottom strip only (preview only) ──────────────────────────
 function BorderTextSvg({ tc, enFontValue, W, H }: { tc: string; enFontValue: string; W: number; H: number }) {
   const fs = 5.5
   const ls = 3.2
   const op = 0.42
-  const margin = 8
-
-  // repeat text enough to fill each side
-  const repeat = (n: number) => Array(n).fill('YANGBEI COMMUNITY · SEED COURSE · ').join('')
+  const margin = 6
+  const repeat = Array(20).fill('YANGBEI COMMUNITY · SEED COURSE · ').join('')
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg"
       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3 }}>
-
-      {/* top: left to right */}
+      {/* bottom strip — seamless repeat, left to right */}
       <text fontSize={fs} letterSpacing={ls} fill={tc} opacity={op} fontFamily={enFontValue}
-        x={margin} y={margin + fs} dominantBaseline="auto">
-        {repeat(8)}
-      </text>
-
-      {/* right: top to bottom (rotated) */}
-      <text fontSize={fs} letterSpacing={ls} fill={tc} opacity={op} fontFamily={enFontValue}
-        transform={`translate(${W - margin}, ${margin}) rotate(90)`}
-        x={0} y={0} dominantBaseline="auto">
-        {repeat(6)}
-      </text>
-
-      {/* bottom: right to left (rotated 180) */}
-      <text fontSize={fs} letterSpacing={ls} fill={tc} opacity={op} fontFamily={enFontValue}
-        transform={`translate(${W - margin}, ${H - margin}) rotate(180)`}
-        x={0} y={0} dominantBaseline="auto">
-        {repeat(8)}
-      </text>
-
-      {/* left: bottom to top (rotated 270) */}
-      <text fontSize={fs} letterSpacing={ls} fill={tc} opacity={op} fontFamily={enFontValue}
-        transform={`translate(${margin}, ${H - margin}) rotate(270)`}
-        x={0} y={0} dominantBaseline="auto">
-        {repeat(6)}
+        x={margin} y={H - margin} dominantBaseline="auto">
+        {repeat}
       </text>
     </svg>
   )
@@ -1034,42 +1010,13 @@ function drawBorderText(
   W: number, H: number
 ) {
   const fs = 5.5
-  const margin = 8
   ctx.save()
   ctx.globalAlpha = 0.42
   ctx.fillStyle = color
   ctx.font = `400 ${fs}px ${fontFamily}`
   ctx.letterSpacing = '3px'
-
-  const repeatStr = text.repeat(20)
-
-  // top
-  ctx.textAlign = 'left'; ctx.textBaseline = 'top'
-  ctx.fillText(repeatStr, margin, margin)
-
-  // right
-  ctx.save()
-  ctx.translate(W - margin, margin)
-  ctx.rotate(Math.PI / 2)
-  ctx.textBaseline = 'top'
-  ctx.fillText(repeatStr, 0, 0)
-  ctx.restore()
-
-  // bottom
-  ctx.save()
-  ctx.translate(W - margin, H - margin)
-  ctx.rotate(Math.PI)
-  ctx.textBaseline = 'top'
-  ctx.fillText(repeatStr, 0, 0)
-  ctx.restore()
-
-  // left
-  ctx.save()
-  ctx.translate(margin, H - margin)
-  ctx.rotate(-Math.PI / 2)
-  ctx.textBaseline = 'top'
-  ctx.fillText(repeatStr, 0, 0)
-  ctx.restore()
-
+  ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'
+  // bottom strip only — seamless repeat
+  ctx.fillText(text.repeat(12), 6, H - 6)
   ctx.restore()
 }
