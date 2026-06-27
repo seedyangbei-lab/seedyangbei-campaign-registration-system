@@ -217,17 +217,17 @@ function drawOneDot(ctx: CanvasRenderingContext2D, shape: DotShape, customChar: 
 }
 
 function drawBorderText(ctx: CanvasRenderingContext2D, text: string, color: string, fontFamily: string, W: number, H: number) {
-  // photo zone only — top strip + left/right sides (not bottom, bottom is info zone)
-  const fs = 5.5, margin = 6
+  const fs = 5.5, margin = 7
   ctx.save(); ctx.globalAlpha=0.42; ctx.fillStyle=color
   ctx.font=`400 ${fs}px ${fontFamily}`; ctx.letterSpacing='3px'
   const rep = text.repeat(20)
-  // top
-  ctx.textAlign='left'; ctx.textBaseline='top'; ctx.fillText(rep, margin, margin)
-  // right
-  ctx.save(); ctx.translate(W-margin, margin); ctx.rotate(Math.PI/2); ctx.textBaseline='top'; ctx.fillText(rep,0,0); ctx.restore()
-  // left
-  ctx.save(); ctx.translate(margin, H-margin); ctx.rotate(-Math.PI/2); ctx.textBaseline='top'; ctx.fillText(rep,0,0); ctx.restore()
+  // top: left to right
+  ctx.textAlign='left'; ctx.textBaseline='top'
+  ctx.fillText(rep, margin, margin)
+  // right: top to bottom
+  ctx.save(); ctx.translate(W-2, margin); ctx.rotate(Math.PI/2); ctx.textBaseline='top'; ctx.fillText(rep,0,0); ctx.restore()
+  // left: top to bottom
+  ctx.save(); ctx.translate(8, margin); ctx.rotate(Math.PI/2); ctx.textBaseline='top'; ctx.fillText(rep,0,0); ctx.restore()
   ctx.restore()
 }
 
@@ -334,12 +334,18 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
           const i=new Image(); i.crossOrigin='anonymous'
           i.onload=()=>res(i); i.onerror=rej; i.src=imgSrc
         })
-        // cover-fit: preserve aspect ratio
+        // Match CSS: object-fit:cover then transform:translate+scale from center
+        // cover base: scale image to fill W×PH
         const iw=img.naturalWidth, ih=img.naturalHeight
         const baseScale = Math.max(W/iw, PH/ih)
-        const sw=iw*baseScale*imgScale, sh=ih*baseScale*imgScale
-        const ox=imgPos.x+(W-iw*baseScale)/2, oy=imgPos.y+(PH-ih*baseScale)/2
-        ctx.drawImage(img, ox, oy, sw, sh)
+        const coveredW = iw*baseScale, coveredH = ih*baseScale
+        // center offset (same as object-fit:cover centers the image)
+        const baseCx = (W - coveredW)/2, baseCy = (PH - coveredH)/2
+        // apply user scale from center of zone
+        const scaledW = coveredW*imgScale, scaledH = coveredH*imgScale
+        const scaleCx = (W - scaledW)/2, scaleCy = (PH - scaledH)/2
+        // final draw position: scale-centered + user pan
+        ctx.drawImage(img, scaleCx + imgPos.x, scaleCy + imgPos.y, scaledW, scaledH)
       } else {
         ctx.fillStyle='#d6d3d1'; ctx.fillRect(0,0,W,PH)
       }
@@ -420,10 +426,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
         ctx.font=`400 9px ${zhFont.value}`; ctx.fillStyle=tc; ctx.globalAlpha=0.62
         ctx.fillText(course.instructor,14,cy+10); ctx.globalAlpha=1
       }
-      // bottom strip (info zone)
-      const bText = BORDER_TEXT.repeat(12)
-      ctx.font=`${enWeight} 5.5px ${enFont.value}`; ctx.fillStyle=enTc; ctx.globalAlpha=0.42; ctx.textAlign='left'
-      ctx.fillText(bText, 6, H-8); ctx.globalAlpha=1
       ctx.restore()
 
       const a=document.createElement('a')
@@ -455,8 +457,10 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
         </button>
 
         {/* ── LEFT: poster preview + upload + export ── */}
-        <div className="md:w-[380px] flex-shrink-0 flex flex-col items-center justify-between bg-stone-100 py-5 px-4 gap-4 overflow-hidden">
-          <div style={{ transform: 'scale(1.05)', transformOrigin: 'top center', flexShrink: 0 }}>
+        <div className="md:w-[380px] flex-shrink-0 flex flex-col bg-stone-100 overflow-hidden">
+          {/* poster area — fills available space, centers content */}
+          <div className="flex-1 flex flex-col items-center justify-center py-5 px-4 gap-3 overflow-hidden">
+            <div style={{ transform: 'scale(1.05)', transformOrigin: 'center center', flexShrink: 0 }}>
             {/* poster */}
             <div
               className="relative overflow-hidden rounded-sm select-none"
@@ -470,17 +474,21 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                 onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
               >
                 {imgSrc ? (
+                  // Cover-fit: img fills zone maintaining aspect ratio, then user offset+scale applied
+                  // This matches canvas export logic exactly: baseScale=cover, then imgScale multiplier, then imgPos offset
                   <div style={{ position:'absolute', inset:0, overflow:'hidden' }}>
                     <img
                       ref={imgRef}
                       src={imgSrc} alt="" draggable={false}
                       style={{
                         position:'absolute',
-                        width:`${imgScale*100}%`,
-                        height:`${imgScale*100}%`,
+                        // Use object-fit:cover on a 100%x100% box to get baseline cover,
+                        // then apply user's scale and translation via transform
+                        width:'100%',
+                        height:'100%',
                         objectFit:'cover',
-                        left:`${imgPos.x}px`,
-                        top:`${imgPos.y}px`,
+                        transform:`translate(${imgPos.x}px, ${imgPos.y}px) scale(${imgScale})`,
+                        transformOrigin:'center center',
                         pointerEvents:'none', userSelect:'none', zIndex:0,
                       }}
                     />
@@ -501,20 +509,23 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                     totalHeight={POSTER_H} photoHeight={PHOTO_H} posterWidth={POSTER_W} />
                 )}
 
-                {/* border text on photo zone: top + left + right */}
+                {/* border text on photo zone: top (L→R), right (top→bottom), left (top→bottom) */}
                 {borderOn && (
                   <svg viewBox={`0 0 ${POSTER_W} ${PHOTO_H}`} xmlns="http://www.w3.org/2000/svg"
                     style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:3 }}>
+                    {/* top: left to right */}
                     <text fontSize={5.5} letterSpacing={3.2} fill={enTc} opacity={0.42} fontFamily={enFont.value}
-                      x={6} y={11} dominantBaseline="auto">
+                      x={7} y={10}>
                       {BORDER_TEXT.repeat(12)}
                     </text>
+                    {/* right: top to bottom */}
                     <text fontSize={5.5} letterSpacing={3.2} fill={enTc} opacity={0.42} fontFamily={enFont.value}
-                      transform={`translate(${POSTER_W-6}, 6) rotate(90)`} x={0} y={0} dominantBaseline="auto">
+                      transform={`translate(${POSTER_W-2}, 7) rotate(90)`} x={0} y={0}>
                       {BORDER_TEXT.repeat(8)}
                     </text>
+                    {/* left: top to bottom */}
                     <text fontSize={5.5} letterSpacing={3.2} fill={enTc} opacity={0.42} fontFamily={enFont.value}
-                      transform={`translate(6, ${PHOTO_H-6}) rotate(-90)`} x={0} y={0} dominantBaseline="auto">
+                      transform={`translate(8, 7) rotate(90)`} x={0} y={0}>
                       {BORDER_TEXT.repeat(8)}
                     </text>
                   </svg>
@@ -589,15 +600,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                     {course.instructor}
                   </div>
                 )}
-
-                {/* bottom border text strip in info zone */}
-                <div style={{
-                  position:'absolute', bottom:'6px', left:0, right:0,
-                  fontFamily:enFont.value, fontWeight:enWeight, fontSize:'5.5px', letterSpacing:'3px',
-                  color:enTc, opacity:0.42, whiteSpace:'nowrap', overflow:'hidden', paddingLeft:'6px',
-                }}>
-                  {BORDER_TEXT.repeat(12)}
-                </div>
               </div>
             </div>
 
@@ -608,14 +610,12 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-stone-400 flex-shrink-0"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35M11 8v6M8 11h6" /></svg>
             </div>
           </div>
+          </div>
 
-          {/* spacer pushes buttons to bottom */}
-          <div className="flex-1" />
-
-          {/* upload + export at bottom */}
-          <div className="w-full space-y-2">
+          {/* upload + export — white bg to distinguish from canvas area */}
+          <div className="flex-shrink-0 bg-white border-t border-stone-200 px-4 py-3 space-y-2">
             <button onClick={() => fileRef.current?.click()}
-              className="w-full flex items-center justify-center gap-2 border border-dashed border-stone-300 rounded-xl py-2.5 text-sm text-stone-500 hover:border-orange-400 hover:text-orange-500 transition-colors bg-white">
+              className="w-full flex items-center justify-center gap-2 border border-dashed border-stone-300 rounded-xl py-2.5 text-sm text-stone-500 hover:border-orange-400 hover:text-orange-500 transition-colors">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" /></svg>
               {imgSrc ? '更換圖片' : '上傳圖片'}
             </button>
