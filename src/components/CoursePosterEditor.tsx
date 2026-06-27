@@ -614,6 +614,8 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
           </div>
           </div>
 
+        </div>
+
         {/* ── RIGHT: controls ── */}
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
 
@@ -761,7 +763,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                   <span className="text-[10px] text-stone-400 w-8 text-right">{dotDensity}</span>
                 </div>
               </div>
-            </div>
           </section>
 
           {/* text colour */}
