@@ -455,8 +455,8 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
         </button>
 
         {/* ── LEFT: poster preview + upload + export ── */}
-        <div className="md:w-[340px] flex-shrink-0 flex flex-col items-center justify-center bg-stone-100 p-4 gap-3 overflow-hidden">
-          <div style={{ transform: 'scale(0.92)', transformOrigin: 'top center', flexShrink: 0 }}>
+        <div className="md:w-[380px] flex-shrink-0 flex flex-col items-center justify-between bg-stone-100 py-5 px-4 gap-4 overflow-hidden">
+          <div style={{ transform: 'scale(1.05)', transformOrigin: 'top center', flexShrink: 0 }}>
             {/* poster */}
             <div
               className="relative overflow-hidden rounded-sm select-none"
@@ -601,7 +601,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
               </div>
             </div>
 
-            {/* zoom slider */}
+          {/* zoom slider */}
             <div className="w-[210px] flex items-center gap-2 mt-2">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-stone-400 flex-shrink-0"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35M8 11h6" /></svg>
               <input type="range" min="0.5" max="3" step="0.05" value={imgScale} onChange={e => setImgScale(parseFloat(e.target.value))} className="flex-1 accent-orange-500" />
@@ -609,23 +609,23 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
             </div>
           </div>
 
-          {/* upload */}
-          <div className="w-full px-2">
-            <p className="text-[10px] font-medium text-stone-400 tracking-widest uppercase mb-1">上半部背景圖片</p>
+          {/* spacer pushes buttons to bottom */}
+          <div className="flex-1" />
+
+          {/* upload + export at bottom */}
+          <div className="w-full space-y-2">
             <button onClick={() => fileRef.current?.click()}
-              className="w-full flex items-center justify-center gap-2 border border-dashed border-stone-300 rounded-xl py-3 text-sm text-stone-500 hover:border-orange-400 hover:text-orange-500 transition-colors">
+              className="w-full flex items-center justify-center gap-2 border border-dashed border-stone-300 rounded-xl py-2.5 text-sm text-stone-500 hover:border-orange-400 hover:text-orange-500 transition-colors bg-white">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" /></svg>
               {imgSrc ? '更換圖片' : '上傳圖片'}
             </button>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+            <button onClick={handleExport} disabled={isExporting}
+              className="w-full py-3 rounded-xl text-sm font-medium tracking-wide text-white transition-opacity disabled:opacity-60"
+              style={{ background:'#f97316' }}>
+              {isExporting ? '產生中...' : '完成！匯出 PNG'}
+            </button>
           </div>
-
-          {/* export button */}
-          <button onClick={handleExport} disabled={isExporting}
-            className="w-full mx-2 py-3 rounded-xl text-sm font-medium tracking-wide text-white transition-opacity disabled:opacity-60"
-            style={{ background:'#f97316', width:'calc(100% - 16px)' }}>
-            {isExporting ? '產生中...' : '完成！匯出 PNG'}
-          </button>
         </div>
 
         {/* ── RIGHT: controls ── */}
@@ -634,25 +634,25 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
           {/* colour */}
           <section>
             <p className="text-[10px] font-medium text-stone-400 tracking-widest uppercase mb-2">主視覺色彩</p>
-            <div className="flex gap-1.5 flex-wrap">
+            <div className="flex gap-1.5 items-center">
               {SCHEMES.map(s => (
                 <button key={s.id} title={s.label} aria-label={s.label}
                   onClick={() => { setScheme(s); setCustomBg('') }}
-                  className="rounded transition-transform hover:scale-105 flex-shrink-0"
+                  className="rounded flex-1 transition-transform hover:scale-105 flex-shrink-0"
                   style={{
-                    width:'61px', height:'28px', background:s.bg,
+                    height:'28px', background:s.bg,
                     outline: (!customBg&&scheme.id===s.id) ? '2px solid #f97316' : '2px solid transparent',
                     outlineOffset:'2px',
                   }} />
               ))}
-              <label className="rounded cursor-pointer transition-transform hover:scale-105 border border-stone-200 flex items-center justify-center flex-shrink-0"
+              <label className="rounded cursor-pointer transition-transform hover:scale-105 border border-stone-200 flex items-center justify-center flex-1 flex-shrink-0 relative"
                 style={{
-                  width:'61px', height:'28px', background:customBg||'#ffffff',
+                  height:'28px', background:customBg||'#ffffff',
                   outline: customBg ? '2px solid #f97316' : '2px solid transparent',
                   outlineOffset:'2px',
                 }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={customBg ? textCol(customBg) : '#888'} strokeWidth="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" /></svg>
-                <input type="color" className="absolute opacity-0 cursor-pointer w-0 h-0"
+                <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                   value={customBg||scheme.bg} onChange={e => setCustomBg(e.target.value)} />
               </label>
             </div>
@@ -704,7 +704,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                   </div>
                 </div>
 
-                {/* arrangement — random btn merged with label */}
+                {/* arrangement */}
                 <div>
                   <p className="text-[10px] text-stone-400 mb-1">排列方式</p>
                   <div className="grid grid-cols-2 gap-1.5">
@@ -724,18 +724,14 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                       }}>
                       隨機散落
                       {dotArrangement==='random' && (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-3.44" />
-                        </svg>
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-orange-100">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-3.44" />
+                          </svg>
+                        </span>
                       )}
                     </button>
                   </div>
-                  {dotArrangement==='random' && (
-                    <button onClick={() => setDotSeed(Math.floor(Math.random()*99999))}
-                      className="mt-1 w-full text-[10px] text-stone-400 hover:text-orange-500 border border-stone-200 rounded-lg py-1 transition-colors">
-                      再次隨機
-                    </button>
-                  )}
                 </div>
 
                 {/* dot color — defaults to activeBg */}
@@ -746,8 +742,9 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                     <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                       value={dotFill} onChange={e => setDotColor(e.target.value)} />
                   </label>
+                  <span className="text-[10px] text-stone-400">{dotFill.toUpperCase()}</span>
                   {dotColor && (
-                    <button onClick={() => setDotColor('')} className="text-[9px] text-stone-400 hover:text-orange-500 transition-colors">重設</button>
+                    <button onClick={() => setDotColor('')} className="text-[9px] text-stone-400 hover:text-orange-500 transition-colors ml-auto">重設</button>
                   )}
                 </div>
 
@@ -785,14 +782,15 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
             <p className="text-[10px] font-medium text-stone-400 tracking-widest uppercase mb-1">
               中文字體設定 <span className="normal-case font-normal opacity-70">標題 / 地點</span>
             </p>
-            <div className="grid grid-cols-2 gap-1.5 mb-2">
+            <div className="grid grid-cols-4 gap-1.5 mb-2">
               {ZH_FONTS.map((f,i) => (
                 <button key={f.label} onClick={() => setZhFontIdx(i)}
-                  className="text-left px-3 py-2 rounded-lg border transition-all text-[11px]"
+                  className="text-left px-2 py-2 rounded-lg border transition-all"
                   style={{
-                    fontFamily:f.value,
+                    fontFamily:f.value, fontSize:'10px',
                     border: zhFontIdx===i ? '1.5px solid #f97316' : '1px solid #e7e5e4',
                     background: zhFontIdx===i ? '#fff7ed' : 'transparent', color:'#374151',
+                    overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
                   }}>
                   {f.label}
                 </button>
@@ -814,13 +812,14 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-stone-400 flex-shrink-0">字體顏色</span>
-              <label className="relative w-5 h-5 rounded-full border border-stone-200 overflow-hidden cursor-pointer flex-shrink-0">
+              <label className="relative w-5 h-5 rounded border border-stone-200 overflow-hidden cursor-pointer flex-shrink-0">
                 <div className="w-full h-full" style={{ background:tc }} />
                 <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                   value={tc} onChange={e => setTextColorOverride(e.target.value)} />
               </label>
+              <span className="text-[10px] text-stone-400">{tc.toUpperCase()}</span>
               {textColorOverride && (
-                <button onClick={() => setTextColorOverride('')} className="text-[9px] text-stone-400 hover:text-orange-500 transition-colors">重設自動</button>
+                <button onClick={() => setTextColorOverride('')} className="text-[9px] text-stone-400 hover:text-orange-500 transition-colors ml-auto">重設自動</button>
               )}
             </div>
           </section>
@@ -832,14 +831,15 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
             <p className="text-[10px] font-medium text-stone-400 tracking-widest uppercase mb-1">
               英文字體設定 <span className="normal-case font-normal opacity-70">時間 / 邊框</span>
             </p>
-            <div className="grid grid-cols-2 gap-1.5 mb-2">
+            <div className="grid grid-cols-4 gap-1.5 mb-2">
               {EN_FONTS.map((f,i) => (
                 <button key={f.label} onClick={() => setEnFontIdx(i)}
-                  className="text-left px-3 py-2 rounded-lg border transition-all text-[11px]"
+                  className="text-left px-2 py-2 rounded-lg border transition-all"
                   style={{
-                    fontFamily:f.value,
+                    fontFamily:f.value, fontSize:'10px',
                     border: enFontIdx===i ? '1.5px solid #f97316' : '1px solid #e7e5e4',
                     background: enFontIdx===i ? '#fff7ed' : 'transparent', color:'#374151',
+                    overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
                   }}>
                   {f.label}
                 </button>
@@ -861,13 +861,14 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-stone-400 flex-shrink-0">字體顏色</span>
-              <label className="relative w-5 h-5 rounded-full border border-stone-200 overflow-hidden cursor-pointer flex-shrink-0">
+              <label className="relative w-5 h-5 rounded border border-stone-200 overflow-hidden cursor-pointer flex-shrink-0">
                 <div className="w-full h-full" style={{ background:enTc }} />
                 <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                   value={enTc} onChange={e => setEnTextColorOverride(e.target.value)} />
               </label>
+              <span className="text-[10px] text-stone-400">{enTc.toUpperCase()}</span>
               {enTextColorOverride && (
-                <button onClick={() => setEnTextColorOverride('')} className="text-[9px] text-stone-400 hover:text-orange-500 transition-colors">重設自動</button>
+                <button onClick={() => setEnTextColorOverride('')} className="text-[9px] text-stone-400 hover:text-orange-500 transition-colors ml-auto">重設自動</button>
               )}
             </div>
           </section>
