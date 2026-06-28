@@ -28,14 +28,6 @@ function lum(hex: string) {
   return 0.2126*lin(r) + 0.7152*lin(g) + 0.0722*lin(b)
 }
 function textCol(bg: string) { return lum(bg) > 0.35 ? '#111111' : '#ffffff' }
-function darkOf(hex: string) {
-  const l = lum(hex)
-  if (l > 0.5) {
-    const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16)
-    return `#${Math.round(r*0.55).toString(16).padStart(2,'0')}${Math.round(g*0.55).toString(16).padStart(2,'0')}${Math.round(b*0.55).toString(16).padStart(2,'0')}`
-  }
-  return hex
-}
 
 // ── schemes ────────────────────────────────────────────────────────────────────
 const SCHEMES = [
@@ -225,35 +217,51 @@ function drawOneDot(ctx: CanvasRenderingContext2D, shape: DotShape, customChar: 
 }
 
 function drawBorderText(ctx: CanvasRenderingContext2D, text: string, color: string, fontFamily: string, W: number, H: number) {
-  const fs = 5.5, margin = 7
+  const fs = 5.5, lsp = 3, margin = 8
   ctx.save(); ctx.globalAlpha=0.42; ctx.fillStyle=color
-  ctx.font=`400 ${fs}px ${fontFamily}`; ctx.letterSpacing='3px'
-  const rep = text.repeat(20)
-  // top: left to right
+  ctx.font=`400 ${fs}px ${fontFamily}`; ctx.letterSpacing=`${lsp}px`
+  const rep = text.repeat(30)
+
+  // left: top→bottom along left edge (x=margin, from y=margin downward)
+  ctx.save()
+  ctx.beginPath(); ctx.rect(0, 0, margin+fs, H); ctx.clip()
+  ctx.translate(margin, margin); ctx.rotate(Math.PI/2)
   ctx.textAlign='left'; ctx.textBaseline='top'
-  ctx.fillText(rep, margin, margin)
-  // right: top to bottom
-  ctx.save(); ctx.translate(W-2, margin); ctx.rotate(Math.PI/2); ctx.textBaseline='top'; ctx.fillText(rep,0,0); ctx.restore()
-  // left: top to bottom
-  ctx.save(); ctx.translate(8, margin); ctx.rotate(Math.PI/2); ctx.textBaseline='top'; ctx.fillText(rep,0,0); ctx.restore()
+  ctx.fillText(rep, 0, 0)
+  ctx.restore()
+
+  // right: top→bottom along right edge
+  ctx.save()
+  ctx.beginPath(); ctx.rect(W-margin-fs, 0, margin+fs, H); ctx.clip()
+  ctx.translate(W-margin, margin); ctx.rotate(Math.PI/2)
+  ctx.textAlign='left'; ctx.textBaseline='top'
+  ctx.fillText(rep, 0, 0)
+  ctx.restore()
+
+  // top: left→right, but only in the strip BETWEEN the two vertical borders
+  ctx.save()
+  ctx.beginPath(); ctx.rect(margin+fs+lsp, 0, W-(margin+fs+lsp)*2, margin+fs); ctx.clip()
+  ctx.textAlign='left'; ctx.textBaseline='top'
+  ctx.fillText(rep, margin+fs+lsp, margin)
+  ctx.restore()
+
   ctx.restore()
 }
 
-// Draw icon on canvas (place / person)
+// Draw icon on canvas using Material Icons filled paths (matches Figma)
 function drawIcon(ctx: CanvasRenderingContext2D, type: 'place'|'person', x: number, y: number, size: number, color: string) {
-  ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=0.6
-  ctx.translate(x, y)
+  ctx.save(); ctx.fillStyle=color
+  ctx.translate(x - size/2, y - size/2)
   const s = size/24
   ctx.scale(s, s)
   if (type === 'place') {
-    // map pin
-    ctx.beginPath(); ctx.arc(0,-4,4.5,0,Math.PI*2); ctx.stroke()
-    ctx.beginPath(); ctx.moveTo(0,2); ctx.lineTo(0,10); ctx.stroke()
-    ctx.beginPath(); ctx.arc(0,-4,1.5,0,Math.PI*2); ctx.fill()
+    // ic:baseline-place — filled map pin (matches Figma node 1414:83)
+    const p = new Path2D('M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z')
+    ctx.fill(p)
   } else {
-    // person silhouette
-    ctx.beginPath(); ctx.arc(0,-6,3.5,0,Math.PI*2); ctx.stroke()
-    ctx.beginPath(); ctx.moveTo(-6,8); ctx.quadraticCurveTo(-6,2,0,2); ctx.quadraticCurveTo(6,2,6,8); ctx.stroke()
+    // iconamoon:profile-fill — filled person (matches Figma node 1414:94)
+    const p = new Path2D('M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z')
+    ctx.fill(p)
   }
   ctx.restore()
 }
@@ -301,8 +309,9 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
   const enFont   = EN_FONTS[enFontIdx]
   // enTc applies to ALL English text: time badge, border text — not just border
   const enTc     = enTextColorOverride || tc
-  // icon color follows dot color (darkened version of activeBg if dotColor empty)
-  const iconColor = dotColor || darkOf(activeBg) || tc
+  // icon color: use dotColor if set, otherwise fall back to tc (main text color)
+  // avoids invisible icons when dotColor === activeBg (e.g. orange on orange)
+  const iconColor = dotColor || tc
 
   // load fonts
   useGoogleFont(zhFont.gf)
@@ -444,9 +453,11 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
         ctx.fillStyle=enTc; ctx.fillText(timeParts,19,cy+11)
         cy+=20
       }
-      // location with icon — icon color = iconColor
+      // location with icon
       if (course.location) {
+        ctx.save(); ctx.globalAlpha=0.82
         drawIcon(ctx, 'place', 14+5, cy+9, 11, iconColor)
+        ctx.restore()
         ctx.font=`400 9px ${zhFont.value}`; ctx.fillStyle=tc; ctx.globalAlpha=0.82
         const locLines = wrapCanvasText(ctx, course.location, maxTitleW-14)
         locLines.forEach((line,i) => { ctx.fillText(line,28,cy+10+i*13) })
@@ -454,7 +465,9 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
       }
       // instructor with icon
       if (course.instructor) {
+        ctx.save(); ctx.globalAlpha=0.62
         drawIcon(ctx, 'person', 14+5, cy+9, 11, iconColor)
+        ctx.restore()
         ctx.font=`400 9px ${zhFont.value}`; ctx.fillStyle=tc; ctx.globalAlpha=0.62
         ctx.fillText(course.instructor,28,cy+10); ctx.globalAlpha=1
       }
@@ -486,9 +499,9 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
 
         {/* ── LEFT: poster preview + upload + export ── */}
         <div className="md:w-[380px] flex-shrink-0 flex flex-col bg-stone-100 overflow-hidden">
-          {/* poster area — fills available space, centers content, NO scale transform */}
-          <div className="flex-1 flex flex-col items-center justify-center py-5 px-4 gap-3 overflow-hidden">
-            {/* poster — exact pixel size, clipped */}
+          {/* poster area */}
+          <div className="flex-1 flex flex-col items-center justify-center py-4 px-4 gap-3 overflow-hidden min-h-0">
+            {/* poster — rendered at 210×297, centered */}
             <div
               className="relative rounded-sm select-none overflow-hidden flex-shrink-0"
               style={{ width:`${POSTER_W}px`, height:`${POSTER_H}px`, backgroundColor: activeBg }}
@@ -532,20 +545,34 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                     totalHeight={POSTER_H} photoHeight={PHOTO_H} posterWidth={POSTER_W} />
                 )}
 
-                {/* border text: top, right, left — enTc color */}
+                {/* border text: left, right, top (clipped, no overlap at corners) */}
                 {borderOn && (
                   <svg viewBox={`0 0 ${POSTER_W} ${PHOTO_H}`} xmlns="http://www.w3.org/2000/svg"
                     style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:3 }}>
-                    <text fontSize={5.5} letterSpacing={3.2} fill={enTc} opacity={0.42} fontFamily={enFont.value}
-                      x={7} y={10}>
-                      {BORDER_TEXT.repeat(12)}
+                    <defs>
+                      {/* left strip */}
+                      <clipPath id="cp-left"><rect x="0" y="0" width="14" height={PHOTO_H} /></clipPath>
+                      {/* right strip */}
+                      <clipPath id="cp-right"><rect x={POSTER_W-14} y="0" width="14" height={PHOTO_H} /></clipPath>
+                      {/* top strip between left+right borders */}
+                      <clipPath id="cp-top"><rect x="14" y="0" width={POSTER_W-28} height="14" /></clipPath>
+                    </defs>
+                    {/* left: top→bottom */}
+                    <text fontSize={5.5} letterSpacing={3} fill={enTc} opacity={0.42} fontFamily={enFont.value}
+                      clipPath="url(#cp-left)"
+                      transform={`translate(8, 8) rotate(90)`} x={0} y={0}>
+                      {BORDER_TEXT.repeat(10)}
                     </text>
-                    <text fontSize={5.5} letterSpacing={3.2} fill={enTc} opacity={0.42} fontFamily={enFont.value}
-                      transform={`translate(${POSTER_W-2}, 7) rotate(90)`} x={0} y={0}>
-                      {BORDER_TEXT.repeat(8)}
+                    {/* right: top→bottom */}
+                    <text fontSize={5.5} letterSpacing={3} fill={enTc} opacity={0.42} fontFamily={enFont.value}
+                      clipPath="url(#cp-right)"
+                      transform={`translate(${POSTER_W-8}, 8) rotate(90)`} x={0} y={0}>
+                      {BORDER_TEXT.repeat(10)}
                     </text>
-                    <text fontSize={5.5} letterSpacing={3.2} fill={enTc} opacity={0.42} fontFamily={enFont.value}
-                      transform={`translate(8, 7) rotate(90)`} x={0} y={0}>
+                    {/* top: left→right between borders */}
+                    <text fontSize={5.5} letterSpacing={3} fill={enTc} opacity={0.42} fontFamily={enFont.value}
+                      clipPath="url(#cp-top)"
+                      x={16} y={10}>
                       {BORDER_TEXT.repeat(8)}
                     </text>
                   </svg>
@@ -604,7 +631,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                 {/* location with icon */}
                 {course.location && (
                   <div style={{ display:'flex', alignItems:'flex-start', gap:'4px', marginBottom:'2px', flexShrink:0, overflow:'hidden' }}>
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill={iconColor} stroke="none" aria-hidden="true" style={{flexShrink:0,marginTop:'1px'}}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill={iconColor} stroke="none" aria-hidden="true" style={{flexShrink:0,marginTop:'1px',opacity:0.82}}>
                       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                     </svg>
                     <div style={{
@@ -619,7 +646,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                 {/* instructor with icon */}
                 {course.instructor && (
                   <div style={{ display:'flex', alignItems:'center', gap:'4px', flexShrink:0, overflow:'hidden' }}>
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill={iconColor} stroke="none" aria-hidden="true" style={{flexShrink:0}}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill={iconColor} stroke="none" aria-hidden="true" style={{flexShrink:0,opacity:0.62}}>
                       <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                     </svg>
                     <div style={{
