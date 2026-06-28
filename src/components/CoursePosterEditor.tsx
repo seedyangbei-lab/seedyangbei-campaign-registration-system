@@ -467,7 +467,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
       const tagBorder = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.20)'  : 'rgba(255,255,255,0.35)'
       const timeBg    = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.09)'  : 'rgba(255,255,255,0.18)'
 
-      let cy = PH+14
+      let cy = PH+12
       // SEED COURSE tag
       const tagText = 'SEED COURSE'
       ctx.font=`700 7px ${enFont.value}`
@@ -551,12 +551,13 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
 
         {/* ── LEFT: poster preview + upload + export ── */}
         <div className="md:w-[380px] flex-shrink-0 flex flex-col bg-stone-100 overflow-hidden">
-          {/* poster area — scrollable so poster is never clipped */}
-          <div className="flex-1 flex flex-col items-center justify-start py-4 px-4 gap-3 overflow-y-auto min-h-0">
-            {/* poster — min height is A4, can grow if info zone has more content */}
+          {/* poster area — centred; scrollable if poster taller than panel */}
+          <div className="flex-1 flex flex-col items-center min-h-0 overflow-y-auto">
+            <div className="flex flex-col items-center justify-center min-h-full py-4 px-4 gap-3">
+            {/* poster — fixed A4 proportions: 210×297, same ratio as canvas output */}
             <div
-              className="relative rounded-sm select-none flex-shrink-0"
-              style={{ width:`${POSTER_W}px`, minHeight:`${POSTER_H}px`, backgroundColor: activeBg }}
+              className="relative rounded-sm select-none flex-shrink-0 overflow-hidden"
+              style={{ width:`${POSTER_W}px`, height:`${POSTER_H}px`, backgroundColor: activeBg }}
             >
               {/* UPPER: photo zone */}
               <div
@@ -629,9 +630,9 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
               {/* divider — sits at bottom of photo zone */}
               <div style={{ position:'absolute', left:'14px', right:'14px', top:`${PHOTO_H}px`, height:'0.5px', background:divider, zIndex:4 }} />
 
-              {/* LOWER: info zone — flows after photo zone, symmetric padding */}
-              <div className="flex flex-col"
-                style={{ marginTop:`${PHOTO_H}px`, padding:'14px 14px 14px', zIndex:3 }}>
+              {/* LOWER: info zone — absolute, fills from photo bottom to poster bottom */}
+              <div className="absolute left-0 right-0 bottom-0 flex flex-col"
+                style={{ top:`${PHOTO_H}px`, padding:'12px 14px 12px', overflow:'hidden', zIndex:3 }}>
                 {/* SEED COURSE tag */}
                 <div style={{
                   display:'inline-flex', alignItems:'center', marginBottom:'6px', width:'fit-content',
@@ -641,10 +642,10 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                   flexShrink:0,
                 }}>SEED COURSE</div>
 
-                {/* title */}
+                {/* title — fixed 17px matches canvas export exactly */}
                 <div style={{
                   color:tc, fontWeight:titleWeight, lineHeight:1.3, marginBottom:'5px', fontFamily:zhFont.value,
-                  flexShrink:0, fontSize:'clamp(11px,4vw,17px)',
+                  flexShrink:0, fontSize:'17px',
                   overflow:'hidden', display:'-webkit-box', WebkitLineClamp:3, WebkitBoxOrient:'vertical',
                 }}>
                   {course.title||'課程名稱'}
@@ -667,7 +668,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
 
                 {/* location with icon */}
                 {course.location && (
-                  <div style={{ display:'flex', alignItems:'flex-start', gap:'4px', marginBottom:'2px', flexShrink:0, overflow:'hidden' }}>
+                  <div style={{ display:'flex', alignItems:'flex-start', gap:'4px', marginBottom:'4px', flexShrink:0, overflow:'hidden' }}>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill={iconColor} stroke="none" aria-hidden="true" style={{flexShrink:0,marginTop:'1px',opacity:0.82}}>
                       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                     </svg>
@@ -680,9 +681,9 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                   </div>
                 )}
 
-                {/* instructor with icon */}
+                {/* instructor with icon — marginBottom ensures breathing room from poster edge */}
                 {course.instructor && (
-                  <div style={{ display:'flex', alignItems:'center', gap:'4px', flexShrink:0, overflow:'hidden' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'4px', marginBottom:'4px', flexShrink:0, overflow:'hidden' }}>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill={iconColor} stroke="none" aria-hidden="true" style={{flexShrink:0,opacity:0.62}}>
                       <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                     </svg>
@@ -703,7 +704,8 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
               <input type="range" min="0.5" max="3" step="0.05" value={imgScale} onChange={e => setImgScale(parseFloat(e.target.value))} className="flex-1 accent-orange-500" />
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-stone-400 flex-shrink-0"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35M11 8v6M8 11h6" /></svg>
             </div>
-          </div>
+          </div>{/* end inner centering div */}
+          </div>{/* end poster area scrollable */}
 
           {/* upload + export */}
           <div className="flex-shrink-0 bg-white border-t border-stone-200 px-4 py-3 space-y-2">
