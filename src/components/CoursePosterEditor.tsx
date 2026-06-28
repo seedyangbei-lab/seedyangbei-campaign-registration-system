@@ -28,6 +28,14 @@ function lum(hex: string) {
   return 0.2126*lin(r) + 0.7152*lin(g) + 0.0722*lin(b)
 }
 function textCol(bg: string) { return lum(bg) > 0.35 ? '#111111' : '#ffffff' }
+function darkOf(hex: string) {
+  const l = lum(hex)
+  if (l > 0.5) {
+    const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16)
+    return `#${Math.round(r*0.55).toString(16).padStart(2,'0')}${Math.round(g*0.55).toString(16).padStart(2,'0')}${Math.round(b*0.55).toString(16).padStart(2,'0')}`
+  }
+  return hex
+}
 
 // ── schemes ────────────────────────────────────────────────────────────────────
 const SCHEMES = [
@@ -47,7 +55,6 @@ const ZH_FONTS = [
   { label: 'Noto Serif TC',          value: "'Noto Serif TC', serif",               gf: 'Noto+Serif+TC:wght@300;400;500;700' },
   { label: 'Zen Maru Gothic',        value: "'Zen Maru Gothic', sans-serif",        gf: 'Zen+Maru+Gothic:wght@300;400;500;700' },
 ]
-// EN: 4 fonts as per Figma. Betania Patmos not on GF → CDN fallback handled separately
 const EN_FONTS = [
   { label: 'Outfit',           value: "'Outfit', sans-serif",          gf: 'Outfit:wght@300;400;500;700' },
   { label: 'Space Mono',       value: "'Space Mono', monospace",       gf: 'Space+Mono:wght@400;700' },
@@ -150,11 +157,12 @@ function useGoogleFont(gfParam: string) {
   }, [gfParam])
 }
 
-// ── poster dimensions ──────────────────────────────────────────────────────────
+// ── poster dimensions (A4 portrait proportions) ───────────────────────────────
+// Figma: 595×843 — photo zone 539px = 63.9%, info 304px = 36.1%
 const POSTER_W = 210
 const POSTER_H = 297
-const PHOTO_H  = 178
-const INFO_H   = POSTER_H - PHOTO_H
+const PHOTO_H  = Math.round(POSTER_H * 0.639)  // ≈ 190
+const INFO_H   = POSTER_H - PHOTO_H             // ≈ 107
 
 // ── canvas helpers ──────────────────────────────────────────────────────────────
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -231,6 +239,25 @@ function drawBorderText(ctx: CanvasRenderingContext2D, text: string, color: stri
   ctx.restore()
 }
 
+// Draw icon on canvas (place / person)
+function drawIcon(ctx: CanvasRenderingContext2D, type: 'place'|'person', x: number, y: number, size: number, color: string) {
+  ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=0.6
+  ctx.translate(x, y)
+  const s = size/24
+  ctx.scale(s, s)
+  if (type === 'place') {
+    // map pin
+    ctx.beginPath(); ctx.arc(0,-4,4.5,0,Math.PI*2); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(0,2); ctx.lineTo(0,10); ctx.stroke()
+    ctx.beginPath(); ctx.arc(0,-4,1.5,0,Math.PI*2); ctx.fill()
+  } else {
+    // person silhouette
+    ctx.beginPath(); ctx.arc(0,-6,3.5,0,Math.PI*2); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(-6,8); ctx.quadraticCurveTo(-6,2,0,2); ctx.quadraticCurveTo(6,2,6,8); ctx.stroke()
+  }
+  ctx.restore()
+}
+
 export default function CoursePosterEditor({ course, initialImage, onClose }: Props) {
   const [imgSrc, setImgSrc]     = useState<string|null>(initialImage||null)
   const [imgPos, setImgPos]     = useState({ x:0, y:0 })
@@ -241,10 +268,10 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
   const [scheme, setScheme]     = useState(SCHEMES[2])
   const [customBg, setCustomBg] = useState('')
 
-  // dot state — default shape = circle (not none), color defaults to bg (empty = derived)
+  // dot state
   const [dotShape, setDotShape]         = useState<DotShape>('circle')
   const [dotCustomChar, setDotCustomChar] = useState('央')
-  const [dotColor, setDotColor]         = useState('')  // empty = same as activeBg
+  const [dotColor, setDotColor]         = useState('')
   const [dotOpacity, setDotOpacity]     = useState(30)
   const [dotSize, setDotSize]           = useState(6)
   const [dotDensity, setDotDensity]     = useState(50)
@@ -269,11 +296,13 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
   const activeBg = customBg || scheme.bg
   const tc       = textColorOverride || textCol(activeBg)
   const dotOn    = dotShape !== 'none'
-  // dotFill defaults to activeBg (same as background color per Figma spec)
   const dotFill  = dotColor || activeBg
   const zhFont   = ZH_FONTS[zhFontIdx]
   const enFont   = EN_FONTS[enFontIdx]
+  // enTc applies to ALL English text: time badge, border text — not just border
   const enTc     = enTextColorOverride || tc
+  // icon color follows dot color (darkened version of activeBg if dotColor empty)
+  const iconColor = dotColor || darkOf(activeBg) || tc
 
   // load fonts
   useGoogleFont(zhFont.gf)
@@ -308,7 +337,12 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
     const reader = new FileReader()
-    reader.onload = ev => { setImgSrc(ev.target?.result as string); setImgPos({x:0,y:0}); setImgScale(1) }
+    reader.onload = ev => {
+      setImgSrc(ev.target?.result as string)
+      // Reset position & scale so image starts cover-fit without any offset
+      setImgPos({x:0, y:0})
+      setImgScale(1)
+    }
     reader.readAsDataURL(file)
   }
 
@@ -334,17 +368,12 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
           const i=new Image(); i.crossOrigin='anonymous'
           i.onload=()=>res(i); i.onerror=rej; i.src=imgSrc
         })
-        // Match CSS: object-fit:cover then transform:translate+scale from center
-        // cover base: scale image to fill W×PH
+        // cover-fit: scale image to fill W×PH, then apply user scale+pan
         const iw=img.naturalWidth, ih=img.naturalHeight
         const baseScale = Math.max(W/iw, PH/ih)
         const coveredW = iw*baseScale, coveredH = ih*baseScale
-        // center offset (same as object-fit:cover centers the image)
-        const baseCx = (W - coveredW)/2, baseCy = (PH - coveredH)/2
-        // apply user scale from center of zone
         const scaledW = coveredW*imgScale, scaledH = coveredH*imgScale
         const scaleCx = (W - scaledW)/2, scaleCy = (PH - scaledH)/2
-        // final draw position: scale-centered + user pan
         ctx.drawImage(img, scaleCx + imgPos.x, scaleCy + imgPos.y, scaledW, scaledH)
       } else {
         ctx.fillStyle='#d6d3d1'; ctx.fillRect(0,0,W,PH)
@@ -353,7 +382,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
       if (dotOn && dotCoverage==='photo') {
         drawDotsCanvas(ctx, dotShape, dotCustomChar, dotFill, dotOpacity, dotSize, dotDensity, dotArrangement, dotSeed, W, PH)
       }
-      // border text on photo (3 sides: top, left, right)
+      // border text (3 sides: top, left, right)
       if (borderOn) {
         drawBorderText(ctx, BORDER_TEXT, enTc, enFont.value, W, PH)
       }
@@ -377,15 +406,15 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
       const tagBorder = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.20)'  : 'rgba(255,255,255,0.35)'
       const timeBg    = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.09)'  : 'rgba(255,255,255,0.18)'
 
-      let cy = PH+16
+      let cy = PH+14
       // SEED COURSE tag
       const tagText = 'SEED COURSE'
       ctx.font=`700 7px ${enFont.value}`
       const tagW = ctx.measureText(tagText).width+14
       ctx.fillStyle=tagBg; roundRect(ctx,14,cy,tagW,14,7); ctx.fill()
       ctx.strokeStyle=tagBorder; ctx.lineWidth=0.5; roundRect(ctx,14,cy,tagW,14,7); ctx.stroke()
-      ctx.fillStyle=tc; ctx.textAlign='left'; ctx.fillText(tagText,21,cy+9.5)
-      cy+=20
+      ctx.fillStyle=enTc; ctx.textAlign='left'; ctx.fillText(tagText,21,cy+9.5)
+      cy+=18
 
       // title
       const maxTitleW = W-28; let titleSize=17
@@ -396,10 +425,11 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
       }
       const titleLines = wrapCanvasText(ctx, titleStr, maxTitleW)
       ctx.fillStyle=tc
-      titleLines.forEach((line,i) => { ctx.fillText(line,14,cy+titleSize+i*titleSize*1.3) })
-      cy += titleSize*1.3*titleLines.length+6
+      // max 3 lines
+      titleLines.slice(0,3).forEach((line,i) => { ctx.fillText(line,14,cy+titleSize+i*titleSize*1.3) })
+      cy += titleSize*1.3*Math.min(titleLines.length,3)+6
 
-      // time badge
+      // time badge — uses enTc
       const hasTime = course.timeStart||course.timeEnd||course.date
       if (hasTime) {
         const timeParts = [
@@ -411,20 +441,22 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
         ctx.font=`${enWeight} 9px ${enFont.value}`
         const timeW = ctx.measureText(timeParts).width+10
         ctx.fillStyle=timeBg; roundRect(ctx,14,cy,timeW,16,4); ctx.fill()
-        ctx.fillStyle=tc; ctx.fillText(timeParts,19,cy+11)
-        cy+=21
+        ctx.fillStyle=enTc; ctx.fillText(timeParts,19,cy+11)
+        cy+=20
       }
-      // location
+      // location with icon — icon color = iconColor
       if (course.location) {
-        ctx.font=`400 9.5px ${zhFont.value}`; ctx.fillStyle=tc; ctx.globalAlpha=0.82
-        const locLines = wrapCanvasText(ctx, course.location, maxTitleW)
-        locLines.forEach((line,i) => { ctx.fillText(line,14,cy+10+i*14) })
-        cy+=14*locLines.length; ctx.globalAlpha=1
+        drawIcon(ctx, 'place', 14+5, cy+9, 11, iconColor)
+        ctx.font=`400 9px ${zhFont.value}`; ctx.fillStyle=tc; ctx.globalAlpha=0.82
+        const locLines = wrapCanvasText(ctx, course.location, maxTitleW-14)
+        locLines.forEach((line,i) => { ctx.fillText(line,28,cy+10+i*13) })
+        cy+=13*locLines.length+2; ctx.globalAlpha=1
       }
-      // instructor
+      // instructor with icon
       if (course.instructor) {
+        drawIcon(ctx, 'person', 14+5, cy+9, 11, iconColor)
         ctx.font=`400 9px ${zhFont.value}`; ctx.fillStyle=tc; ctx.globalAlpha=0.62
-        ctx.fillText(course.instructor,14,cy+10); ctx.globalAlpha=1
+        ctx.fillText(course.instructor,28,cy+10); ctx.globalAlpha=1
       }
       ctx.restore()
 
@@ -432,17 +464,13 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
       a.href=canvas.toDataURL('image/png'); a.download=`${course.title||'poster'}.png`; a.click()
     } catch (_e) { console.error('export failed',_e) }
     finally { setIsExporting(false) }
-  }, [activeBg, tc, enTc, dotFill, dotOn, dotShape, dotCustomChar, dotOpacity, dotSize, dotDensity, dotCoverage, dotArrangement, dotSeed, borderOn, imgSrc, imgPos, imgScale, enFont, zhFont, titleWeight, enWeight, course])
+  }, [activeBg, tc, enTc, iconColor, dotFill, dotOn, dotShape, dotCustomChar, dotOpacity, dotSize, dotDensity, dotCoverage, dotArrangement, dotSeed, borderOn, imgSrc, imgPos, imgScale, enFont, zhFont, titleWeight, enWeight, course])
 
   // ── derived UI values ────────────────────────────────────────────────────────
   const tagBg     = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.22)'
   const tagBorder = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.20)'  : 'rgba(255,255,255,0.35)'
   const timeBg    = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.09)'  : 'rgba(255,255,255,0.18)'
   const divider   = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.15)'  : 'rgba(255,255,255,0.25)'
-
-  // ── img preview: cover-fit offset calc ──────────────────────────────────────
-  // We use objectFit cover + objectPosition to mirror canvas logic in preview
-  const imgRef = useRef<HTMLImageElement>(null)
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm">
@@ -458,12 +486,11 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
 
         {/* ── LEFT: poster preview + upload + export ── */}
         <div className="md:w-[380px] flex-shrink-0 flex flex-col bg-stone-100 overflow-hidden">
-          {/* poster area — fills available space, centers content */}
+          {/* poster area — fills available space, centers content, NO scale transform */}
           <div className="flex-1 flex flex-col items-center justify-center py-5 px-4 gap-3 overflow-hidden">
-            <div style={{ transform: 'scale(1.05)', transformOrigin: 'center center', flexShrink: 0 }}>
-            {/* poster */}
+            {/* poster — exact pixel size, clipped */}
             <div
-              className="relative overflow-hidden rounded-sm select-none"
+              className="relative rounded-sm select-none overflow-hidden flex-shrink-0"
               style={{ width:`${POSTER_W}px`, height:`${POSTER_H}px`, backgroundColor: activeBg }}
             >
               {/* UPPER: photo zone */}
@@ -474,16 +501,12 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                 onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
               >
                 {imgSrc ? (
-                  // Cover-fit: img fills zone maintaining aspect ratio, then user offset+scale applied
-                  // This matches canvas export logic exactly: baseScale=cover, then imgScale multiplier, then imgPos offset
+                  // Cover-fit + user pan/scale. Matches canvas export exactly.
                   <div style={{ position:'absolute', inset:0, overflow:'hidden' }}>
                     <img
-                      ref={imgRef}
                       src={imgSrc} alt="" draggable={false}
                       style={{
                         position:'absolute',
-                        // Use object-fit:cover on a 100%x100% box to get baseline cover,
-                        // then apply user's scale and translation via transform
                         width:'100%',
                         height:'100%',
                         objectFit:'cover',
@@ -509,21 +532,18 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                     totalHeight={POSTER_H} photoHeight={PHOTO_H} posterWidth={POSTER_W} />
                 )}
 
-                {/* border text on photo zone: top (L→R), right (top→bottom), left (top→bottom) */}
+                {/* border text: top, right, left — enTc color */}
                 {borderOn && (
                   <svg viewBox={`0 0 ${POSTER_W} ${PHOTO_H}`} xmlns="http://www.w3.org/2000/svg"
                     style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:3 }}>
-                    {/* top: left to right */}
                     <text fontSize={5.5} letterSpacing={3.2} fill={enTc} opacity={0.42} fontFamily={enFont.value}
                       x={7} y={10}>
                       {BORDER_TEXT.repeat(12)}
                     </text>
-                    {/* right: top to bottom */}
                     <text fontSize={5.5} letterSpacing={3.2} fill={enTc} opacity={0.42} fontFamily={enFont.value}
                       transform={`translate(${POSTER_W-2}, 7) rotate(90)`} x={0} y={0}>
                       {BORDER_TEXT.repeat(8)}
                     </text>
-                    {/* left: top to bottom */}
                     <text fontSize={5.5} letterSpacing={3.2} fill={enTc} opacity={0.42} fontFamily={enFont.value}
                       transform={`translate(8, 7) rotate(90)`} x={0} y={0}>
                       {BORDER_TEXT.repeat(8)}
@@ -547,31 +567,31 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
 
               {/* LOWER: info zone */}
               <div className="absolute left-0 right-0 bottom-0 flex flex-col"
-                style={{ top:`${PHOTO_H}px`, height:`${INFO_H}px`, padding:'16px 14px 14px', pointerEvents:'none', overflow:'hidden', zIndex:3 }}>
-                {/* tag */}
+                style={{ top:`${PHOTO_H}px`, height:`${INFO_H}px`, padding:'14px 14px 10px', pointerEvents:'none', overflow:'hidden', zIndex:3 }}>
+                {/* SEED COURSE tag */}
                 <div style={{
-                  display:'inline-flex', alignItems:'center', marginBottom:'8px', width:'fit-content',
+                  display:'inline-flex', alignItems:'center', marginBottom:'6px', width:'fit-content',
                   borderRadius:'20px', padding:'2px 7px',
-                  background:tagBg, border:`0.5px solid ${tagBorder}`, color:tc,
+                  background:tagBg, border:`0.5px solid ${tagBorder}`, color:enTc,
                   fontFamily:enFont.value, fontSize:'7px', letterSpacing:'0.16em', textTransform:'uppercase',
                   flexShrink:0,
                 }}>SEED COURSE</div>
 
                 {/* title */}
                 <div style={{
-                  color:tc, fontWeight:titleWeight, lineHeight:1.3, marginBottom:'6px', fontFamily:zhFont.value,
+                  color:tc, fontWeight:titleWeight, lineHeight:1.3, marginBottom:'5px', fontFamily:zhFont.value,
                   flexShrink:0, fontSize:'clamp(11px,4vw,17px)',
                   overflow:'hidden', display:'-webkit-box', WebkitLineClamp:3, WebkitBoxOrient:'vertical',
                 }}>
                   {course.title||'課程名稱'}
                 </div>
 
-                {/* time */}
+                {/* time badge — uses enTc */}
                 {(course.timeStart||course.timeEnd||course.date) && (
                   <div style={{
-                    display:'inline-flex', alignItems:'center', gap:'3px', marginBottom:'5px', width:'fit-content',
+                    display:'inline-flex', alignItems:'center', gap:'3px', marginBottom:'4px', width:'fit-content',
                     borderRadius:'4px', padding:'2px 5px',
-                    background:timeBg, fontFamily:enFont.value, fontWeight:enWeight, fontSize:'9px', color:tc, letterSpacing:'0.04em',
+                    background:timeBg, fontFamily:enFont.value, fontWeight:enWeight, fontSize:'9px', color:enTc, letterSpacing:'0.04em',
                     flexShrink:0,
                   }}>
                     {course.date && <span>{course.date}</span>}
@@ -581,38 +601,47 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                   </div>
                 )}
 
-                {/* location */}
+                {/* location with icon */}
                 {course.location && (
-                  <div style={{
-                    color:tc, fontFamily:zhFont.value, fontSize:'9.5px', opacity:0.82, lineHeight:1.5,
-                    flexShrink:0, overflow:'hidden',
-                    display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical',
-                  }}>
-                    {course.location}
+                  <div style={{ display:'flex', alignItems:'flex-start', gap:'4px', marginBottom:'2px', flexShrink:0, overflow:'hidden' }}>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill={iconColor} stroke="none" aria-hidden="true" style={{flexShrink:0,marginTop:'1px'}}>
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                    <div style={{
+                      color:tc, fontFamily:zhFont.value, fontSize:'9px', opacity:0.82, lineHeight:1.4,
+                      overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical',
+                    }}>
+                      {course.location}
+                    </div>
                   </div>
                 )}
 
+                {/* instructor with icon */}
                 {course.instructor && (
-                  <div style={{
-                    color:tc, fontFamily:zhFont.value, fontSize:'9px', opacity:0.62, marginTop:'2px',
-                    flexShrink:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
-                  }}>
-                    {course.instructor}
+                  <div style={{ display:'flex', alignItems:'center', gap:'4px', flexShrink:0, overflow:'hidden' }}>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill={iconColor} stroke="none" aria-hidden="true" style={{flexShrink:0}}>
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                    <div style={{
+                      color:tc, fontFamily:zhFont.value, fontSize:'9px', opacity:0.62,
+                      whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
+                    }}>
+                      {course.instructor}
+                    </div>
                   </div>
                 )}
               </div>
             </div>
 
-          {/* zoom slider */}
-            <div className="w-[210px] flex items-center gap-2 mt-2">
+            {/* zoom slider */}
+            <div className="w-[210px] flex items-center gap-2">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-stone-400 flex-shrink-0"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35M8 11h6" /></svg>
               <input type="range" min="0.5" max="3" step="0.05" value={imgScale} onChange={e => setImgScale(parseFloat(e.target.value))} className="flex-1 accent-orange-500" />
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-stone-400 flex-shrink-0"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35M11 8v6M8 11h6" /></svg>
             </div>
           </div>
-          </div>
 
-          {/* upload + export — white bg to distinguish from canvas area */}
+          {/* upload + export */}
           <div className="flex-shrink-0 bg-white border-t border-stone-200 px-4 py-3 space-y-2">
             <button onClick={() => fileRef.current?.click()}
               className="w-full flex items-center justify-center gap-2 border border-dashed border-stone-300 rounded-xl py-2.5 text-sm text-stone-500 hover:border-orange-400 hover:text-orange-500 transition-colors">
@@ -643,13 +672,16 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                     height:'28px', background:s.bg,
                     outline: (!customBg&&scheme.id===s.id) ? '2px solid #f97316' : '2px solid transparent',
                     outlineOffset:'2px',
+                    // white needs a border to be visible against white panel background
+                    boxShadow: s.id==='white' ? 'inset 0 0 0 1px rgba(0,0,0,0.15)' : 'none',
                   }} />
               ))}
-              <label className="rounded cursor-pointer transition-transform hover:scale-105 border border-stone-200 flex items-center justify-center flex-1 flex-shrink-0 relative"
+              <label className="rounded cursor-pointer transition-transform hover:scale-105 flex items-center justify-center flex-1 flex-shrink-0 relative"
                 style={{
                   height:'28px', background:customBg||'#ffffff',
                   outline: customBg ? '2px solid #f97316' : '2px solid transparent',
                   outlineOffset:'2px',
+                  boxShadow: !customBg ? 'inset 0 0 0 1px rgba(0,0,0,0.15)' : 'none',
                 }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={customBg ? textCol(customBg) : '#888'} strokeWidth="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" /></svg>
                 <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
@@ -664,7 +696,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
           <section>
             <p className="text-[10px] font-medium text-stone-400 tracking-widest uppercase mb-2">裝飾點</p>
             <div className="space-y-3">
-              {/* shape — 6 options */}
+              {/* shape */}
               <div className="flex gap-1">
                 {DOT_SHAPES.map(d => (
                   <button key={d.id} onClick={() => setDotShape(d.id)}
@@ -679,26 +711,29 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                 ))}
               </div>
 
-              {dotOn && (<>
-                {/* custom char */}
-                {dotShape==='custom' && (
-                  <input type="text" maxLength={1} value={dotCustomChar}
-                    onChange={e => setDotCustomChar(e.target.value)} placeholder="輸入一個字"
-                    className="w-full border border-stone-200 rounded-lg px-3 py-1.5 text-sm text-center focus:outline-none focus:border-orange-400" />
+              {dotShape !== 'none' && (<>
+                {/* custom char input */}
+                {dotShape === 'custom' && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-stone-400 flex-shrink-0">自訂文字</span>
+                    <input type="text" maxLength={1} value={dotCustomChar}
+                      onChange={e => setDotCustomChar(e.target.value)}
+                      className="w-10 text-center border border-stone-200 rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-400" />
+                  </div>
                 )}
 
                 {/* coverage */}
                 <div>
                   <p className="text-[10px] text-stone-400 mb-1">放置位置</p>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {([['photo','照片上'],['full','滿版']] as const).map(([v,label]) => (
-                      <button key={v} onClick={() => setDotCoverage(v)}
-                        className="py-1.5 rounded-lg border text-[11px] transition-all"
+                  <div className="flex gap-1.5">
+                    {(['photo','full'] as const).map(c => (
+                      <button key={c} onClick={() => setDotCoverage(c)}
+                        className="flex-1 py-1.5 rounded-lg border text-[11px] transition-all"
                         style={{
-                          border: dotCoverage===v ? '1.5px solid #f97316' : '1px solid #e7e5e4',
-                          background: dotCoverage===v ? '#fff7ed' : 'transparent', color:'#374151',
+                          border: dotCoverage===c ? '1.5px solid #f97316' : '1px solid #e7e5e4',
+                          background: dotCoverage===c ? '#fff7ed' : 'transparent', color:'#374151',
                         }}>
-                        {label}
+                        {c==='photo' ? '照片上' : '滿版'}
                       </button>
                     ))}
                   </div>
@@ -707,34 +742,30 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                 {/* arrangement */}
                 <div>
                   <p className="text-[10px] text-stone-400 mb-1">排列方式</p>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <button onClick={() => setDotArrangement('grid')}
-                      className="py-1.5 rounded-lg border text-[11px] transition-all"
-                      style={{
-                        border: dotArrangement==='grid' ? '1.5px solid #f97316' : '1px solid #e7e5e4',
-                        background: dotArrangement==='grid' ? '#fff7ed' : 'transparent', color:'#374151',
-                      }}>
-                      整齊格狀
-                    </button>
-                    <button onClick={() => { setDotArrangement('random'); setDotSeed(Math.floor(Math.random()*99999)) }}
-                      className="py-1.5 rounded-lg border text-[11px] transition-all flex items-center justify-center gap-1.5"
-                      style={{
-                        border: dotArrangement==='random' ? '1.5px solid #f97316' : '1px solid #e7e5e4',
-                        background: dotArrangement==='random' ? '#fff7ed' : 'transparent', color:'#374151',
-                      }}>
-                      隨機散落
-                      {dotArrangement==='random' && (
-                        <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-orange-100">
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-3.44" />
-                          </svg>
-                        </span>
-                      )}
-                    </button>
+                  <div className="flex gap-1.5">
+                    {(['grid','random'] as const).map(a => (
+                      <button key={a} onClick={() => { setDotArrangement(a); if(a==='random') setDotSeed(s=>s+1) }}
+                        className="flex-1 py-1.5 rounded-lg border text-[11px] transition-all flex items-center justify-center gap-1"
+                        style={{
+                          border: dotArrangement===a ? '1.5px solid #f97316' : '1px solid #e7e5e4',
+                          background: dotArrangement===a ? '#fff7ed' : 'transparent', color:'#374151',
+                        }}>
+                        {a==='grid' ? '整齊格狀' : (
+                          <>
+                            隨機散落
+                            {dotArrangement==='random' && (
+                              <span className="w-4 h-4 rounded-full bg-orange-100 flex items-center justify-center" onClick={e=>{e.stopPropagation();setDotSeed(s=>s+1)}}>
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                {/* dot color — defaults to activeBg */}
+                {/* dot color */}
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-stone-400 flex-shrink-0">裝飾點顏色</span>
                   <label className="relative w-5 h-5 rounded border border-stone-200 overflow-hidden cursor-pointer flex-shrink-0">
@@ -859,6 +890,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                 </button>
               ))}
             </div>
+            {/* EN color picker — controls ALL English text (time badge + border text) */}
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-stone-400 flex-shrink-0">字體顏色</span>
               <label className="relative w-5 h-5 rounded border border-stone-200 overflow-hidden cursor-pointer flex-shrink-0">
