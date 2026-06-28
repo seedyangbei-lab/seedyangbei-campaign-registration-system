@@ -42,17 +42,30 @@ const SCHEMES = [
 
 // ── fonts ──────────────────────────────────────────────────────────────────────
 const ZH_FONTS = [
-  { label: 'Noto Sans TC',           value: "'Noto Sans TC', sans-serif",           gf: 'Noto+Sans+TC:wght@300;400;500;700' },
-  { label: 'Zen Kaku Gothic New',    value: "'Zen Kaku Gothic New', sans-serif",    gf: 'Zen+Kaku+Gothic+New:wght@400;500;700;900' },
-  { label: 'Noto Serif TC',          value: "'Noto Serif TC', serif",               gf: 'Noto+Serif+TC:wght@300;400;500;700' },
-  { label: 'Zen Maru Gothic',        value: "'Zen Maru Gothic', sans-serif",        gf: 'Zen+Maru+Gothic:wght@300;400;500;700' },
+  { label: 'Noto Sans TC',        value: "'Noto Sans TC', sans-serif",        gf: 'Noto+Sans+TC:wght@300;400;500;700' },
+  { label: 'Zen Kaku Gothic New', value: "'Zen Kaku Gothic New', sans-serif", gf: 'Zen+Kaku+Gothic+New:wght@400;500;700;900' },
+  { label: 'Noto Serif TC',       value: "'Noto Serif TC', serif",            gf: 'Noto+Serif+TC:wght@300;400;500;700' },
+  { label: 'Zen Maru Gothic',     value: "'Zen Maru Gothic', sans-serif",     gf: 'Zen+Maru+Gothic:wght@300;400;500;700' },
 ]
 const EN_FONTS = [
-  { label: 'Outfit',           value: "'Outfit', sans-serif",          gf: 'Outfit:wght@300;400;500;700' },
-  { label: 'Space Mono',       value: "'Space Mono', monospace",       gf: 'Space+Mono:wght@400;700' },
-  { label: 'Helvetica',        value: "'Helvetica Neue', Helvetica, Arial, sans-serif", gf: '' },
-  { label: 'Betania Patmos',   value: "'Betania Patmos', 'Playfair Display', serif",    gf: 'Playfair+Display:wght@400;700' },
+  { label: 'Outfit',         value: "'Outfit', sans-serif",                                   gf: 'Outfit:wght@300;400;500;700' },
+  { label: 'Space Mono',     value: "'Space Mono', monospace",                               gf: 'Space+Mono:wght@400;700' },
+  { label: 'Helvetica',      value: "'Helvetica Neue', Helvetica, Arial, sans-serif",        gf: '' },
+  { label: 'Betania Patmos', value: "'Betania Patmos', 'Playfair Display', serif",           gf: 'Playfair+Display:wght@400;700' },
 ]
+
+// Load all Google Fonts once (no hooks in loops)
+function loadAllGoogleFonts() {
+  const allGf = [...ZH_FONTS, ...EN_FONTS].map(f => f.gf).filter(Boolean)
+  allGf.forEach(gfParam => {
+    const id = `gf-${gfParam.replace(/[^a-z0-9]/gi,'')}`
+    if (document.getElementById(id)) return
+    const link = document.createElement('link')
+    link.id = id; link.rel = 'stylesheet'
+    link.href = `https://fonts.googleapis.com/css2?family=${gfParam}&display=swap`
+    document.head.appendChild(link)
+  })
+}
 
 // ── dot pattern ────────────────────────────────────────────────────────────────
 type DotShape = 'none' | 'circle' | 'star' | 'triangle' | 'heart' | 'custom'
@@ -83,7 +96,7 @@ function renderDotShape(
   if (shape === 'circle') return <circle key={key} cx={x} cy={y} r={size/2} fill={fill} opacity={op} />
   if (shape === 'star') {
     const pts = Array.from({length:5}).map((_,i) => {
-      const a = (i*72-90)*Math.PI/180; const b = (i*72-90+36)*Math.PI/180
+      const a=(i*72-90)*Math.PI/180; const b=(i*72-90+36)*Math.PI/180
       const ro=size/2, ri=size/4.5
       return `${x+ro*Math.cos(a)},${y+ro*Math.sin(a)} ${x+ri*Math.cos(b)},${y+ri*Math.sin(b)}`
     }).join(' ')
@@ -137,25 +150,13 @@ function DotPatternSvg({ shape, customChar, color, opacity, size, density, cover
 
 const BORDER_TEXT = 'YANGBEI COMMUNITY · SEED COURSE · '
 
-function useGoogleFont(gfParam: string) {
-  useEffect(() => {
-    if (!gfParam) return
-    const id = `gf-${gfParam.replace(/[^a-z0-9]/gi,'')}`
-    if (document.getElementById(id)) return
-    const link = document.createElement('link')
-    link.id=id; link.rel='stylesheet'
-    link.href=`https://fonts.googleapis.com/css2?family=${gfParam}&display=swap`
-    document.head.appendChild(link)
-  }, [gfParam])
-}
-
-// ── poster dimensions (A4 portrait proportions) ───────────────────────────────
+// ── poster dimensions ─────────────────────────────────────────────────────────
 const POSTER_W = 210
 const POSTER_H = 297
 const PHOTO_H  = Math.round(POSTER_H * 0.639)  // ≈ 190
-const INFO_H   = POSTER_H - PHOTO_H             // ≈ 107
+const INFO_PAD = 16  // uniform 16px padding all sides in info zone
 
-// ── canvas helpers ──────────────────────────────────────────────────────────────
+// ── canvas helpers ────────────────────────────────────────────────────────────
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath()
   ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r)
@@ -216,82 +217,55 @@ function drawOneDot(ctx: CanvasRenderingContext2D, shape: DotShape, customChar: 
 }
 
 function drawBorderText(ctx: CanvasRenderingContext2D, text: string, color: string, fontFamily: string, W: number, H: number) {
-  const fs = 5.5, lsp = 3.5, margin = 8, r = 8
+  const fs=5.5, lsp=3.5, margin=8, r=8
   ctx.save()
-  ctx.globalAlpha = 0.42
-  ctx.fillStyle = color
-  ctx.font = `400 ${fs}px ${fontFamily}`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-
-  const charW = fs * 0.6 + lsp
-  const rep = text.repeat(50)
-  const chars = rep.split('')
-
-  const arcLen = r * Math.PI / 2
-  const segA = H - margin - (margin + r)
-  const segB = arcLen
-  const segC = W - 2*(margin + r)
-  const segD = arcLen
-  const segE = H - margin - (margin + r)
-
-  const totalLen = segA + segB + segC + segD + segE
-
-  let dist = 0
+  ctx.globalAlpha=0.42; ctx.fillStyle=color
+  ctx.font=`400 ${fs}px ${fontFamily}`
+  ctx.textAlign='center'; ctx.textBaseline='middle'
+  const charW=fs*0.6+lsp
+  const rep=text.repeat(50)
+  const chars=rep.split('')
+  const arcLen=r*Math.PI/2
+  const segA=H-margin-(margin+r)
+  const segB=arcLen
+  const segC=W-2*(margin+r)
+  const segD=arcLen
+  const segE=H-margin-(margin+r)
+  const totalLen=segA+segB+segC+segD+segE
+  let dist=0
   for (const ch of chars) {
-    if (dist >= totalLen) break
-    const d = dist + charW/2
-
+    if (dist>=totalLen) break
+    const d=dist+charW/2
     let x: number, y: number, angle: number
-
-    if (d < segA) {
-      x = margin
-      y = (H - margin) - d
-      angle = -Math.PI/2
-    } else if (d < segA + segB) {
-      const t = (d - segA) / segB
-      const a = Math.PI + t * Math.PI/2
-      x = (margin + r) + r * Math.cos(a)
-      y = (margin + r) + r * Math.sin(a)
-      angle = a + Math.PI/2
-    } else if (d < segA + segB + segC) {
-      x = margin + r + (d - segA - segB)
-      y = margin
-      angle = 0
-    } else if (d < segA + segB + segC + segD) {
-      const t = (d - segA - segB - segC) / segD
-      const a = -Math.PI/2 + t * Math.PI/2
-      x = (W - margin - r) + r * Math.cos(a)
-      y = (margin + r) + r * Math.sin(a)
-      angle = a + Math.PI/2
+    if (d<segA) {
+      x=margin; y=(H-margin)-d; angle=-Math.PI/2
+    } else if (d<segA+segB) {
+      const t=(d-segA)/segB
+      const a=Math.PI+t*Math.PI/2
+      x=(margin+r)+r*Math.cos(a); y=(margin+r)+r*Math.sin(a); angle=a+Math.PI/2
+    } else if (d<segA+segB+segC) {
+      x=margin+r+(d-segA-segB); y=margin; angle=0
+    } else if (d<segA+segB+segC+segD) {
+      const t=(d-segA-segB-segC)/segD
+      const a=-Math.PI/2+t*Math.PI/2
+      x=(W-margin-r)+r*Math.cos(a); y=(margin+r)+r*Math.sin(a); angle=a+Math.PI/2
     } else {
-      x = W - margin
-      y = margin + r + (d - segA - segB - segC - segD)
-      angle = Math.PI/2
+      x=W-margin; y=margin+r+(d-segA-segB-segC-segD); angle=Math.PI/2
     }
-
-    ctx.save()
-    ctx.translate(x, y)
-    ctx.rotate(angle)
-    ctx.fillText(ch, 0, 0)
-    ctx.restore()
-
-    dist += charW
+    ctx.save(); ctx.translate(x,y); ctx.rotate(angle); ctx.fillText(ch,0,0); ctx.restore()
+    dist+=charW
   }
   ctx.restore()
 }
 
 function drawIcon(ctx: CanvasRenderingContext2D, type: 'place'|'person', x: number, y: number, size: number, color: string) {
   ctx.save(); ctx.fillStyle=color
-  ctx.translate(x - size/2, y - size/2)
-  const s = size/24
-  ctx.scale(s, s)
-  if (type === 'place') {
-    const p = new Path2D('M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z')
-    ctx.fill(p)
+  ctx.translate(x-size/2, y-size/2)
+  const s=size/24; ctx.scale(s,s)
+  if (type==='place') {
+    ctx.fill(new Path2D('M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z'))
   } else {
-    const p = new Path2D('M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z')
-    ctx.fill(p)
+    ctx.fill(new Path2D('M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'))
   }
   ctx.restore()
 }
@@ -303,69 +277,73 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
   const [isDragging, setIsDragging] = useState(false)
   const dragStart = useRef({ mx:0, my:0, px:0, py:0 })
 
-  const [scheme, setScheme]     = useState(SCHEMES[2])
+  const [scheme, setScheme]   = useState(SCHEMES[2])
   const [customBg, setCustomBg] = useState('')
 
-  const [dotShape, setDotShape]         = useState<DotShape>('circle')
-  const [dotCustomChar, setDotCustomChar] = useState('央')
-  const [dotColor, setDotColor]         = useState('')
-  const [dotOpacity, setDotOpacity]     = useState(30)
-  const [dotSize, setDotSize]           = useState(6)
-  const [dotDensity, setDotDensity]     = useState(50)
-  const [dotCoverage, setDotCoverage]   = useState<DotCoverage>('photo')
+  const [dotShape, setDotShape]             = useState<DotShape>('circle')
+  const [dotCustomChar, setDotCustomChar]   = useState('央')
+  const [dotColor, setDotColor]             = useState('')
+  const [dotOpacity, setDotOpacity]         = useState(30)
+  const [dotSize, setDotSize]               = useState(6)
+  const [dotDensity, setDotDensity]         = useState(50)
+  const [dotCoverage, setDotCoverage]       = useState<DotCoverage>('photo')
   const [dotArrangement, setDotArrangement] = useState<DotArrangement>('grid')
-  const [dotSeed, setDotSeed]           = useState(42)
+  const [dotSeed, setDotSeed]               = useState(42)
 
-  const [textColorOverride, setTextColorOverride] = useState('')
+  const [textColorOverride, setTextColorOverride]     = useState('')
   const [enTextColorOverride, setEnTextColorOverride] = useState('')
   const [borderOn, setBorderOn] = useState(true)
 
-  const [zhFontIdx, setZhFontIdx]   = useState(0)
-  const [enFontIdx, setEnFontIdx]   = useState(0)
-  const [titleWeight, setTitleWeight]   = useState<300|400|500|700>(500)
-  const [enWeight, setEnWeight]         = useState<300|400|500|700>(400)
+  const [zhFontIdx, setZhFontIdx]     = useState(0)
+  const [enFontIdx, setEnFontIdx]     = useState(0)
+  const [titleWeight, setTitleWeight] = useState<300|400|500|700>(500)
+  const [enWeight, setEnWeight]       = useState<300|400|500|700>(400)
 
   const [isExporting, setIsExporting] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
-
-  // ── preview scale: fit entire poster in left panel ────────────────────────
+  const fileRef    = useRef<HTMLInputElement>(null)
+  const panelRef   = useRef<HTMLDivElement>(null)   // entire left panel
   const [previewScale, setPreviewScale] = useState(1)
-  const posterAreaRef = useRef<HTMLDivElement>(null)
-  const posterContainerRef = useRef<HTMLDivElement>(null)
 
+  // Load all Google Fonts once on mount — no hooks in loops
+  useEffect(() => { loadAllGoogleFonts() }, [])
+
+  // ResizeObserver: measure full left panel, subtract fixed bottom area
   useEffect(() => {
-    const panel = posterAreaRef.current
-    const container = posterContainerRef.current
-    if (!panel || !container) return
+    const el = panelRef.current
+    if (!el) return
+    const BOTTOM_H = 88   // border-t + py-3 + upload btn + export btn
+    const PADDING  = 32   // pt-4 pb-2 = 16+8 top+bottom
+    const SLIDER_H = 36   // zoom slider row
+    const GAP      = 8
     const update = () => {
-      // panel height - bottom buttons (88px) - top padding (16px) - bottom padding (16px) - zoom slider (32px) - gap (8px)
-      const availH = el.clientHeight - 88 - 16 - 16 - 32 - 8
-      const availW = el.clientWidth - 32
-      const scaleH = availH / POSTER_H
-      const scaleW = availW / POSTER_W
-      setPreviewScale(Math.min(scaleH, scaleW, 1))
+      const availH = el.clientHeight - BOTTOM_H - PADDING - SLIDER_H - GAP
+      const availW = el.clientWidth  - 32
+      setPreviewScale(Math.min(availH/POSTER_H, availW/POSTER_W, 1))
     }
     update()
     const ro = new ResizeObserver(update)
-    ro.observe(container)
+    ro.observe(el)
     return () => ro.disconnect()
   }, [])
 
-  const activeBg = customBg || scheme.bg
-  const tc       = textColorOverride || textCol(activeBg)
-  const dotOn    = dotShape !== 'none'
-  const dotFill  = dotColor || activeBg
-  const zhFont   = ZH_FONTS[zhFontIdx]
-  const enFont   = EN_FONTS[enFontIdx]
-  const enTc     = enTextColorOverride || tc
+  const activeBg  = customBg || scheme.bg
+  const tc        = textColorOverride   || textCol(activeBg)
+  const enTc      = enTextColorOverride || tc
+  const dotOn     = dotShape !== 'none'
+  const dotFill   = dotColor || activeBg
   const iconColor = dotColor || tc
+  const zhFont    = ZH_FONTS[zhFontIdx]
+  const enFont    = EN_FONTS[enFontIdx]
 
-  useGoogleFont(zhFont.gf)
-  useGoogleFont(enFont.gf)
-  ZH_FONTS.forEach(f => useGoogleFont(f.gf))
-  EN_FONTS.forEach(f => useGoogleFont(f.gf))
+  const tagBg     = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.12)'  : 'rgba(255,255,255,0.22)'
+  const tagBorder = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.20)'  : 'rgba(255,255,255,0.35)'
+  const timeBg    = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.09)'  : 'rgba(255,255,255,0.18)'
+  const divider   = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.15)'  : 'rgba(255,255,255,0.25)'
 
-  // ── drag ────────────────────────────────────────────────────────────────────
+  const scaledW = POSTER_W * previewScale
+  const scaledH = POSTER_H * previewScale
+
+  // ── drag ─────────────────────────────────────────────────────────────────────
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     if (!imgSrc) return; e.preventDefault()
     setIsDragging(true)
@@ -373,9 +351,9 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
   }, [imgSrc, imgPos])
   const onMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isDragging) return
-    setImgPos({ x: dragStart.current.px+e.clientX-dragStart.current.mx, y: dragStart.current.py+e.clientY-dragStart.current.my })
+    setImgPos({ x:dragStart.current.px+e.clientX-dragStart.current.mx, y:dragStart.current.py+e.clientY-dragStart.current.my })
   }, [isDragging])
-  const onMouseUp = useCallback(() => setIsDragging(false), [])
+  const onMouseUp   = useCallback(() => setIsDragging(false), [])
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     if (!imgSrc) return
     const t=e.touches[0]; setIsDragging(true)
@@ -384,126 +362,108 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
   const onTouchMove = useCallback((e: React.TouchEvent) => {
     if (!isDragging) return
     const t=e.touches[0]
-    setImgPos({ x: dragStart.current.px+t.clientX-dragStart.current.mx, y: dragStart.current.py+t.clientY-dragStart.current.my })
+    setImgPos({ x:dragStart.current.px+t.clientX-dragStart.current.mx, y:dragStart.current.py+t.clientY-dragStart.current.my })
   }, [isDragging])
   const onTouchEnd = useCallback(() => setIsDragging(false), [])
 
-  // ── upload ───────────────────────────────────────────────────────────────────
+  // ── upload ────────────────────────────────────────────────────────────────────
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return
-    const reader = new FileReader()
-    reader.onload = ev => {
-      setImgSrc(ev.target?.result as string)
-      setImgPos({x:0, y:0})
-      setImgScale(1)
-    }
+    const file=e.target.files?.[0]; if (!file) return
+    const reader=new FileReader()
+    reader.onload = ev => { setImgSrc(ev.target?.result as string); setImgPos({x:0,y:0}); setImgScale(1) }
     reader.readAsDataURL(file)
   }
 
-  // ── Canvas export ────────────────────────────────────────────────────────────
+  // ── Canvas export ─────────────────────────────────────────────────────────────
   const handleExport = useCallback(async () => {
     setIsExporting(true)
     try {
       await document.fonts.ready
-      const SCALE = 3
-      const canvas = document.createElement('canvas')
-      canvas.width = POSTER_W*SCALE; canvas.height = POSTER_H*SCALE
-      const ctx = canvas.getContext('2d')!
-      ctx.scale(SCALE, SCALE)
+      const SCALE=3
+      const canvas=document.createElement('canvas')
+      canvas.width=POSTER_W*SCALE; canvas.height=POSTER_H*SCALE
+      const ctx=canvas.getContext('2d')!
+      ctx.scale(SCALE,SCALE)
       const W=POSTER_W, H=POSTER_H, PH=PHOTO_H
 
-      ctx.fillStyle = activeBg; ctx.fillRect(0,0,W,H)
+      // background
+      ctx.fillStyle=activeBg; ctx.fillRect(0,0,W,H)
 
+      // photo zone (clipped)
       ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,PH); ctx.clip()
       if (imgSrc) {
-        const img = await new Promise<HTMLImageElement>((res,rej) => {
-          const i=new Image(); i.crossOrigin='anonymous'
-          i.onload=()=>res(i); i.onerror=rej; i.src=imgSrc
-        })
+        const img=await new Promise<HTMLImageElement>((res,rej)=>{ const i=new Image(); i.crossOrigin='anonymous'; i.onload=()=>res(i); i.onerror=rej; i.src=imgSrc })
         const iw=img.naturalWidth, ih=img.naturalHeight
-        const containScale = Math.min(W/iw, PH/ih)
-        const containW = iw*containScale, containH = ih*containScale
-        const scaledW = containW*imgScale, scaledH = containH*imgScale
-        const zoneCx = W/2, zoneCy = PH/2
-        const drawX = zoneCx - scaledW/2 + imgPos.x
-        const drawY = zoneCy - scaledH/2 + imgPos.y
-        ctx.drawImage(img, drawX, drawY, scaledW, scaledH)
+        const containScale=Math.min(W/iw, PH/ih)
+        const scaledW=iw*containScale*imgScale, scaledH=ih*containScale*imgScale
+        ctx.drawImage(img, W/2-scaledW/2+imgPos.x, PH/2-scaledH/2+imgPos.y, scaledW, scaledH)
       } else {
         ctx.fillStyle='#d6d3d1'; ctx.fillRect(0,0,W,PH)
       }
-      if (dotOn && dotCoverage==='photo') {
-        drawDotsCanvas(ctx, dotShape, dotCustomChar, dotFill, dotOpacity, dotSize, dotDensity, dotArrangement, dotSeed, W, PH)
-      }
-      if (borderOn) {
-        drawBorderText(ctx, BORDER_TEXT, enTc, enFont.value, W, PH)
-      }
+      // dots on photo
+      if (dotOn && dotCoverage==='photo') drawDotsCanvas(ctx,dotShape,dotCustomChar,dotFill,dotOpacity,dotSize,dotDensity,dotArrangement,dotSeed,W,PH)
+      // border text
+      if (borderOn) drawBorderText(ctx,BORDER_TEXT,enTc,enFont.value,W,PH)
+      // SEED COURSE tag — photo zone top-left, 16px from edges
+      const tagText='SEED COURSE'
+      ctx.font=`700 7px ${enFont.value}`
+      const tagW=ctx.measureText(tagText).width+14
+      const tagBgC = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.22)'
+      const tagBdC = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.20)' : 'rgba(255,255,255,0.35)'
+      ctx.fillStyle=tagBgC; roundRect(ctx,INFO_PAD,INFO_PAD,tagW,14,7); ctx.fill()
+      ctx.strokeStyle=tagBdC; ctx.lineWidth=0.5; roundRect(ctx,INFO_PAD,INFO_PAD,tagW,14,7); ctx.stroke()
+      ctx.fillStyle=enTc; ctx.textAlign='left'; ctx.fillText(tagText,INFO_PAD+7,INFO_PAD+9.5)
       ctx.restore()
 
-      if (dotOn && dotCoverage==='full') {
-        ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip()
-        drawDotsCanvas(ctx, dotShape, dotCustomChar, dotFill, dotOpacity, dotSize, dotDensity, dotArrangement, dotSeed, W, H)
-        ctx.restore()
-      }
+      // full-coverage dots (no clip)
+      if (dotOn && dotCoverage==='full') drawDotsCanvas(ctx,dotShape,dotCustomChar,dotFill,dotOpacity,dotSize,dotDensity,dotArrangement,dotSeed,W,H)
 
-      ctx.fillStyle = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.25)'
-      ctx.fillRect(14,PH,W-28,0.5)
+      // divider
+      ctx.fillStyle=lum(activeBg)>0.35 ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.25)'
+      ctx.fillRect(INFO_PAD,PH,W-INFO_PAD*2,0.5)
 
+      // info zone — 16px padding, NO clip so content flows freely
       ctx.save()
+      const timeBgC=lum(activeBg)>0.35 ? 'rgba(0,0,0,0.09)' : 'rgba(255,255,255,0.18)'
+      const maxTitleW=W-INFO_PAD*2
 
-      const tagBg     = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.22)'
-      const tagBorder = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.20)'  : 'rgba(255,255,255,0.35)'
-      const timeBg    = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.09)'  : 'rgba(255,255,255,0.18)'
+      let cy=PH+INFO_PAD
 
-      // SEED COURSE tag — photo zone left-top (16,16)
-      const tagText = 'SEED COURSE'
-      ctx.font=`700 7px ${enFont.value}`
-      const tagW = ctx.measureText(tagText).width+14
-      ctx.fillStyle=tagBg; roundRect(ctx,16,16,tagW,14,7); ctx.fill()
-      ctx.strokeStyle=tagBorder; ctx.lineWidth=0.5; roundRect(ctx,16,16,tagW,14,7); ctx.stroke()
-      ctx.fillStyle=enTc; ctx.textAlign='left'; ctx.fillText(tagText,23,16+9.5)
-
-      // info zone starts at PH+16 (16px padding)
-      let cy = PH+16
-      const maxTitleW = W-32; let titleSize=17
+      // title
+      let titleSize=17
       ctx.font=`${titleWeight} ${titleSize}px ${zhFont.value}`
-      const titleStr = course.title||'課程名稱'
-      while (titleSize>10 && ctx.measureText(titleStr).width>maxTitleW) {
-        titleSize-=0.5; ctx.font=`${titleWeight} ${titleSize}px ${zhFont.value}`
-      }
-      const titleLines = wrapCanvasText(ctx, titleStr, maxTitleW)
-      ctx.fillStyle=tc
-      titleLines.slice(0,3).forEach((line,i) => { ctx.fillText(line,14,cy+titleSize+i*titleSize*1.3) })
-      cy += titleSize*1.3*Math.min(titleLines.length,3)+6
+      const titleStr=course.title||'課程名稱'
+      while (titleSize>10 && ctx.measureText(titleStr).width>maxTitleW) { titleSize-=0.5; ctx.font=`${titleWeight} ${titleSize}px ${zhFont.value}` }
+      const titleLines=wrapCanvasText(ctx,titleStr,maxTitleW)
+      ctx.fillStyle=tc; ctx.textAlign='left'
+      titleLines.slice(0,3).forEach((line,i)=>{ ctx.fillText(line,INFO_PAD,cy+titleSize+i*titleSize*1.3) })
+      cy+=titleSize*1.3*Math.min(titleLines.length,3)+6
 
-      const hasTime = course.timeStart||course.timeEnd||course.date
-      if (hasTime) {
-        const timeParts = [
-          course.date||'',
-          (course.date&&(course.timeStart||course.timeEnd)) ? '·' : '',
-          course.timeStart||'',
-          course.timeEnd ? `– ${course.timeEnd}` : '',
-        ].filter(Boolean).join(' ')
+      // time badge
+      if (course.timeStart||course.timeEnd||course.date) {
+        const timeParts=[course.date||'',(course.date&&(course.timeStart||course.timeEnd))?'·':'',course.timeStart||'',course.timeEnd?`– ${course.timeEnd}`:''].filter(Boolean).join(' ')
         ctx.font=`${enWeight} 9px ${enFont.value}`
-        const timeW = ctx.measureText(timeParts).width+10
-        ctx.fillStyle=timeBg; roundRect(ctx,14,cy,timeW,16,4); ctx.fill()
-        ctx.fillStyle=enTc; ctx.fillText(timeParts,19,cy+11)
+        const tw=ctx.measureText(timeParts).width+10
+        ctx.fillStyle=timeBgC; roundRect(ctx,INFO_PAD,cy,tw,16,4); ctx.fill()
+        ctx.fillStyle=enTc; ctx.fillText(timeParts,INFO_PAD+5,cy+11)
         cy+=20
       }
+      // location
       if (course.location) {
         ctx.save(); ctx.globalAlpha=0.82
-        drawIcon(ctx, 'place', 14+5, cy+9, 11, iconColor)
+        drawIcon(ctx,'place',INFO_PAD+5,cy+9,11,iconColor)
         ctx.restore()
         ctx.font=`400 9px ${zhFont.value}`; ctx.fillStyle=tc; ctx.globalAlpha=0.82
-        const locLines = wrapCanvasText(ctx, course.location, maxTitleW-14)
-        locLines.forEach((line,i) => { ctx.fillText(line,28,cy+10+i*13) })
-        cy+=13*locLines.length+2; ctx.globalAlpha=1
+        wrapCanvasText(ctx,course.location,maxTitleW-14).forEach((line,i)=>{ ctx.fillText(line,INFO_PAD+14,cy+10+i*13) })
+        cy+=13+2; ctx.globalAlpha=1
       }
+      // instructor
       if (course.instructor) {
         ctx.save(); ctx.globalAlpha=0.62
-        drawIcon(ctx, 'person', 14+5, cy+9, 11, iconColor)
+        drawIcon(ctx,'person',INFO_PAD+5,cy+9,11,iconColor)
         ctx.restore()
         ctx.font=`400 9px ${zhFont.value}`; ctx.fillStyle=tc; ctx.globalAlpha=0.62
-        ctx.fillText(course.instructor,28,cy+10); ctx.globalAlpha=1
+        ctx.fillText(course.instructor,INFO_PAD+14,cy+10); ctx.globalAlpha=1
       }
       ctx.restore()
 
@@ -511,83 +471,53 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
       a.href=canvas.toDataURL('image/png'); a.download=`${course.title||'poster'}.png`; a.click()
     } catch (_e) { console.error('export failed',_e) }
     finally { setIsExporting(false) }
-  }, [activeBg, tc, enTc, iconColor, dotFill, dotOn, dotShape, dotCustomChar, dotOpacity, dotSize, dotDensity, dotCoverage, dotArrangement, dotSeed, borderOn, imgSrc, imgPos, imgScale, enFont, zhFont, titleWeight, enWeight, course])
-
-  // ── derived UI values ────────────────────────────────────────────────────────
-  const tagBg     = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.22)'
-  const tagBorder = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.20)'  : 'rgba(255,255,255,0.35)'
-  const timeBg    = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.09)'  : 'rgba(255,255,255,0.18)'
-  const divider   = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.15)'  : 'rgba(255,255,255,0.25)'
-
-  // Scaled poster dimensions (for placeholder div that reserves space)
-  const scaledW = POSTER_W * previewScale
-  const scaledH = POSTER_H * previewScale
+  }, [activeBg,tc,enTc,iconColor,dotFill,dotOn,dotShape,dotCustomChar,dotOpacity,dotSize,dotDensity,dotCoverage,dotArrangement,dotSeed,borderOn,imgSrc,imgPos,imgScale,enFont,zhFont,titleWeight,enWeight,course])
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm">
       <div
         className="relative w-full md:max-w-4xl md:mx-4 flex flex-col md:flex-row bg-white md:rounded-2xl rounded-t-2xl overflow-hidden shadow-2xl"
-        style={{ maxHeight: '95dvh', height: '95dvh' }}
+        style={{ maxHeight:'95dvh', height:'95dvh' }}
       >
         {/* close */}
         <button onClick={onClose} aria-label="關閉"
           className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-black/10 hover:bg-black/20 transition-colors">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
         </button>
 
-        {/* ── LEFT: poster preview + upload + export ── */}
-        <div ref={posterAreaRef} className="md:w-[380px] flex-shrink-0 flex flex-col bg-stone-100 overflow-hidden">
+        {/* ── LEFT panel ── */}
+        <div ref={panelRef} className="md:w-[380px] flex-shrink-0 flex flex-col bg-stone-100 overflow-hidden">
 
-          {/* poster area — flex-1, centres the scaled poster, no scroll */}
-          <div ref={posterContainerRef} className="flex-1 flex flex-col items-center justify-center min-h-0 px-4 pt-4 pb-2">
-            
-            {/* Placeholder div holds the scaled size so layout is stable; overflow:hidden clips poster to A4 boundary */}
-            <div style={{ width: scaledW, height: scaledH, position: 'relative', flexShrink: 0, overflow: 'hidden', borderRadius: '2px' }}>
-              {/* Actual poster at full 210×297, scaled down via transform */}
-              <div
-                className="absolute top-0 left-0 origin-top-left"
-                style={{ transform: `scale(${previewScale})`, width: POSTER_W, height: POSTER_H }}
-              >
-                 {/* poster — overflow:visible so info zone isn't clipped; wrapper handles visual boundary */}
-                <div
-                  className="relative rounded-sm select-none"
-                  style={{ width:`${POSTER_W}px`, height:`${POSTER_H}px`, backgroundColor: activeBg, overflow:'visible' }}
-                >
-                  {/* SEED COURSE tag — photo zone left-top, 16px from edges */}
-                  <div style={{
-                    position:'absolute', top:'16px', left:'16px', zIndex:10,
-                    display:'inline-flex', alignItems:'center',
-                    borderRadius:'20px', padding:'2px 7px',
-                    background:tagBg, border:`0.5px solid ${tagBorder}`, color:enTc,
-                    fontFamily:enFont.value, fontSize:'7px', letterSpacing:'0.16em', textTransform:'uppercase',
-                  }}>SEED COURSE</div>
+          {/* poster area */}
+          <div className="flex-1 flex flex-col items-center justify-center min-h-0 pt-4 pb-2 px-4">
 
-                  {/* UPPER: photo zone */}
-                  <div
-                    className="absolute left-0 right-0 top-0 overflow-hidden"
-                    style={{ height:`${PHOTO_H}px`, cursor: imgSrc?(isDragging?'grabbing':'grab'):'default', zIndex:1 }}
+            {/* placeholder — reserves scaled space in layout */}
+            <div style={{ width:scaledW, height:scaledH, position:'relative', flexShrink:0, overflow:'hidden', borderRadius:'2px' }}>
+              {/* poster scaled down from 210×297 */}
+              <div className="absolute top-0 left-0 origin-top-left"
+                style={{ transform:`scale(${previewScale})`, width:POSTER_W, height:POSTER_H }}>
+
+                <div className="relative select-none"
+                  style={{ width:POSTER_W, height:POSTER_H, backgroundColor:activeBg, overflow:'visible' }}>
+
+                  {/* photo zone */}
+                  <div className="absolute left-0 right-0 top-0 overflow-hidden"
+                    style={{ height:PHOTO_H, cursor:imgSrc?(isDragging?'grabbing':'grab'):'default', zIndex:1 }}
                     onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
-                    onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
-                  >
+                    onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+
                     {imgSrc ? (
                       <div style={{ position:'absolute', inset:0, overflow:'hidden' }}>
-                        <img
-                          src={imgSrc} alt="" draggable={false}
-                          style={{
-                            position:'absolute',
-                            width:'100%',
-                            height:'100%',
-                            objectFit:'contain',
-                            transform:`translate(${imgPos.x}px, ${imgPos.y}px) scale(${imgScale})`,
-                            transformOrigin:'center center',
-                            pointerEvents:'none', userSelect:'none', zIndex:0,
-                          }}
-                        />
+                        <img src={imgSrc} alt="" draggable={false} style={{
+                          position:'absolute', width:'100%', height:'100%', objectFit:'contain',
+                          transform:`translate(${imgPos.x}px,${imgPos.y}px) scale(${imgScale})`,
+                          transformOrigin:'center center', pointerEvents:'none', userSelect:'none', zIndex:0,
+                        }} />
                       </div>
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center bg-stone-200" style={{zIndex:0}}>
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" />
+                          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
                         </svg>
                       </div>
                     )}
@@ -600,7 +530,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                         totalHeight={POSTER_H} photoHeight={PHOTO_H} posterWidth={POSTER_W} />
                     )}
 
-                    {/* border text: U-shaped path */}
+                    {/* border text U-path */}
                     {borderOn && (
                       <svg viewBox={`0 0 ${POSTER_W} ${PHOTO_H}`} xmlns="http://www.w3.org/2000/svg"
                         style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:3 }}>
@@ -609,12 +539,19 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                             d={`M 8,${PHOTO_H} L 8,16 Q 8,8 16,8 L ${POSTER_W-16},8 Q ${POSTER_W-8},8 ${POSTER_W-8},16 L ${POSTER_W-8},${PHOTO_H}`} />
                         </defs>
                         <text fontSize={5.5} letterSpacing={3} fill={enTc} opacity={0.42} fontFamily={enFont.value} dominantBaseline="middle">
-                          <textPath href="#border-u-path" startOffset="0">
-                            {BORDER_TEXT.repeat(20)}
-                          </textPath>
+                          <textPath href="#border-u-path" startOffset="0">{BORDER_TEXT.repeat(20)}</textPath>
                         </text>
                       </svg>
                     )}
+
+                    {/* SEED COURSE tag — photo zone top-left, 16px from edges */}
+                    <div style={{
+                      position:'absolute', top:INFO_PAD, left:INFO_PAD, zIndex:10,
+                      display:'inline-flex', alignItems:'center',
+                      borderRadius:'20px', padding:'2px 7px',
+                      background:tagBg, border:`0.5px solid ${tagBorder}`, color:enTc,
+                      fontFamily:enFont.value, fontSize:'7px', letterSpacing:'0.16em', textTransform:'uppercase',
+                    }}>SEED COURSE</div>
                   </div>
 
                   {/* dots full */}
@@ -628,16 +565,16 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                   )}
 
                   {/* divider */}
-                  <div style={{ position:'absolute', left:'14px', right:'14px', top:`${PHOTO_H}px`, height:'0.5px', background:divider, zIndex:4 }} />
+                  <div style={{ position:'absolute', left:INFO_PAD, right:INFO_PAD, top:PHOTO_H, height:'0.5px', background:divider, zIndex:4 }} />
 
-                  {/* LOWER: info zone — 16px padding all sides */}
-                  <div className="absolute left-0 right-0 bottom-0 flex flex-col"
-                    style={{ top:`${PHOTO_H}px`, padding:'16px', overflow:'hidden', zIndex:3 }}>
+                  {/* info zone — 16px padding all sides, overflow visible */}
+                  <div className="absolute left-0 right-0 flex flex-col"
+                    style={{ top:PHOTO_H, bottom:0, padding:INFO_PAD, overflow:'visible', zIndex:3 }}>
 
                     {/* title */}
                     <div style={{
-                      color:tc, fontWeight:titleWeight, lineHeight:1.3, marginBottom:'5px', fontFamily:zhFont.value,
-                      flexShrink:0, fontSize:'17px',
+                      color:tc, fontWeight:titleWeight, lineHeight:1.3, marginBottom:'5px',
+                      fontFamily:zhFont.value, fontSize:'17px', flexShrink:0,
                       overflow:'hidden', display:'-webkit-box', WebkitLineClamp:3, WebkitBoxOrient:'vertical',
                     }}>
                       {course.title||'課程名稱'}
@@ -647,8 +584,8 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                     {(course.timeStart||course.timeEnd||course.date) && (
                       <div style={{
                         display:'inline-flex', alignItems:'center', gap:'3px', marginBottom:'4px', width:'fit-content',
-                        borderRadius:'4px', padding:'2px 5px',
-                        background:timeBg, fontFamily:enFont.value, fontWeight:enWeight, fontSize:'9px', color:enTc, letterSpacing:'0.04em',
+                        borderRadius:'4px', padding:'2px 5px', background:timeBg,
+                        fontFamily:enFont.value, fontWeight:enWeight, fontSize:'9px', color:enTc, letterSpacing:'0.04em',
                         flexShrink:0,
                       }}>
                         {course.date && <span>{course.date}</span>}
@@ -660,14 +597,11 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
 
                     {/* location */}
                     {course.location && (
-                      <div style={{ display:'flex', alignItems:'flex-start', gap:'4px', marginBottom:'4px', flexShrink:0, overflow:'hidden' }}>
+                      <div style={{ display:'flex', alignItems:'flex-start', gap:'4px', marginBottom:'4px', flexShrink:0 }}>
                         <svg width="10" height="10" viewBox="0 0 24 24" fill={iconColor} stroke="none" aria-hidden="true" style={{flexShrink:0,marginTop:'1px',opacity:0.82}}>
                           <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                         </svg>
-                        <div style={{
-                          color:tc, fontFamily:zhFont.value, fontSize:'9px', opacity:0.82, lineHeight:1.4,
-                          overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical',
-                        }}>
+                        <div style={{ color:tc, fontFamily:zhFont.value, fontSize:'9px', opacity:0.82, lineHeight:1.4 }}>
                           {course.location}
                         </div>
                       </div>
@@ -675,36 +609,33 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
 
                     {/* instructor */}
                     {course.instructor && (
-                      <div style={{ display:'flex', alignItems:'center', gap:'4px', marginBottom:'4px', flexShrink:0, overflow:'hidden' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:'4px', marginBottom:INFO_PAD, flexShrink:0 }}>
                         <svg width="10" height="10" viewBox="0 0 24 24" fill={iconColor} stroke="none" aria-hidden="true" style={{flexShrink:0,opacity:0.62}}>
                           <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                         </svg>
-                        <div style={{
-                          color:tc, fontFamily:zhFont.value, fontSize:'9px', opacity:0.62,
-                          whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
-                        }}>
+                        <div style={{ color:tc, fontFamily:zhFont.value, fontSize:'9px', opacity:0.62, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
                           {course.instructor}
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
-              </div>{/* end transform wrapper */}
-            </div>{/* end placeholder */}
-
-            {/* zoom slider — width matches scaled poster */}
-            <div style={{ width: scaledW }} className="flex items-center gap-2 mt-2 flex-shrink-0">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-stone-400 flex-shrink-0"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35M8 11h6" /></svg>
-              <input type="range" min="0.5" max="3" step="0.05" value={imgScale} onChange={e => setImgScale(parseFloat(e.target.value))} className="flex-1 accent-orange-500" />
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-stone-400 flex-shrink-0"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35M11 8v6M8 11h6" /></svg>
+              </div>
             </div>
-          </div>{/* end poster area */}
 
-          {/* upload + export — anchored to bottom */}
+            {/* zoom slider */}
+            <div style={{ width:scaledW }} className="flex items-center gap-2 mt-2 flex-shrink-0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-stone-400 flex-shrink-0"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M8 11h6"/></svg>
+              <input type="range" min="0.5" max="3" step="0.05" value={imgScale} onChange={e=>setImgScale(parseFloat(e.target.value))} className="flex-1 accent-orange-500" />
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-stone-400 flex-shrink-0"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M11 8v6M8 11h6"/></svg>
+            </div>
+          </div>
+
+          {/* bottom buttons */}
           <div className="flex-shrink-0 bg-white border-t border-stone-200 px-4 py-3 space-y-2">
-            <button onClick={() => fileRef.current?.click()}
+            <button onClick={()=>fileRef.current?.click()}
               className="w-full flex items-center justify-center gap-2 border border-dashed border-stone-300 rounded-xl py-2.5 text-sm text-stone-500 hover:border-orange-400 hover:text-orange-500 transition-colors">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" /></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
               {imgSrc ? '更換圖片' : '上傳圖片'}
             </button>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
@@ -723,27 +654,19 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
           <section>
             <p className="text-[10px] font-medium text-stone-400 tracking-widest uppercase mb-2">主視覺色彩</p>
             <div className="flex gap-1.5 items-center">
-              {SCHEMES.map(s => (
+              {SCHEMES.map(s=>(
                 <button key={s.id} title={s.label} aria-label={s.label}
-                  onClick={() => { setScheme(s); setCustomBg('') }}
+                  onClick={()=>{ setScheme(s); setCustomBg('') }}
                   className="rounded flex-1 transition-transform hover:scale-105 flex-shrink-0"
-                  style={{
-                    height:'28px', background:s.bg,
-                    outline: (!customBg&&scheme.id===s.id) ? '2px solid #f97316' : '2px solid transparent',
-                    outlineOffset:'2px',
-                    boxShadow: s.id==='white' ? 'inset 0 0 0 1px rgba(0,0,0,0.15)' : 'none',
-                  }} />
+                  style={{ height:'28px', background:s.bg, outline:(!customBg&&scheme.id===s.id)?'2px solid #f97316':'2px solid transparent', outlineOffset:'2px',
+                    boxShadow:s.id==='white'?'inset 0 0 0 1px rgba(0,0,0,0.15)':'none' }} />
               ))}
               <label className="rounded cursor-pointer transition-transform hover:scale-105 flex items-center justify-center flex-1 flex-shrink-0 relative"
-                style={{
-                  height:'28px', background:customBg||'#ffffff',
-                  outline: customBg ? '2px solid #f97316' : '2px solid transparent',
-                  outlineOffset:'2px',
-                  boxShadow: !customBg ? 'inset 0 0 0 1px rgba(0,0,0,0.15)' : 'none',
-                }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={customBg ? textCol(customBg) : '#888'} strokeWidth="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" /></svg>
+                style={{ height:'28px', background:customBg||'#ffffff', outline:customBg?'2px solid #f97316':'2px solid transparent', outlineOffset:'2px',
+                  boxShadow:!customBg?'inset 0 0 0 1px rgba(0,0,0,0.15)':'none' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={customBg?textCol(customBg):'#888'} strokeWidth="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
                 <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                  value={customBg||scheme.bg} onChange={e => setCustomBg(e.target.value)} />
+                  value={customBg||scheme.bg} onChange={e=>setCustomBg(e.target.value)} />
               </label>
             </div>
           </section>
@@ -755,103 +678,75 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
             <p className="text-[10px] font-medium text-stone-400 tracking-widest uppercase mb-2">裝飾點</p>
             <div className="space-y-3">
               <div className="flex gap-1">
-                {DOT_SHAPES.map(d => (
-                  <button key={d.id} onClick={() => setDotShape(d.id)}
+                {DOT_SHAPES.map(d=>(
+                  <button key={d.id} onClick={()=>setDotShape(d.id)}
                     className="flex-1 flex flex-col items-center gap-0.5 py-2 rounded-lg border transition-all"
-                    style={{
-                      border: dotShape===d.id ? '1.5px solid #f97316' : '1px solid #e7e5e4',
-                      background: dotShape===d.id ? '#fff7ed' : 'transparent',
-                    }}>
+                    style={{ border:dotShape===d.id?'1.5px solid #f97316':'1px solid #e7e5e4', background:dotShape===d.id?'#fff7ed':'transparent' }}>
                     <span className="text-sm leading-none">{d.symbol}</span>
                     <span className="text-[8px] text-stone-400">{d.label}</span>
                   </button>
                 ))}
               </div>
 
-              {dotShape !== 'none' && (<>
-                {dotShape === 'custom' && (
+              {dotShape!=='none' && (<>
+                {dotShape==='custom' && (
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] text-stone-400 flex-shrink-0">自訂文字</span>
-                    <input type="text" maxLength={1} value={dotCustomChar}
-                      onChange={e => setDotCustomChar(e.target.value)}
+                    <input type="text" maxLength={1} value={dotCustomChar} onChange={e=>setDotCustomChar(e.target.value)}
                       className="w-10 text-center border border-stone-200 rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-400" />
                   </div>
                 )}
-
                 <div>
                   <p className="text-[10px] text-stone-400 mb-1">放置位置</p>
                   <div className="flex gap-1.5">
-                    {(['photo','full'] as const).map(c => (
-                      <button key={c} onClick={() => setDotCoverage(c)}
+                    {(['photo','full'] as const).map(c=>(
+                      <button key={c} onClick={()=>setDotCoverage(c)}
                         className="flex-1 py-1.5 rounded-lg border text-[11px] transition-all"
-                        style={{
-                          border: dotCoverage===c ? '1.5px solid #f97316' : '1px solid #e7e5e4',
-                          background: dotCoverage===c ? '#fff7ed' : 'transparent', color:'#374151',
-                        }}>
-                        {c==='photo' ? '照片上' : '滿版'}
+                        style={{ border:dotCoverage===c?'1.5px solid #f97316':'1px solid #e7e5e4', background:dotCoverage===c?'#fff7ed':'transparent', color:'#374151' }}>
+                        {c==='photo'?'照片上':'滿版'}
                       </button>
                     ))}
                   </div>
                 </div>
-
                 <div>
                   <p className="text-[10px] text-stone-400 mb-1">排列方式</p>
                   <div className="flex gap-1.5">
-                    {(['grid','random'] as const).map(a => (
-                      <button key={a} onClick={() => { setDotArrangement(a); if(a==='random') setDotSeed(s=>s+1) }}
+                    {(['grid','random'] as const).map(a=>(
+                      <button key={a} onClick={()=>{ setDotArrangement(a); if(a==='random') setDotSeed(s=>s+1) }}
                         className="flex-1 py-1.5 rounded-lg border text-[11px] transition-all flex items-center justify-center gap-1"
-                        style={{
-                          border: dotArrangement===a ? '1.5px solid #f97316' : '1px solid #e7e5e4',
-                          background: dotArrangement===a ? '#fff7ed' : 'transparent', color:'#374151',
-                        }}>
-                        {a==='grid' ? '整齊格狀' : (
-                          <>
-                            隨機散落
-                            {dotArrangement==='random' && (
-                              <span className="w-4 h-4 rounded-full bg-orange-100 flex items-center justify-center" onClick={e=>{e.stopPropagation();setDotSeed(s=>s+1)}}>
-                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-                              </span>
-                            )}
-                          </>
+                        style={{ border:dotArrangement===a?'1.5px solid #f97316':'1px solid #e7e5e4', background:dotArrangement===a?'#fff7ed':'transparent', color:'#374151' }}>
+                        {a==='grid'?'整齊格狀':(
+                          <>隨機散落{dotArrangement==='random'&&(
+                            <span className="w-4 h-4 rounded-full bg-orange-100 flex items-center justify-center" onClick={e=>{e.stopPropagation();setDotSeed(s=>s+1)}}>
+                              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                            </span>
+                          )}</>
                         )}
                       </button>
                     ))}
                   </div>
                 </div>
-
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-stone-400 flex-shrink-0">裝飾點顏色</span>
                   <label className="relative w-5 h-5 rounded border border-stone-200 overflow-hidden cursor-pointer flex-shrink-0">
-                    <div className="w-full h-full" style={{ background:dotFill }} />
-                    <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                      value={dotFill} onChange={e => setDotColor(e.target.value)} />
+                    <div className="w-full h-full" style={{background:dotFill}} />
+                    <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" value={dotFill} onChange={e=>setDotColor(e.target.value)} />
                   </label>
                   <span className="text-[10px] text-stone-400">{dotFill.toUpperCase()}</span>
-                  {dotColor && (
-                    <button onClick={() => setDotColor('')} className="text-[9px] text-stone-400 hover:text-orange-500 transition-colors ml-auto">重設</button>
-                  )}
+                  {dotColor && <button onClick={()=>setDotColor('')} className="text-[9px] text-stone-400 hover:text-orange-500 transition-colors ml-auto">重設</button>}
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-stone-400 flex-shrink-0 w-8">透明</span>
-                  <input type="range" min="5" max="100" step="1" value={dotOpacity}
-                    onChange={e => setDotOpacity(parseInt(e.target.value))} className="flex-1 accent-orange-500" />
-                  <span className="text-[10px] text-stone-400 w-8 text-right">{dotOpacity}%</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-stone-400 flex-shrink-0 w-8">大小</span>
-                  <input type="range" min="2" max="24" step="0.5" value={dotSize}
-                    onChange={e => setDotSize(parseFloat(e.target.value))} className="flex-1 accent-orange-500" />
-                  <span className="text-[10px] text-stone-400 w-8 text-right">{dotSize}px</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-stone-400 flex-shrink-0 w-8">密度</span>
-                  <input type="range" min="10" max="90" step="1" value={dotDensity}
-                    onChange={e => setDotDensity(parseInt(e.target.value))} className="flex-1 accent-orange-500" />
-                  <span className="text-[10px] text-stone-400 w-8 text-right">{dotDensity}</span>
-                </div>
+                {[
+                  { label:'透明', min:5,   max:100, step:1,   val:dotOpacity, set:(v:number)=>setDotOpacity(v),   unit:'%' },
+                  { label:'大小', min:2,   max:24,  step:0.5, val:dotSize,    set:(v:number)=>setDotSize(v),      unit:'px' },
+                  { label:'密度', min:10,  max:90,  step:1,   val:dotDensity, set:(v:number)=>setDotDensity(v),   unit:'' },
+                ].map(r=>(
+                  <div key={r.label} className="flex items-center gap-2">
+                    <span className="text-[10px] text-stone-400 flex-shrink-0 w-8">{r.label}</span>
+                    <input type="range" min={r.min} max={r.max} step={r.step} value={r.val}
+                      onChange={e=>r.set(parseFloat(e.target.value))} className="flex-1 accent-orange-500" />
+                    <span className="text-[10px] text-stone-400 w-10 text-right">{r.val}{r.unit}</span>
+                  </div>
+                ))}
               </>)}
             </div>
           </section>
@@ -864,29 +759,21 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
               中文字體設定 <span className="normal-case font-normal opacity-70">標題 / 地點</span>
             </p>
             <div className="grid grid-cols-4 gap-1.5 mb-2">
-              {ZH_FONTS.map((f,i) => (
-                <button key={f.label} onClick={() => setZhFontIdx(i)}
+              {ZH_FONTS.map((f,i)=>(
+                <button key={f.label} onClick={()=>setZhFontIdx(i)}
                   className="text-left px-2 py-2 rounded-lg border transition-all"
-                  style={{
-                    fontFamily:f.value, fontSize:'10px',
-                    border: zhFontIdx===i ? '1.5px solid #f97316' : '1px solid #e7e5e4',
-                    background: zhFontIdx===i ? '#fff7ed' : 'transparent', color:'#374151',
-                    overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
-                  }}>
+                  style={{ fontFamily:f.value, fontSize:'10px', border:zhFontIdx===i?'1.5px solid #f97316':'1px solid #e7e5e4',
+                    background:zhFontIdx===i?'#fff7ed':'transparent', color:'#374151', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                   {f.label}
                 </button>
               ))}
             </div>
             <p className="text-[10px] text-stone-400 mb-1">標題粗細</p>
             <div className="grid grid-cols-4 gap-1.5 mb-2">
-              {([300,400,500,700] as const).map(w => (
-                <button key={w} onClick={() => setTitleWeight(w)}
+              {([300,400,500,700] as const).map(w=>(
+                <button key={w} onClick={()=>setTitleWeight(w)}
                   className="py-1.5 rounded-lg border text-[11px] transition-all"
-                  style={{
-                    fontWeight:w,
-                    border: titleWeight===w ? '1.5px solid #f97316' : '1px solid #e7e5e4',
-                    background: titleWeight===w ? '#fff7ed' : 'transparent', color:'#374151',
-                  }}>
+                  style={{ fontWeight:w, border:titleWeight===w?'1.5px solid #f97316':'1px solid #e7e5e4', background:titleWeight===w?'#fff7ed':'transparent', color:'#374151' }}>
                   {w===300?'細':w===400?'標準':w===500?'中':'粗'}
                 </button>
               ))}
@@ -894,14 +781,11 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-stone-400 flex-shrink-0">字體顏色</span>
               <label className="relative w-5 h-5 rounded border border-stone-200 overflow-hidden cursor-pointer flex-shrink-0">
-                <div className="w-full h-full" style={{ background:tc }} />
-                <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                  value={tc} onChange={e => setTextColorOverride(e.target.value)} />
+                <div className="w-full h-full" style={{background:tc}} />
+                <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" value={tc} onChange={e=>setTextColorOverride(e.target.value)} />
               </label>
               <span className="text-[10px] text-stone-400">{tc.toUpperCase()}</span>
-              {textColorOverride && (
-                <button onClick={() => setTextColorOverride('')} className="text-[9px] text-stone-400 hover:text-orange-500 transition-colors ml-auto">重設自動</button>
-              )}
+              {textColorOverride && <button onClick={()=>setTextColorOverride('')} className="text-[9px] text-stone-400 hover:text-orange-500 transition-colors ml-auto">重設自動</button>}
             </div>
           </section>
 
@@ -913,29 +797,21 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
               英文字體設定 <span className="normal-case font-normal opacity-70">時間 / 邊框</span>
             </p>
             <div className="grid grid-cols-4 gap-1.5 mb-2">
-              {EN_FONTS.map((f,i) => (
-                <button key={f.label} onClick={() => setEnFontIdx(i)}
+              {EN_FONTS.map((f,i)=>(
+                <button key={f.label} onClick={()=>setEnFontIdx(i)}
                   className="text-left px-2 py-2 rounded-lg border transition-all"
-                  style={{
-                    fontFamily:f.value, fontSize:'10px',
-                    border: enFontIdx===i ? '1.5px solid #f97316' : '1px solid #e7e5e4',
-                    background: enFontIdx===i ? '#fff7ed' : 'transparent', color:'#374151',
-                    overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
-                  }}>
+                  style={{ fontFamily:f.value, fontSize:'10px', border:enFontIdx===i?'1.5px solid #f97316':'1px solid #e7e5e4',
+                    background:enFontIdx===i?'#fff7ed':'transparent', color:'#374151', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                   {f.label}
                 </button>
               ))}
             </div>
             <p className="text-[10px] text-stone-400 mb-1">字體粗細</p>
             <div className="grid grid-cols-4 gap-1.5 mb-2">
-              {([300,400,500,700] as const).map(w => (
-                <button key={w} onClick={() => setEnWeight(w)}
+              {([300,400,500,700] as const).map(w=>(
+                <button key={w} onClick={()=>setEnWeight(w)}
                   className="py-1.5 rounded-lg border text-[11px] transition-all"
-                  style={{
-                    fontWeight:w,
-                    border: enWeight===w ? '1.5px solid #f97316' : '1px solid #e7e5e4',
-                    background: enWeight===w ? '#fff7ed' : 'transparent', color:'#374151',
-                  }}>
+                  style={{ fontWeight:w, border:enWeight===w?'1.5px solid #f97316':'1px solid #e7e5e4', background:enWeight===w?'#fff7ed':'transparent', color:'#374151' }}>
                   {w===300?'細':w===400?'標準':w===500?'中':'粗'}
                 </button>
               ))}
@@ -943,14 +819,11 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-stone-400 flex-shrink-0">字體顏色</span>
               <label className="relative w-5 h-5 rounded border border-stone-200 overflow-hidden cursor-pointer flex-shrink-0">
-                <div className="w-full h-full" style={{ background:enTc }} />
-                <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                  value={enTc} onChange={e => setEnTextColorOverride(e.target.value)} />
+                <div className="w-full h-full" style={{background:enTc}} />
+                <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" value={enTc} onChange={e=>setEnTextColorOverride(e.target.value)} />
               </label>
               <span className="text-[10px] text-stone-400">{enTc.toUpperCase()}</span>
-              {enTextColorOverride && (
-                <button onClick={() => setEnTextColorOverride('')} className="text-[9px] text-stone-400 hover:text-orange-500 transition-colors ml-auto">重設自動</button>
-              )}
+              {enTextColorOverride && <button onClick={()=>setEnTextColorOverride('')} className="text-[9px] text-stone-400 hover:text-orange-500 transition-colors ml-auto">重設自動</button>}
             </div>
           </section>
 
@@ -960,11 +833,11 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
           <section>
             <div className="flex items-center justify-between">
               <p className="text-[10px] font-medium text-stone-400 tracking-widest uppercase">邊框英文</p>
-              <button onClick={() => setBorderOn(v => !v)} aria-label="切換邊框文字"
+              <button onClick={()=>setBorderOn(v=>!v)} aria-label="切換邊框文字"
                 className="relative rounded-full transition-colors flex-shrink-0"
-                style={{ height:'18px', width:'30px', background: borderOn ? '#f97316' : '#d1d5db' }}>
+                style={{ height:'18px', width:'30px', background:borderOn?'#f97316':'#d1d5db' }}>
                 <span className="absolute top-0.5 rounded-full bg-white transition-all"
-                  style={{ width:'14px', height:'14px', left: borderOn ? '14px' : '2px' }} />
+                  style={{ width:'14px', height:'14px', left:borderOn?'14px':'2px' }} />
               </button>
             </div>
           </section>
