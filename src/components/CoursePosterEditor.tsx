@@ -150,7 +150,6 @@ function useGoogleFont(gfParam: string) {
 }
 
 // ── poster dimensions (A4 portrait proportions) ───────────────────────────────
-// Figma: 595×843 — photo zone 539px = 63.9%, info 304px = 36.1%
 const POSTER_W = 210
 const POSTER_H = 297
 const PHOTO_H  = Math.round(POSTER_H * 0.639)  // ≈ 190
@@ -217,8 +216,6 @@ function drawOneDot(ctx: CanvasRenderingContext2D, shape: DotShape, customChar: 
 }
 
 function drawBorderText(ctx: CanvasRenderingContext2D, text: string, color: string, fontFamily: string, W: number, H: number) {
-  // U-shaped path with rounded corners (r=8):
-  // left-bottom → up left side → arc top-left → right top → arc top-right → down right side → right-bottom
   const fs = 5.5, lsp = 3.5, margin = 8, r = 8
   ctx.save()
   ctx.globalAlpha = 0.42
@@ -231,18 +228,12 @@ function drawBorderText(ctx: CanvasRenderingContext2D, text: string, color: stri
   const rep = text.repeat(50)
   const chars = rep.split('')
 
-  // Path segments (lengths):
-  // A: left straight,  from (margin, H-margin) going UP to (margin, margin+r)
-  // B: top-left arc,   quarter circle r=r, from left→top, arc length = r*π/2
-  // C: top straight,   from (margin+r, margin) going RIGHT to (W-margin-r, margin)
-  // D: top-right arc,  quarter circle r=r, from top→right, arc length = r*π/2
-  // E: right straight, from (W-margin, margin+r) going DOWN to (W-margin, H-margin)
   const arcLen = r * Math.PI / 2
-  const segA = H - margin - (margin + r)   // left straight
-  const segB = arcLen                       // top-left corner arc
-  const segC = W - 2*(margin + r)          // top straight
-  const segD = arcLen                       // top-right corner arc
-  const segE = H - margin - (margin + r)   // right straight
+  const segA = H - margin - (margin + r)
+  const segB = arcLen
+  const segC = W - 2*(margin + r)
+  const segD = arcLen
+  const segE = H - margin - (margin + r)
 
   const totalLen = segA + segB + segC + segD + segE
 
@@ -254,31 +245,26 @@ function drawBorderText(ctx: CanvasRenderingContext2D, text: string, color: stri
     let x: number, y: number, angle: number
 
     if (d < segA) {
-      // Segment A: left side going UP
       x = margin
       y = (H - margin) - d
       angle = -Math.PI/2
     } else if (d < segA + segB) {
-      // Segment B: top-left arc — center at (margin+r, margin+r)
-      const t = (d - segA) / segB  // 0→1
-      const a = Math.PI + t * Math.PI/2  // goes from 180° (left) to 270° (top)
+      const t = (d - segA) / segB
+      const a = Math.PI + t * Math.PI/2
       x = (margin + r) + r * Math.cos(a)
       y = (margin + r) + r * Math.sin(a)
       angle = a + Math.PI/2
     } else if (d < segA + segB + segC) {
-      // Segment C: top going RIGHT
       x = margin + r + (d - segA - segB)
       y = margin
       angle = 0
     } else if (d < segA + segB + segC + segD) {
-      // Segment D: top-right arc — center at (W-margin-r, margin+r)
-      const t = (d - segA - segB - segC) / segD  // 0→1
-      const a = -Math.PI/2 + t * Math.PI/2  // goes from 270° (top) to 0° (right)
+      const t = (d - segA - segB - segC) / segD
+      const a = -Math.PI/2 + t * Math.PI/2
       x = (W - margin - r) + r * Math.cos(a)
       y = (margin + r) + r * Math.sin(a)
       angle = a + Math.PI/2
     } else {
-      // Segment E: right side going DOWN
       x = W - margin
       y = margin + r + (d - segA - segB - segC - segD)
       angle = Math.PI/2
@@ -295,18 +281,15 @@ function drawBorderText(ctx: CanvasRenderingContext2D, text: string, color: stri
   ctx.restore()
 }
 
-// Draw icon on canvas using Material Icons filled paths (matches Figma)
 function drawIcon(ctx: CanvasRenderingContext2D, type: 'place'|'person', x: number, y: number, size: number, color: string) {
   ctx.save(); ctx.fillStyle=color
   ctx.translate(x - size/2, y - size/2)
   const s = size/24
   ctx.scale(s, s)
   if (type === 'place') {
-    // ic:baseline-place — filled map pin (matches Figma node 1414:83)
     const p = new Path2D('M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z')
     ctx.fill(p)
   } else {
-    // iconamoon:profile-fill — filled person (matches Figma node 1414:94)
     const p = new Path2D('M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z')
     ctx.fill(p)
   }
@@ -323,7 +306,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
   const [scheme, setScheme]     = useState(SCHEMES[2])
   const [customBg, setCustomBg] = useState('')
 
-  // dot state
   const [dotShape, setDotShape]         = useState<DotShape>('circle')
   const [dotCustomChar, setDotCustomChar] = useState('央')
   const [dotColor, setDotColor]         = useState('')
@@ -334,12 +316,10 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
   const [dotArrangement, setDotArrangement] = useState<DotArrangement>('grid')
   const [dotSeed, setDotSeed]           = useState(42)
 
-  // text / border
   const [textColorOverride, setTextColorOverride] = useState('')
   const [enTextColorOverride, setEnTextColorOverride] = useState('')
   const [borderOn, setBorderOn] = useState(true)
 
-  // fonts
   const [zhFontIdx, setZhFontIdx]   = useState(0)
   const [enFontIdx, setEnFontIdx]   = useState(0)
   const [titleWeight, setTitleWeight]   = useState<300|400|500|700>(500)
@@ -347,8 +327,27 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
 
   const [isExporting, setIsExporting] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
-  const posterAreaRef = useRef<HTMLDivElement>(null)
+
+  // ── preview scale: fit entire poster in left panel ────────────────────────
   const [previewScale, setPreviewScale] = useState(1)
+  const posterAreaRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = posterAreaRef.current
+    if (!el) return
+    const update = () => {
+      // available area: panel height minus bottom buttons (~90px) minus padding (32px)
+      const availH = el.clientHeight - 90 - 32 - 40 // zoom slider ~40px
+      const availW = el.clientWidth - 32
+      const scaleH = availH / POSTER_H
+      const scaleW = availW / POSTER_W
+      setPreviewScale(Math.min(scaleH, scaleW, 1))
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   const activeBg = customBg || scheme.bg
   const tc       = textColorOverride || textCol(activeBg)
@@ -356,36 +355,13 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
   const dotFill  = dotColor || activeBg
   const zhFont   = ZH_FONTS[zhFontIdx]
   const enFont   = EN_FONTS[enFontIdx]
-  // enTc applies to ALL English text: time badge, border text — not just border
   const enTc     = enTextColorOverride || tc
-  // icon color: use dotColor if set, otherwise fall back to tc (main text color)
-  // avoids invisible icons when dotColor === activeBg (e.g. orange on orange)
   const iconColor = dotColor || tc
 
-  // load fonts
   useGoogleFont(zhFont.gf)
   useGoogleFont(enFont.gf)
   ZH_FONTS.forEach(f => useGoogleFont(f.gf))
   EN_FONTS.forEach(f => useGoogleFont(f.gf))
-
-  // ── dynamic preview scale ──────────────────────────────────────────────────
-  // Measures the poster area container and scales the poster to fit inside it.
-  // This never affects canvas export — only the visual preview.
-  useEffect(() => {
-    const el = posterAreaRef.current
-    if (!el) return
-    const update = () => {
-      const availH = el.clientHeight - 80   // subtract padding + zoom slider space
-      const availW = el.clientWidth  - 32   // subtract horizontal padding
-      const scaleH = availH / POSTER_H
-      const scaleW = availW / POSTER_W
-      setPreviewScale(Math.min(scaleH, scaleW, 1))  // never scale up, only down
-    }
-    update()
-    const ro = new ResizeObserver(update)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
 
   // ── drag ────────────────────────────────────────────────────────────────────
   const onMouseDown = useCallback((e: React.MouseEvent) => {
@@ -416,7 +392,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
     const reader = new FileReader()
     reader.onload = ev => {
       setImgSrc(ev.target?.result as string)
-      // Reset position & scale so image starts cover-fit without any offset
       setImgPos({x:0, y:0})
       setImgScale(1)
     }
@@ -433,22 +408,16 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
       canvas.width = POSTER_W*SCALE; canvas.height = POSTER_H*SCALE
       const ctx = canvas.getContext('2d')!
       ctx.scale(SCALE, SCALE)
-      const W=POSTER_W, H=POSTER_H, PH=PHOTO_H, IH=INFO_H
+      const W=POSTER_W, H=POSTER_H, PH=PHOTO_H
 
-      // background
       ctx.fillStyle = activeBg; ctx.fillRect(0,0,W,H)
 
-      // photo zone
       ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,PH); ctx.clip()
       if (imgSrc) {
         const img = await new Promise<HTMLImageElement>((res,rej) => {
           const i=new Image(); i.crossOrigin='anonymous'
           i.onload=()=>res(i); i.onerror=rej; i.src=imgSrc
         })
-        // contain-fit: scale image so it fits entirely within W×PH, centered.
-        // CSS preview uses transformOrigin:center + translate(px,py) scale(s):
-        //   scale from zone center first, then translate by (px,py) in screen coords.
-        // Canvas must match: imgPos is direct screen offset, independent of scale.
         const iw=img.naturalWidth, ih=img.naturalHeight
         const containScale = Math.min(W/iw, PH/ih)
         const containW = iw*containScale, containH = ih*containScale
@@ -460,28 +429,23 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
       } else {
         ctx.fillStyle='#d6d3d1'; ctx.fillRect(0,0,W,PH)
       }
-      // dots on photo
       if (dotOn && dotCoverage==='photo') {
         drawDotsCanvas(ctx, dotShape, dotCustomChar, dotFill, dotOpacity, dotSize, dotDensity, dotArrangement, dotSeed, W, PH)
       }
-      // border text (3 sides: top, left, right)
       if (borderOn) {
         drawBorderText(ctx, BORDER_TEXT, enTc, enFont.value, W, PH)
       }
       ctx.restore()
 
-      // dots full coverage
       if (dotOn && dotCoverage==='full') {
         ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip()
         drawDotsCanvas(ctx, dotShape, dotCustomChar, dotFill, dotOpacity, dotSize, dotDensity, dotArrangement, dotSeed, W, H)
         ctx.restore()
       }
 
-      // divider
       ctx.fillStyle = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.25)'
       ctx.fillRect(14,PH,W-28,0.5)
 
-      // info zone (no clip height limit — let content flow)
       ctx.save(); ctx.beginPath(); ctx.rect(0,PH,W,H-PH); ctx.clip()
 
       const tagBg     = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.22)'
@@ -489,7 +453,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
       const timeBg    = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.09)'  : 'rgba(255,255,255,0.18)'
 
       let cy = PH+12
-      // SEED COURSE tag
       const tagText = 'SEED COURSE'
       ctx.font=`700 7px ${enFont.value}`
       const tagW = ctx.measureText(tagText).width+14
@@ -498,7 +461,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
       ctx.fillStyle=enTc; ctx.textAlign='left'; ctx.fillText(tagText,21,cy+9.5)
       cy+=18
 
-      // title
       const maxTitleW = W-28; let titleSize=17
       ctx.font=`${titleWeight} ${titleSize}px ${zhFont.value}`
       const titleStr = course.title||'課程名稱'
@@ -507,11 +469,9 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
       }
       const titleLines = wrapCanvasText(ctx, titleStr, maxTitleW)
       ctx.fillStyle=tc
-      // max 3 lines
       titleLines.slice(0,3).forEach((line,i) => { ctx.fillText(line,14,cy+titleSize+i*titleSize*1.3) })
       cy += titleSize*1.3*Math.min(titleLines.length,3)+6
 
-      // time badge — uses enTc
       const hasTime = course.timeStart||course.timeEnd||course.date
       if (hasTime) {
         const timeParts = [
@@ -526,7 +486,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
         ctx.fillStyle=enTc; ctx.fillText(timeParts,19,cy+11)
         cy+=20
       }
-      // location with icon
       if (course.location) {
         ctx.save(); ctx.globalAlpha=0.82
         drawIcon(ctx, 'place', 14+5, cy+9, 11, iconColor)
@@ -536,7 +495,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
         locLines.forEach((line,i) => { ctx.fillText(line,28,cy+10+i*13) })
         cy+=13*locLines.length+2; ctx.globalAlpha=1
       }
-      // instructor with icon
       if (course.instructor) {
         ctx.save(); ctx.globalAlpha=0.62
         drawIcon(ctx, 'person', 14+5, cy+9, 11, iconColor)
@@ -558,6 +516,10 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
   const timeBg    = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.09)'  : 'rgba(255,255,255,0.18)'
   const divider   = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.15)'  : 'rgba(255,255,255,0.25)'
 
+  // Scaled poster dimensions (for placeholder div that reserves space)
+  const scaledW = POSTER_W * previewScale
+  const scaledH = POSTER_H * previewScale
+
   return (
     <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm">
       <div
@@ -571,175 +533,170 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
         </button>
 
         {/* ── LEFT: poster preview + upload + export ── */}
-        <div className="md:w-[380px] flex-shrink-0 flex flex-col bg-stone-100 overflow-hidden">
-          {/* poster area — fills space, centers poster using dynamic scale */}
-          <div ref={posterAreaRef} className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-hidden">
-            <div className="flex flex-col items-center gap-3">
-            {/* scale wrapper: keeps poster aspect ratio but fits within panel */}
-            <div style={{
-              width: `${POSTER_W * previewScale}px`,
-              height: `${POSTER_H * previewScale}px`,
-              flexShrink: 0,
-            }}>
-            {/* poster — always 210×297 internally, scaled visually */}
-            <div
-              className="relative rounded-sm select-none overflow-hidden"
-              style={{
-                width:`${POSTER_W}px`, height:`${POSTER_H}px`, backgroundColor: activeBg,
-                transform: `scale(${previewScale})`,
-                transformOrigin: 'top left',
-              }}
-            >
-              {/* UPPER: photo zone */}
+        <div ref={posterAreaRef} className="md:w-[380px] flex-shrink-0 flex flex-col bg-stone-100 overflow-hidden">
+
+          {/* poster area — flex-1, centres the scaled poster, no scroll */}
+          <div className="flex-1 flex flex-col items-center justify-center min-h-0 px-4 pt-4 pb-2">
+
+            {/* Placeholder div holds the scaled size so layout is stable */}
+            <div style={{ width: scaledW, height: scaledH, position: 'relative', flexShrink: 0 }}>
+              {/* Actual poster at full 210×297, scaled down via transform */}
               <div
-                className="absolute left-0 right-0 top-0 overflow-hidden"
-                style={{ height:`${PHOTO_H}px`, cursor: imgSrc?(isDragging?'grabbing':'grab'):'default', zIndex:1 }}
-                onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
-                onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+                className="absolute top-0 left-0 origin-top-left"
+                style={{ transform: `scale(${previewScale})`, width: POSTER_W, height: POSTER_H }}
               >
-                {imgSrc ? (
-                  // Preview uses object-fit:contain so the full image is visible.
-                  // User drags/zooms to set crop area; canvas export uses cover-fit math.
-                  <div style={{ position:'absolute', inset:0, overflow:'hidden' }}>
-                    <img
-                      src={imgSrc} alt="" draggable={false}
-                      style={{
-                        position:'absolute',
-                        width:'100%',
-                        height:'100%',
-                        objectFit:'contain',
-                        transform:`translate(${imgPos.x}px, ${imgPos.y}px) scale(${imgScale})`,
-                        transformOrigin:'center center',
-                        pointerEvents:'none', userSelect:'none', zIndex:0,
-                      }}
-                    />
+                {/* poster — fixed A4 proportions */}
+                <div
+                  className="relative rounded-sm select-none overflow-hidden"
+                  style={{ width:`${POSTER_W}px`, height:`${POSTER_H}px`, backgroundColor: activeBg }}
+                >
+                  {/* UPPER: photo zone */}
+                  <div
+                    className="absolute left-0 right-0 top-0 overflow-hidden"
+                    style={{ height:`${PHOTO_H}px`, cursor: imgSrc?(isDragging?'grabbing':'grab'):'default', zIndex:1 }}
+                    onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
+                    onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+                  >
+                    {imgSrc ? (
+                      <div style={{ position:'absolute', inset:0, overflow:'hidden' }}>
+                        <img
+                          src={imgSrc} alt="" draggable={false}
+                          style={{
+                            position:'absolute',
+                            width:'100%',
+                            height:'100%',
+                            objectFit:'contain',
+                            transform:`translate(${imgPos.x}px, ${imgPos.y}px) scale(${imgScale})`,
+                            transformOrigin:'center center',
+                            pointerEvents:'none', userSelect:'none', zIndex:0,
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center bg-stone-200" style={{zIndex:0}}>
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" />
+                        </svg>
+                      </div>
+                    )}
+
+                    {/* dots on photo */}
+                    {dotOn && dotCoverage==='photo' && (
+                      <DotPatternSvg shape={dotShape} customChar={dotCustomChar} color={dotFill}
+                        opacity={dotOpacity} size={dotSize} density={dotDensity}
+                        coverage="photo" arrangement={dotArrangement} seed={dotSeed}
+                        totalHeight={POSTER_H} photoHeight={PHOTO_H} posterWidth={POSTER_W} />
+                    )}
+
+                    {/* border text: U-shaped path */}
+                    {borderOn && (
+                      <svg viewBox={`0 0 ${POSTER_W} ${PHOTO_H}`} xmlns="http://www.w3.org/2000/svg"
+                        style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:3 }}>
+                        <defs>
+                          <path id="border-u-path"
+                            d={`M 8,${PHOTO_H} L 8,16 Q 8,8 16,8 L ${POSTER_W-16},8 Q ${POSTER_W-8},8 ${POSTER_W-8},16 L ${POSTER_W-8},${PHOTO_H}`} />
+                        </defs>
+                        <text fontSize={5.5} letterSpacing={3} fill={enTc} opacity={0.42} fontFamily={enFont.value} dominantBaseline="middle">
+                          <textPath href="#border-u-path" startOffset="0">
+                            {BORDER_TEXT.repeat(20)}
+                          </textPath>
+                        </text>
+                      </svg>
+                    )}
                   </div>
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center bg-stone-200" style={{zIndex:0}}>
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" />
-                    </svg>
-                  </div>
-                )}
 
-                {/* dots on photo */}
-                {dotOn && dotCoverage==='photo' && (
-                  <DotPatternSvg shape={dotShape} customChar={dotCustomChar} color={dotFill}
-                    opacity={dotOpacity} size={dotSize} density={dotDensity}
-                    coverage="photo" arrangement={dotArrangement} seed={dotSeed}
-                    totalHeight={POSTER_H} photoHeight={PHOTO_H} posterWidth={POSTER_W} />
-                )}
-
-                {/* border text: U-shaped continuous path with rounded corners, left-bottom → left-top → right-top → right-bottom */}
-                {borderOn && (
-                  <svg viewBox={`0 0 ${POSTER_W} ${PHOTO_H}`} xmlns="http://www.w3.org/2000/svg"
-                    style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:3 }}>
-                    <defs>
-                      {/* U path with r=8 rounded corners at top-left and top-right */}
-                      <path id="border-u-path"
-                        d={`M 8,${PHOTO_H} L 8,16 Q 8,8 16,8 L ${POSTER_W-16},8 Q ${POSTER_W-8},8 ${POSTER_W-8},16 L ${POSTER_W-8},${PHOTO_H}`} />
-                    </defs>
-                    <text fontSize={5.5} letterSpacing={3} fill={enTc} opacity={0.42} fontFamily={enFont.value} dominantBaseline="middle">
-                      <textPath href="#border-u-path" startOffset="0">
-                        {BORDER_TEXT.repeat(20)}
-                      </textPath>
-                    </text>
-                  </svg>
-                )}
-              </div>
-
-              {/* dots full */}
-              {dotOn && dotCoverage==='full' && (
-                <div className="absolute inset-0 overflow-hidden" style={{zIndex:2,pointerEvents:'none'}}>
-                  <DotPatternSvg shape={dotShape} customChar={dotCustomChar} color={dotFill}
-                    opacity={dotOpacity} size={dotSize} density={dotDensity}
-                    coverage="full" arrangement={dotArrangement} seed={dotSeed}
-                    totalHeight={POSTER_H} photoHeight={PHOTO_H} posterWidth={POSTER_W} />
-                </div>
-              )}
-
-              {/* divider — sits at bottom of photo zone */}
-              <div style={{ position:'absolute', left:'14px', right:'14px', top:`${PHOTO_H}px`, height:'0.5px', background:divider, zIndex:4 }} />
-
-              {/* LOWER: info zone — absolute, fills from photo bottom to poster bottom */}
-              <div className="absolute left-0 right-0 bottom-0 flex flex-col"
-                style={{ top:`${PHOTO_H}px`, padding:'12px 14px 12px', overflow:'hidden', zIndex:3 }}>
-                {/* SEED COURSE tag */}
-                <div style={{
-                  display:'inline-flex', alignItems:'center', marginBottom:'6px', width:'fit-content',
-                  borderRadius:'20px', padding:'2px 7px',
-                  background:tagBg, border:`0.5px solid ${tagBorder}`, color:enTc,
-                  fontFamily:enFont.value, fontSize:'7px', letterSpacing:'0.16em', textTransform:'uppercase',
-                  flexShrink:0,
-                }}>SEED COURSE</div>
-
-                {/* title — fixed 17px matches canvas export exactly */}
-                <div style={{
-                  color:tc, fontWeight:titleWeight, lineHeight:1.3, marginBottom:'5px', fontFamily:zhFont.value,
-                  flexShrink:0, fontSize:'17px',
-                  overflow:'hidden', display:'-webkit-box', WebkitLineClamp:3, WebkitBoxOrient:'vertical',
-                }}>
-                  {course.title||'課程名稱'}
-                </div>
-
-                {/* time badge — uses enTc */}
-                {(course.timeStart||course.timeEnd||course.date) && (
-                  <div style={{
-                    display:'inline-flex', alignItems:'center', gap:'3px', marginBottom:'4px', width:'fit-content',
-                    borderRadius:'4px', padding:'2px 5px',
-                    background:timeBg, fontFamily:enFont.value, fontWeight:enWeight, fontSize:'9px', color:enTc, letterSpacing:'0.04em',
-                    flexShrink:0,
-                  }}>
-                    {course.date && <span>{course.date}</span>}
-                    {course.date&&(course.timeStart||course.timeEnd) && <span style={{opacity:0.5,margin:'0 2px'}}>·</span>}
-                    {course.timeStart && <span>{course.timeStart}</span>}
-                    {course.timeEnd && <span> – {course.timeEnd}</span>}
-                  </div>
-                )}
-
-                {/* location with icon */}
-                {course.location && (
-                  <div style={{ display:'flex', alignItems:'flex-start', gap:'4px', marginBottom:'4px', flexShrink:0, overflow:'hidden' }}>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill={iconColor} stroke="none" aria-hidden="true" style={{flexShrink:0,marginTop:'1px',opacity:0.82}}>
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                    </svg>
-                    <div style={{
-                      color:tc, fontFamily:zhFont.value, fontSize:'9px', opacity:0.82, lineHeight:1.4,
-                      overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical',
-                    }}>
-                      {course.location}
+                  {/* dots full */}
+                  {dotOn && dotCoverage==='full' && (
+                    <div className="absolute inset-0 overflow-hidden" style={{zIndex:2,pointerEvents:'none'}}>
+                      <DotPatternSvg shape={dotShape} customChar={dotCustomChar} color={dotFill}
+                        opacity={dotOpacity} size={dotSize} density={dotDensity}
+                        coverage="full" arrangement={dotArrangement} seed={dotSeed}
+                        totalHeight={POSTER_H} photoHeight={PHOTO_H} posterWidth={POSTER_W} />
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* instructor with icon — marginBottom ensures breathing room from poster edge */}
-                {course.instructor && (
-                  <div style={{ display:'flex', alignItems:'center', gap:'4px', marginBottom:'4px', flexShrink:0, overflow:'hidden' }}>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill={iconColor} stroke="none" aria-hidden="true" style={{flexShrink:0,opacity:0.62}}>
-                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                    </svg>
+                  {/* divider */}
+                  <div style={{ position:'absolute', left:'14px', right:'14px', top:`${PHOTO_H}px`, height:'0.5px', background:divider, zIndex:4 }} />
+
+                  {/* LOWER: info zone */}
+                  <div className="absolute left-0 right-0 bottom-0 flex flex-col"
+                    style={{ top:`${PHOTO_H}px`, padding:'12px 14px 12px', overflow:'hidden', zIndex:3 }}>
+                    {/* SEED COURSE tag */}
                     <div style={{
-                      color:tc, fontFamily:zhFont.value, fontSize:'9px', opacity:0.62,
-                      whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
+                      display:'inline-flex', alignItems:'center', marginBottom:'6px', width:'fit-content',
+                      borderRadius:'20px', padding:'2px 7px',
+                      background:tagBg, border:`0.5px solid ${tagBorder}`, color:enTc,
+                      fontFamily:enFont.value, fontSize:'7px', letterSpacing:'0.16em', textTransform:'uppercase',
+                      flexShrink:0,
+                    }}>SEED COURSE</div>
+
+                    {/* title */}
+                    <div style={{
+                      color:tc, fontWeight:titleWeight, lineHeight:1.3, marginBottom:'5px', fontFamily:zhFont.value,
+                      flexShrink:0, fontSize:'17px',
+                      overflow:'hidden', display:'-webkit-box', WebkitLineClamp:3, WebkitBoxOrient:'vertical',
                     }}>
-                      {course.instructor}
+                      {course.title||'課程名稱'}
                     </div>
+
+                    {/* time badge */}
+                    {(course.timeStart||course.timeEnd||course.date) && (
+                      <div style={{
+                        display:'inline-flex', alignItems:'center', gap:'3px', marginBottom:'4px', width:'fit-content',
+                        borderRadius:'4px', padding:'2px 5px',
+                        background:timeBg, fontFamily:enFont.value, fontWeight:enWeight, fontSize:'9px', color:enTc, letterSpacing:'0.04em',
+                        flexShrink:0,
+                      }}>
+                        {course.date && <span>{course.date}</span>}
+                        {course.date&&(course.timeStart||course.timeEnd) && <span style={{opacity:0.5,margin:'0 2px'}}>·</span>}
+                        {course.timeStart && <span>{course.timeStart}</span>}
+                        {course.timeEnd && <span> – {course.timeEnd}</span>}
+                      </div>
+                    )}
+
+                    {/* location */}
+                    {course.location && (
+                      <div style={{ display:'flex', alignItems:'flex-start', gap:'4px', marginBottom:'4px', flexShrink:0, overflow:'hidden' }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill={iconColor} stroke="none" aria-hidden="true" style={{flexShrink:0,marginTop:'1px',opacity:0.82}}>
+                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                        </svg>
+                        <div style={{
+                          color:tc, fontFamily:zhFont.value, fontSize:'9px', opacity:0.82, lineHeight:1.4,
+                          overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical',
+                        }}>
+                          {course.location}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* instructor */}
+                    {course.instructor && (
+                      <div style={{ display:'flex', alignItems:'center', gap:'4px', marginBottom:'4px', flexShrink:0, overflow:'hidden' }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill={iconColor} stroke="none" aria-hidden="true" style={{flexShrink:0,opacity:0.62}}>
+                          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </svg>
+                        <div style={{
+                          color:tc, fontFamily:zhFont.value, fontSize:'9px', opacity:0.62,
+                          whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
+                        }}>
+                          {course.instructor}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>{/* end info zone */}
-            </div>{/* end poster div */}
-            </div>{/* end scale wrapper */}
+                </div>
+              </div>{/* end transform wrapper */}
+            </div>{/* end placeholder */}
 
             {/* zoom slider — width matches scaled poster */}
-            <div style={{ width:`${POSTER_W * previewScale}px` }} className="flex items-center gap-2">
+            <div style={{ width: scaledW }} className="flex items-center gap-2 mt-2 flex-shrink-0">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-stone-400 flex-shrink-0"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35M8 11h6" /></svg>
               <input type="range" min="0.5" max="3" step="0.05" value={imgScale} onChange={e => setImgScale(parseFloat(e.target.value))} className="flex-1 accent-orange-500" />
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-stone-400 flex-shrink-0"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35M11 8v6M8 11h6" /></svg>
             </div>
-            </div>{/* end inner flex col */}
           </div>{/* end poster area */}
 
-          {/* upload + export */}
+          {/* upload + export — anchored to bottom */}
           <div className="flex-shrink-0 bg-white border-t border-stone-200 px-4 py-3 space-y-2">
             <button onClick={() => fileRef.current?.click()}
               className="w-full flex items-center justify-center gap-2 border border-dashed border-stone-300 rounded-xl py-2.5 text-sm text-stone-500 hover:border-orange-400 hover:text-orange-500 transition-colors">
@@ -770,7 +727,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                     height:'28px', background:s.bg,
                     outline: (!customBg&&scheme.id===s.id) ? '2px solid #f97316' : '2px solid transparent',
                     outlineOffset:'2px',
-                    // white needs a border to be visible against white panel background
                     boxShadow: s.id==='white' ? 'inset 0 0 0 1px rgba(0,0,0,0.15)' : 'none',
                   }} />
               ))}
@@ -794,7 +750,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
           <section>
             <p className="text-[10px] font-medium text-stone-400 tracking-widest uppercase mb-2">裝飾點</p>
             <div className="space-y-3">
-              {/* shape */}
               <div className="flex gap-1">
                 {DOT_SHAPES.map(d => (
                   <button key={d.id} onClick={() => setDotShape(d.id)}
@@ -810,7 +765,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
               </div>
 
               {dotShape !== 'none' && (<>
-                {/* custom char input */}
                 {dotShape === 'custom' && (
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] text-stone-400 flex-shrink-0">自訂文字</span>
@@ -820,7 +774,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                   </div>
                 )}
 
-                {/* coverage */}
                 <div>
                   <p className="text-[10px] text-stone-400 mb-1">放置位置</p>
                   <div className="flex gap-1.5">
@@ -837,7 +790,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                   </div>
                 </div>
 
-                {/* arrangement */}
                 <div>
                   <p className="text-[10px] text-stone-400 mb-1">排列方式</p>
                   <div className="flex gap-1.5">
@@ -863,7 +815,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                   </div>
                 </div>
 
-                {/* dot color */}
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-stone-400 flex-shrink-0">裝飾點顏色</span>
                   <label className="relative w-5 h-5 rounded border border-stone-200 overflow-hidden cursor-pointer flex-shrink-0">
@@ -877,7 +828,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                   )}
                 </div>
 
-                {/* opacity */}
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-stone-400 flex-shrink-0 w-8">透明</span>
                   <input type="range" min="5" max="100" step="1" value={dotOpacity}
@@ -885,7 +835,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                   <span className="text-[10px] text-stone-400 w-8 text-right">{dotOpacity}%</span>
                 </div>
 
-                {/* size */}
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-stone-400 flex-shrink-0 w-8">大小</span>
                   <input type="range" min="2" max="24" step="0.5" value={dotSize}
@@ -893,7 +842,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                   <span className="text-[10px] text-stone-400 w-8 text-right">{dotSize}px</span>
                 </div>
 
-                {/* density */}
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-stone-400 flex-shrink-0 w-8">密度</span>
                   <input type="range" min="10" max="90" step="1" value={dotDensity}
@@ -988,7 +936,6 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                 </button>
               ))}
             </div>
-            {/* EN color picker — controls ALL English text (time badge + border text) */}
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-stone-400 flex-shrink-0">字體顏色</span>
               <label className="relative w-5 h-5 rounded border border-stone-200 overflow-hidden cursor-pointer flex-shrink-0">
