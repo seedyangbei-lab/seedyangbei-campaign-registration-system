@@ -347,6 +347,8 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
 
   const [isExporting, setIsExporting] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const posterAreaRef = useRef<HTMLDivElement>(null)
+  const [previewScale, setPreviewScale] = useState(1)
 
   const activeBg = customBg || scheme.bg
   const tc       = textColorOverride || textCol(activeBg)
@@ -365,6 +367,25 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
   useGoogleFont(enFont.gf)
   ZH_FONTS.forEach(f => useGoogleFont(f.gf))
   EN_FONTS.forEach(f => useGoogleFont(f.gf))
+
+  // ── dynamic preview scale ──────────────────────────────────────────────────
+  // Measures the poster area container and scales the poster to fit inside it.
+  // This never affects canvas export — only the visual preview.
+  useEffect(() => {
+    const el = posterAreaRef.current
+    if (!el) return
+    const update = () => {
+      const availH = el.clientHeight - 80   // subtract padding + zoom slider space
+      const availW = el.clientWidth  - 32   // subtract horizontal padding
+      const scaleH = availH / POSTER_H
+      const scaleW = availW / POSTER_W
+      setPreviewScale(Math.min(scaleH, scaleW, 1))  // never scale up, only down
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   // ── drag ────────────────────────────────────────────────────────────────────
   const onMouseDown = useCallback((e: React.MouseEvent) => {
@@ -551,13 +572,23 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
 
         {/* ── LEFT: poster preview + upload + export ── */}
         <div className="md:w-[380px] flex-shrink-0 flex flex-col bg-stone-100 overflow-hidden">
-          {/* poster area — centred; scrollable if poster taller than panel */}
-          <div className="flex-1 flex flex-col items-center min-h-0 overflow-y-auto">
-            <div className="flex flex-col items-center justify-center min-h-full py-4 px-4 gap-3">
-            {/* poster — fixed A4 proportions: 210×297, same ratio as canvas output */}
+          {/* poster area — fills space, centers poster using dynamic scale */}
+          <div ref={posterAreaRef} className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-hidden">
+            <div className="flex flex-col items-center gap-3">
+            {/* scale wrapper: keeps poster aspect ratio but fits within panel */}
+            <div style={{
+              width: `${POSTER_W * previewScale}px`,
+              height: `${POSTER_H * previewScale}px`,
+              flexShrink: 0,
+            }}>
+            {/* poster — always 210×297 internally, scaled visually */}
             <div
-              className="relative rounded-sm select-none flex-shrink-0 overflow-hidden"
-              style={{ width:`${POSTER_W}px`, height:`${POSTER_H}px`, backgroundColor: activeBg }}
+              className="relative rounded-sm select-none overflow-hidden"
+              style={{
+                width:`${POSTER_W}px`, height:`${POSTER_H}px`, backgroundColor: activeBg,
+                transform: `scale(${previewScale})`,
+                transformOrigin: 'top left',
+              }}
             >
               {/* UPPER: photo zone */}
               <div
@@ -695,17 +726,18 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                     </div>
                   </div>
                 )}
-              </div>
-            </div>
+              </div>{/* end info zone */}
+            </div>{/* end poster div */}
+            </div>{/* end scale wrapper */}
 
-            {/* zoom slider */}
-            <div className="w-[210px] flex items-center gap-2">
+            {/* zoom slider — width matches scaled poster */}
+            <div style={{ width:`${POSTER_W * previewScale}px` }} className="flex items-center gap-2">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-stone-400 flex-shrink-0"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35M8 11h6" /></svg>
               <input type="range" min="0.5" max="3" step="0.05" value={imgScale} onChange={e => setImgScale(parseFloat(e.target.value))} className="flex-1 accent-orange-500" />
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-stone-400 flex-shrink-0"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35M11 8v6M8 11h6" /></svg>
             </div>
-          </div>{/* end inner centering div */}
-          </div>{/* end poster area scrollable */}
+            </div>{/* end inner flex col */}
+          </div>{/* end poster area */}
 
           {/* upload + export */}
           <div className="flex-shrink-0 bg-white border-t border-stone-200 px-4 py-3 space-y-2">
