@@ -217,10 +217,9 @@ function drawOneDot(ctx: CanvasRenderingContext2D, shape: DotShape, customChar: 
 }
 
 function drawBorderText(ctx: CanvasRenderingContext2D, text: string, color: string, fontFamily: string, W: number, H: number) {
-  // U-shaped path: left-bottom → left-top → right-top → right-bottom
-  // Canvas doesn't have textPath, so we simulate it by drawing character-by-character
-  // along the three segments of the U.
-  const fs = 5.5, lsp = 3.5, margin = 8
+  // U-shaped path with rounded corners (r=8):
+  // left-bottom → up left side → arc top-left → right top → arc top-right → down right side → right-bottom
+  const fs = 5.5, lsp = 3.5, margin = 8, r = 8
   ctx.save()
   ctx.globalAlpha = 0.42
   ctx.fillStyle = color
@@ -228,43 +227,61 @@ function drawBorderText(ctx: CanvasRenderingContext2D, text: string, color: stri
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
 
-  const rep = text.repeat(40)
+  const charW = fs * 0.6 + lsp
+  const rep = text.repeat(50)
   const chars = rep.split('')
 
-  // Measure character advance
-  const charW = fs * 0.6 + lsp  // approximate char width + letter spacing
+  // Path segments (lengths):
+  // A: left straight,  from (margin, H-margin) going UP to (margin, margin+r)
+  // B: top-left arc,   quarter circle r=r, from left→top, arc length = r*π/2
+  // C: top straight,   from (margin+r, margin) going RIGHT to (W-margin-r, margin)
+  // D: top-right arc,  quarter circle r=r, from top→right, arc length = r*π/2
+  // E: right straight, from (W-margin, margin+r) going DOWN to (W-margin, H-margin)
+  const arcLen = r * Math.PI / 2
+  const segA = H - margin - (margin + r)   // left straight
+  const segB = arcLen                       // top-left corner arc
+  const segC = W - 2*(margin + r)          // top straight
+  const segD = arcLen                       // top-right corner arc
+  const segE = H - margin - (margin + r)   // right straight
 
-  // Path segments:
-  // Seg A: left side, from bottom (W=margin, H-margin) going UP to (margin, margin) → length = H - 2*margin
-  // Seg B: top, from (margin, margin) going RIGHT to (W-margin, margin) → length = W - 2*margin
-  // Seg C: right side, from (W-margin, margin) going DOWN to (W-margin, H-margin) → length = H - 2*margin
-  const segA = H - 2*margin  // left side
-  const segB = W - 2*margin  // top
-  const segC = H - 2*margin  // right side
-  const totalLen = segA + segB + segC
+  const totalLen = segA + segB + segC + segD + segE
 
   let dist = 0
   for (const ch of chars) {
-    if (dist > totalLen) break
+    if (dist >= totalLen) break
     const d = dist + charW/2
 
     let x: number, y: number, angle: number
 
-    if (d <= segA) {
-      // Segment A: left side, bottom→top
+    if (d < segA) {
+      // Segment A: left side going UP
       x = margin
       y = (H - margin) - d
-      angle = -Math.PI/2  // text faces right (reading left-to-right upward)
-    } else if (d <= segA + segB) {
-      // Segment B: top, left→right
-      x = margin + (d - segA)
+      angle = -Math.PI/2
+    } else if (d < segA + segB) {
+      // Segment B: top-left arc — center at (margin+r, margin+r)
+      const t = (d - segA) / segB  // 0→1
+      const a = Math.PI + t * Math.PI/2  // goes from 180° (left) to 270° (top)
+      x = (margin + r) + r * Math.cos(a)
+      y = (margin + r) + r * Math.sin(a)
+      angle = a + Math.PI/2
+    } else if (d < segA + segB + segC) {
+      // Segment C: top going RIGHT
+      x = margin + r + (d - segA - segB)
       y = margin
       angle = 0
+    } else if (d < segA + segB + segC + segD) {
+      // Segment D: top-right arc — center at (W-margin-r, margin+r)
+      const t = (d - segA - segB - segC) / segD  // 0→1
+      const a = -Math.PI/2 + t * Math.PI/2  // goes from 270° (top) to 0° (right)
+      x = (W - margin - r) + r * Math.cos(a)
+      y = (margin + r) + r * Math.sin(a)
+      angle = a + Math.PI/2
     } else {
-      // Segment C: right side, top→bottom
+      // Segment E: right side going DOWN
       x = W - margin
-      y = margin + (d - segA - segB)
-      angle = Math.PI/2  // text faces left (reading downward)
+      y = margin + r + (d - segA - segB - segC - segD)
+      angle = Math.PI/2
     }
 
     ctx.save()
@@ -407,13 +424,14 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
           const i=new Image(); i.crossOrigin='anonymous'
           i.onload=()=>res(i); i.onerror=rej; i.src=imgSrc
         })
-        // cover-fit: scale image to fill W×PH, then apply user scale+pan
+        // contain-fit: scale image so it fits entirely within W×PH, centered
+        // then apply user scale (zoom) and pan. Same math as preview CSS.
         const iw=img.naturalWidth, ih=img.naturalHeight
-        const baseScale = Math.max(W/iw, PH/ih)
-        const coveredW = iw*baseScale, coveredH = ih*baseScale
-        const scaledW = coveredW*imgScale, scaledH = coveredH*imgScale
-        const scaleCx = (W - scaledW)/2, scaleCy = (PH - scaledH)/2
-        ctx.drawImage(img, scaleCx + imgPos.x, scaleCy + imgPos.y, scaledW, scaledH)
+        const baseScale = Math.min(W/iw, PH/ih)   // contain: fit inside
+        const containW = iw*baseScale, containH = ih*baseScale
+        const scaledW = containW*imgScale, scaledH = containH*imgScale
+        const cx = (W - scaledW)/2, cy2 = (PH - scaledH)/2
+        ctx.drawImage(img, cx + imgPos.x, cy2 + imgPos.y, scaledW, scaledH)
       } else {
         ctx.fillStyle='#d6d3d1'; ctx.fillRect(0,0,W,PH)
       }
@@ -438,8 +456,8 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
       ctx.fillStyle = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.25)'
       ctx.fillRect(14,PH,W-28,0.5)
 
-      // info zone (clipped)
-      ctx.save(); ctx.beginPath(); ctx.rect(0,PH,W,IH); ctx.clip()
+      // info zone (no clip height limit — let content flow)
+      ctx.save(); ctx.beginPath(); ctx.rect(0,PH,W,H-PH); ctx.clip()
 
       const tagBg     = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.22)'
       const tagBorder = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.20)'  : 'rgba(255,255,255,0.35)'
@@ -531,10 +549,10 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
         <div className="md:w-[380px] flex-shrink-0 flex flex-col bg-stone-100 overflow-hidden">
           {/* poster area */}
           <div className="flex-1 flex flex-col items-center justify-center py-4 px-4 gap-3 overflow-hidden min-h-0">
-            {/* poster — rendered at 210×297, centered */}
+            {/* poster — min height is A4, can grow if info zone has more content */}
             <div
-              className="relative rounded-sm select-none overflow-hidden flex-shrink-0"
-              style={{ width:`${POSTER_W}px`, height:`${POSTER_H}px`, backgroundColor: activeBg }}
+              className="relative rounded-sm select-none flex-shrink-0"
+              style={{ width:`${POSTER_W}px`, minHeight:`${POSTER_H}px`, backgroundColor: activeBg }}
             >
               {/* UPPER: photo zone */}
               <div
@@ -576,13 +594,14 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                     totalHeight={POSTER_H} photoHeight={PHOTO_H} posterWidth={POSTER_W} />
                 )}
 
-                {/* border text: U-shaped continuous path, left-bottom → left-top → right-top → right-bottom */}
+                {/* border text: U-shaped continuous path with rounded corners, left-bottom → left-top → right-top → right-bottom */}
                 {borderOn && (
                   <svg viewBox={`0 0 ${POSTER_W} ${PHOTO_H}`} xmlns="http://www.w3.org/2000/svg"
                     style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:3 }}>
                     <defs>
+                      {/* U path with r=8 rounded corners at top-left and top-right */}
                       <path id="border-u-path"
-                        d={`M 8,${PHOTO_H} L 8,8 L ${POSTER_W-8},8 L ${POSTER_W-8},${PHOTO_H}`} />
+                        d={`M 8,${PHOTO_H} L 8,16 Q 8,8 16,8 L ${POSTER_W-16},8 Q ${POSTER_W-8},8 ${POSTER_W-8},16 L ${POSTER_W-8},${PHOTO_H}`} />
                     </defs>
                     <text fontSize={5.5} letterSpacing={3} fill={enTc} opacity={0.42} fontFamily={enFont.value} dominantBaseline="middle">
                       <textPath href="#border-u-path" startOffset="0">
@@ -603,12 +622,12 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                 </div>
               )}
 
-              {/* divider */}
-              <div style={{ position:'absolute', left:'14px', right:'14px', top:`${PHOTO_H}px`, height:'0.5px', background:divider, zIndex:3 }} />
+              {/* divider — sits at bottom of photo zone */}
+              <div style={{ position:'absolute', left:'14px', right:'14px', top:`${PHOTO_H}px`, height:'0.5px', background:divider, zIndex:4 }} />
 
-              {/* LOWER: info zone — auto height, symmetric padding */}
-              <div className="absolute left-0 right-0 bottom-0 flex flex-col"
-                style={{ top:`${PHOTO_H}px`, minHeight:`${INFO_H}px`, padding:'14px 14px 14px', pointerEvents:'none', overflow:'hidden', zIndex:3 }}>
+              {/* LOWER: info zone — flows after photo zone, symmetric padding */}
+              <div className="flex flex-col"
+                style={{ marginTop:`${PHOTO_H}px`, padding:'14px 14px 14px', zIndex:3 }}>
                 {/* SEED COURSE tag */}
                 <div style={{
                   display:'inline-flex', alignItems:'center', marginBottom:'6px', width:'fit-content',
