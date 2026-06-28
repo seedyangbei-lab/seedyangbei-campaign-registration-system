@@ -424,14 +424,18 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
           const i=new Image(); i.crossOrigin='anonymous'
           i.onload=()=>res(i); i.onerror=rej; i.src=imgSrc
         })
-        // contain-fit: scale image so it fits entirely within W×PH, centered
-        // then apply user scale (zoom) and pan. Same math as preview CSS.
+        // contain-fit: scale image so it fits entirely within W×PH, centered.
+        // CSS preview uses transformOrigin:center + translate(px,py) scale(s):
+        //   scale from zone center first, then translate by (px,py) in screen coords.
+        // Canvas must match: imgPos is direct screen offset, independent of scale.
         const iw=img.naturalWidth, ih=img.naturalHeight
-        const baseScale = Math.min(W/iw, PH/ih)   // contain: fit inside
-        const containW = iw*baseScale, containH = ih*baseScale
+        const containScale = Math.min(W/iw, PH/ih)
+        const containW = iw*containScale, containH = ih*containScale
         const scaledW = containW*imgScale, scaledH = containH*imgScale
-        const cx = (W - scaledW)/2, cy2 = (PH - scaledH)/2
-        ctx.drawImage(img, cx + imgPos.x, cy2 + imgPos.y, scaledW, scaledH)
+        const zoneCx = W/2, zoneCy = PH/2
+        const drawX = zoneCx - scaledW/2 + imgPos.x
+        const drawY = zoneCy - scaledH/2 + imgPos.y
+        ctx.drawImage(img, drawX, drawY, scaledW, scaledH)
       } else {
         ctx.fillStyle='#d6d3d1'; ctx.fillRect(0,0,W,PH)
       }
@@ -547,8 +551,8 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
 
         {/* ── LEFT: poster preview + upload + export ── */}
         <div className="md:w-[380px] flex-shrink-0 flex flex-col bg-stone-100 overflow-hidden">
-          {/* poster area */}
-          <div className="flex-1 flex flex-col items-center justify-center py-4 px-4 gap-3 overflow-hidden min-h-0">
+          {/* poster area — scrollable so poster is never clipped */}
+          <div className="flex-1 flex flex-col items-center justify-start py-4 px-4 gap-3 overflow-y-auto min-h-0">
             {/* poster — min height is A4, can grow if info zone has more content */}
             <div
               className="relative rounded-sm select-none flex-shrink-0"
