@@ -338,9 +338,9 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
     const container = posterContainerRef.current
     if (!panel || !container) return
     const update = () => {
-      // measure the flex-1 container that holds poster + zoom slider
-      const availH = container.clientHeight - 56 // 40px zoom slider + 16px padding
-      const availW = container.clientWidth - 32
+      // panel height - bottom buttons (88px) - top padding (16px) - bottom padding (16px) - zoom slider (32px) - gap (8px)
+      const availH = el.clientHeight - 88 - 16 - 16 - 32 - 8
+      const availW = el.clientWidth - 32
       const scaleH = availH / POSTER_H
       const scaleW = availW / POSTER_W
       setPreviewScale(Math.min(scaleH, scaleW, 1))
@@ -454,16 +454,17 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
       const tagBorder = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.20)'  : 'rgba(255,255,255,0.35)'
       const timeBg    = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.09)'  : 'rgba(255,255,255,0.18)'
 
-      let cy = PH+12
+      // SEED COURSE tag — photo zone left-top (16,16)
       const tagText = 'SEED COURSE'
       ctx.font=`700 7px ${enFont.value}`
       const tagW = ctx.measureText(tagText).width+14
-      ctx.fillStyle=tagBg; roundRect(ctx,14,cy,tagW,14,7); ctx.fill()
-      ctx.strokeStyle=tagBorder; ctx.lineWidth=0.5; roundRect(ctx,14,cy,tagW,14,7); ctx.stroke()
-      ctx.fillStyle=enTc; ctx.textAlign='left'; ctx.fillText(tagText,21,cy+9.5)
-      cy+=18
+      ctx.fillStyle=tagBg; roundRect(ctx,16,16,tagW,14,7); ctx.fill()
+      ctx.strokeStyle=tagBorder; ctx.lineWidth=0.5; roundRect(ctx,16,16,tagW,14,7); ctx.stroke()
+      ctx.fillStyle=enTc; ctx.textAlign='left'; ctx.fillText(tagText,23,16+9.5)
 
-      const maxTitleW = W-28; let titleSize=17
+      // info zone starts at PH+16 (16px padding)
+      let cy = PH+16
+      const maxTitleW = W-32; let titleSize=17
       ctx.font=`${titleWeight} ${titleSize}px ${zhFont.value}`
       const titleStr = course.title||'課程名稱'
       while (titleSize>10 && ctx.measureText(titleStr).width>maxTitleW) {
@@ -552,6 +553,15 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                   className="relative rounded-sm select-none"
                   style={{ width:`${POSTER_W}px`, height:`${POSTER_H}px`, backgroundColor: activeBg, overflow:'visible' }}
                 >
+                  {/* SEED COURSE tag — photo zone left-top, 16px from edges */}
+                  <div style={{
+                    position:'absolute', top:'16px', left:'16px', zIndex:10,
+                    display:'inline-flex', alignItems:'center',
+                    borderRadius:'20px', padding:'2px 7px',
+                    background:tagBg, border:`0.5px solid ${tagBorder}`, color:enTc,
+                    fontFamily:enFont.value, fontSize:'7px', letterSpacing:'0.16em', textTransform:'uppercase',
+                  }}>SEED COURSE</div>
+
                   {/* UPPER: photo zone */}
                   <div
                     className="absolute left-0 right-0 top-0 overflow-hidden"
@@ -620,17 +630,9 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                   {/* divider */}
                   <div style={{ position:'absolute', left:'14px', right:'14px', top:`${PHOTO_H}px`, height:'0.5px', background:divider, zIndex:4 }} />
 
-                  {/* LOWER: info zone */}
+                  {/* LOWER: info zone — 16px padding all sides */}
                   <div className="absolute left-0 right-0 bottom-0 flex flex-col"
-                    style={{ top:`${PHOTO_H}px`, padding:'12px 14px 12px', overflow:'hidden', zIndex:3 }}>
-                    {/* SEED COURSE tag */}
-                    <div style={{
-                      display:'inline-flex', alignItems:'center', marginBottom:'6px', width:'fit-content',
-                      borderRadius:'20px', padding:'2px 7px',
-                      background:tagBg, border:`0.5px solid ${tagBorder}`, color:enTc,
-                      fontFamily:enFont.value, fontSize:'7px', letterSpacing:'0.16em', textTransform:'uppercase',
-                      flexShrink:0,
-                    }}>SEED COURSE</div>
+                    style={{ top:`${PHOTO_H}px`, padding:'16px', overflow:'hidden', zIndex:3 }}>
 
                     {/* title */}
                     <div style={{
