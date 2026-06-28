@@ -331,21 +331,23 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
   // ── preview scale: fit entire poster in left panel ────────────────────────
   const [previewScale, setPreviewScale] = useState(1)
   const posterAreaRef = useRef<HTMLDivElement>(null)
+  const posterContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const el = posterAreaRef.current
-    if (!el) return
+    const panel = posterAreaRef.current
+    const container = posterContainerRef.current
+    if (!panel || !container) return
     const update = () => {
-      // available area: panel height minus bottom buttons (~90px) minus padding (32px)
-      const availH = el.clientHeight - 90 - 32 - 40 // zoom slider ~40px
-      const availW = el.clientWidth - 32
+      // measure the flex-1 container that holds poster + zoom slider
+      const availH = container.clientHeight - 56 // 40px zoom slider + 16px padding
+      const availW = container.clientWidth - 32
       const scaleH = availH / POSTER_H
       const scaleW = availW / POSTER_W
       setPreviewScale(Math.min(scaleH, scaleW, 1))
     }
     update()
     const ro = new ResizeObserver(update)
-    ro.observe(el)
+    ro.observe(container)
     return () => ro.disconnect()
   }, [])
 
@@ -536,8 +538,8 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
         <div ref={posterAreaRef} className="md:w-[380px] flex-shrink-0 flex flex-col bg-stone-100 overflow-hidden">
 
           {/* poster area — flex-1, centres the scaled poster, no scroll */}
-          <div className="flex-1 flex flex-col items-center justify-center min-h-0 px-4 pt-4 pb-2">
-
+          <div ref={posterContainerRef} className="flex-1 flex flex-col items-center justify-center min-h-0 px-4 pt-4 pb-2">
+            
             {/* Placeholder div holds the scaled size so layout is stable */}
             <div style={{ width: scaledW, height: scaledH, position: 'relative', flexShrink: 0 }}>
               {/* Actual poster at full 210×297, scaled down via transform */}
