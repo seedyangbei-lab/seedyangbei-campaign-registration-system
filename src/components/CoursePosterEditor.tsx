@@ -217,34 +217,64 @@ function drawOneDot(ctx: CanvasRenderingContext2D, shape: DotShape, customChar: 
 }
 
 function drawBorderText(ctx: CanvasRenderingContext2D, text: string, color: string, fontFamily: string, W: number, H: number) {
-  const fs = 5.5, lsp = 3, margin = 8
-  ctx.save(); ctx.globalAlpha=0.42; ctx.fillStyle=color
-  ctx.font=`400 ${fs}px ${fontFamily}`; ctx.letterSpacing=`${lsp}px`
-  const rep = text.repeat(30)
-
-  // left: top→bottom along left edge (x=margin, from y=margin downward)
+  // U-shaped path: left-bottom → left-top → right-top → right-bottom
+  // Canvas doesn't have textPath, so we simulate it by drawing character-by-character
+  // along the three segments of the U.
+  const fs = 5.5, lsp = 3.5, margin = 8
   ctx.save()
-  ctx.beginPath(); ctx.rect(0, 0, margin+fs, H); ctx.clip()
-  ctx.translate(margin, margin); ctx.rotate(Math.PI/2)
-  ctx.textAlign='left'; ctx.textBaseline='top'
-  ctx.fillText(rep, 0, 0)
-  ctx.restore()
+  ctx.globalAlpha = 0.42
+  ctx.fillStyle = color
+  ctx.font = `400 ${fs}px ${fontFamily}`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
 
-  // right: top→bottom along right edge
-  ctx.save()
-  ctx.beginPath(); ctx.rect(W-margin-fs, 0, margin+fs, H); ctx.clip()
-  ctx.translate(W-margin, margin); ctx.rotate(Math.PI/2)
-  ctx.textAlign='left'; ctx.textBaseline='top'
-  ctx.fillText(rep, 0, 0)
-  ctx.restore()
+  const rep = text.repeat(40)
+  const chars = rep.split('')
 
-  // top: left→right, but only in the strip BETWEEN the two vertical borders
-  ctx.save()
-  ctx.beginPath(); ctx.rect(margin+fs+lsp, 0, W-(margin+fs+lsp)*2, margin+fs); ctx.clip()
-  ctx.textAlign='left'; ctx.textBaseline='top'
-  ctx.fillText(rep, margin+fs+lsp, margin)
-  ctx.restore()
+  // Measure character advance
+  const charW = fs * 0.6 + lsp  // approximate char width + letter spacing
 
+  // Path segments:
+  // Seg A: left side, from bottom (W=margin, H-margin) going UP to (margin, margin) → length = H - 2*margin
+  // Seg B: top, from (margin, margin) going RIGHT to (W-margin, margin) → length = W - 2*margin
+  // Seg C: right side, from (W-margin, margin) going DOWN to (W-margin, H-margin) → length = H - 2*margin
+  const segA = H - 2*margin  // left side
+  const segB = W - 2*margin  // top
+  const segC = H - 2*margin  // right side
+  const totalLen = segA + segB + segC
+
+  let dist = 0
+  for (const ch of chars) {
+    if (dist > totalLen) break
+    const d = dist + charW/2
+
+    let x: number, y: number, angle: number
+
+    if (d <= segA) {
+      // Segment A: left side, bottom→top
+      x = margin
+      y = (H - margin) - d
+      angle = -Math.PI/2  // text faces right (reading left-to-right upward)
+    } else if (d <= segA + segB) {
+      // Segment B: top, left→right
+      x = margin + (d - segA)
+      y = margin
+      angle = 0
+    } else {
+      // Segment C: right side, top→bottom
+      x = W - margin
+      y = margin + (d - segA - segB)
+      angle = Math.PI/2  // text faces left (reading downward)
+    }
+
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.rotate(angle)
+    ctx.fillText(ch, 0, 0)
+    ctx.restore()
+
+    dist += charW
+  }
   ctx.restore()
 }
 
@@ -514,7 +544,8 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                 onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
               >
                 {imgSrc ? (
-                  // Cover-fit + user pan/scale. Matches canvas export exactly.
+                  // Preview uses object-fit:contain so the full image is visible.
+                  // User drags/zooms to set crop area; canvas export uses cover-fit math.
                   <div style={{ position:'absolute', inset:0, overflow:'hidden' }}>
                     <img
                       src={imgSrc} alt="" draggable={false}
@@ -522,7 +553,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                         position:'absolute',
                         width:'100%',
                         height:'100%',
-                        objectFit:'cover',
+                        objectFit:'contain',
                         transform:`translate(${imgPos.x}px, ${imgPos.y}px) scale(${imgScale})`,
                         transformOrigin:'center center',
                         pointerEvents:'none', userSelect:'none', zIndex:0,
@@ -545,35 +576,18 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                     totalHeight={POSTER_H} photoHeight={PHOTO_H} posterWidth={POSTER_W} />
                 )}
 
-                {/* border text: left, right, top (clipped, no overlap at corners) */}
+                {/* border text: U-shaped continuous path, left-bottom → left-top → right-top → right-bottom */}
                 {borderOn && (
                   <svg viewBox={`0 0 ${POSTER_W} ${PHOTO_H}`} xmlns="http://www.w3.org/2000/svg"
                     style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:3 }}>
                     <defs>
-                      {/* left strip */}
-                      <clipPath id="cp-left"><rect x="0" y="0" width="14" height={PHOTO_H} /></clipPath>
-                      {/* right strip */}
-                      <clipPath id="cp-right"><rect x={POSTER_W-14} y="0" width="14" height={PHOTO_H} /></clipPath>
-                      {/* top strip between left+right borders */}
-                      <clipPath id="cp-top"><rect x="14" y="0" width={POSTER_W-28} height="14" /></clipPath>
+                      <path id="border-u-path"
+                        d={`M 8,${PHOTO_H} L 8,8 L ${POSTER_W-8},8 L ${POSTER_W-8},${PHOTO_H}`} />
                     </defs>
-                    {/* left: top→bottom */}
-                    <text fontSize={5.5} letterSpacing={3} fill={enTc} opacity={0.42} fontFamily={enFont.value}
-                      clipPath="url(#cp-left)"
-                      transform={`translate(8, 8) rotate(90)`} x={0} y={0}>
-                      {BORDER_TEXT.repeat(10)}
-                    </text>
-                    {/* right: top→bottom */}
-                    <text fontSize={5.5} letterSpacing={3} fill={enTc} opacity={0.42} fontFamily={enFont.value}
-                      clipPath="url(#cp-right)"
-                      transform={`translate(${POSTER_W-8}, 8) rotate(90)`} x={0} y={0}>
-                      {BORDER_TEXT.repeat(10)}
-                    </text>
-                    {/* top: left→right between borders */}
-                    <text fontSize={5.5} letterSpacing={3} fill={enTc} opacity={0.42} fontFamily={enFont.value}
-                      clipPath="url(#cp-top)"
-                      x={16} y={10}>
-                      {BORDER_TEXT.repeat(8)}
+                    <text fontSize={5.5} letterSpacing={3} fill={enTc} opacity={0.42} fontFamily={enFont.value} dominantBaseline="middle">
+                      <textPath href="#border-u-path" startOffset="0">
+                        {BORDER_TEXT.repeat(20)}
+                      </textPath>
                     </text>
                   </svg>
                 )}
@@ -592,9 +606,9 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
               {/* divider */}
               <div style={{ position:'absolute', left:'14px', right:'14px', top:`${PHOTO_H}px`, height:'0.5px', background:divider, zIndex:3 }} />
 
-              {/* LOWER: info zone */}
+              {/* LOWER: info zone — auto height, symmetric padding */}
               <div className="absolute left-0 right-0 bottom-0 flex flex-col"
-                style={{ top:`${PHOTO_H}px`, height:`${INFO_H}px`, padding:'14px 14px 10px', pointerEvents:'none', overflow:'hidden', zIndex:3 }}>
+                style={{ top:`${PHOTO_H}px`, minHeight:`${INFO_H}px`, padding:'14px 14px 14px', pointerEvents:'none', overflow:'hidden', zIndex:3 }}>
                 {/* SEED COURSE tag */}
                 <div style={{
                   display:'inline-flex', alignItems:'center', marginBottom:'6px', width:'fit-content',
