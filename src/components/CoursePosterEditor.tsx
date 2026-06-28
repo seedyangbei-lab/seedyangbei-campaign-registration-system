@@ -448,7 +448,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
       ctx.fillStyle = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.25)'
       ctx.fillRect(14,PH,W-28,0.5)
 
-      ctx.save(); ctx.beginPath(); ctx.rect(0,PH,W,H-PH); ctx.clip()
+      ctx.save()
 
       const tagBg     = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.22)'
       const tagBorder = lum(activeBg)>0.35 ? 'rgba(0,0,0,0.20)'  : 'rgba(255,255,255,0.35)'
@@ -540,17 +540,17 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
           {/* poster area — flex-1, centres the scaled poster, no scroll */}
           <div ref={posterContainerRef} className="flex-1 flex flex-col items-center justify-center min-h-0 px-4 pt-4 pb-2">
             
-            {/* Placeholder div holds the scaled size so layout is stable */}
-            <div style={{ width: scaledW, height: scaledH, position: 'relative', flexShrink: 0 }}>
+            {/* Placeholder div holds the scaled size so layout is stable; overflow:hidden clips poster to A4 boundary */}
+            <div style={{ width: scaledW, height: scaledH, position: 'relative', flexShrink: 0, overflow: 'hidden', borderRadius: '2px' }}>
               {/* Actual poster at full 210×297, scaled down via transform */}
               <div
                 className="absolute top-0 left-0 origin-top-left"
                 style={{ transform: `scale(${previewScale})`, width: POSTER_W, height: POSTER_H }}
               >
-                {/* poster — fixed A4 proportions */}
+                 {/* poster — overflow:visible so info zone isn't clipped; wrapper handles visual boundary */}
                 <div
-                  className="relative rounded-sm select-none overflow-hidden"
-                  style={{ width:`${POSTER_W}px`, height:`${POSTER_H}px`, backgroundColor: activeBg }}
+                  className="relative rounded-sm select-none"
+                  style={{ width:`${POSTER_W}px`, height:`${POSTER_H}px`, backgroundColor: activeBg, overflow:'visible' }}
                 >
                   {/* UPPER: photo zone */}
                   <div
