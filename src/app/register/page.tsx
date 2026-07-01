@@ -41,14 +41,6 @@ function RegisterForm() {
     console.log('[Register] ids:', ids)
     console.log('[Register] lineUserParam:', lineUserParam ? '有值' : '無')
 
-    if (ids.length === 0) {
-      setShouldRedirect(true)
-      setInitialized(true)
-      return
-    }
-
-    setCourseIds(ids)
-
     let user: any = null
     if (lineUserParam) {
       try {
@@ -62,6 +54,14 @@ function RegisterForm() {
         if (stored) user = JSON.parse(stored)
       } catch {}
     }
+
+    if (ids.length === 0) {
+      setShouldRedirect(true)
+      setInitialized(true)
+      return
+    }
+
+    setCourseIds(ids)
 
     if (user) {
       setLineUser(user)
