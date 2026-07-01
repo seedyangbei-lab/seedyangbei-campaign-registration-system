@@ -126,9 +126,10 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
         return
       }
     } catch {}
-    // 用 sessionStorage 暫存 courses，避免 LINE state encode 問題
+    // 課程 id 直接寫進回跳網址（不只靠 sessionStorage）—— LINE App 內建瀏覽器在授權跳轉時
+    // 常會清空或切換 sessionStorage，造成選課記錄遺失，這裡當作雙保險
     sessionStorage.setItem('pending_courses', ids)
-    const registerUrl = `${window.location.origin}/register`
+    const registerUrl = `${window.location.origin}/register?courses=${ids}`
     window.location.href = getLineLoginUrl(registerUrl)
   }
   
