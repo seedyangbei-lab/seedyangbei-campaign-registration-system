@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase' 
+import { logFunnelStep } from '@/lib/funnelLog'
 
 const AGE_GROUPS = ['18歲以下','18~25歲','26~35歲','36~45歲','46~55歲','56~65歲','65歲以上']
 const BUILDINGS = ['A棟','B棟','C棟','D棟']
@@ -55,13 +56,15 @@ function RegisterForm() {
       } catch {}
     }
 
-    if (ids.length === 0) {
+   if (ids.length === 0) {
+      logFunnelStep('register_guard_fail', undefined, { hadLineUserParam: !!lineUserParam, url: window.location.href })
       setShouldRedirect(true)
       setInitialized(true)
       return
     }
 
     setCourseIds(ids)
+    logFunnelStep('line_callback', ids.join(','), { hasLineUser: !!user })
 
     if (user) {
       setLineUser(user)
@@ -134,7 +137,8 @@ function RegisterForm() {
     if (!lineUser) { setError('請先用 LINE 帳號登入'); return }
     if (!validatePhone(form.phone)) { setError('手機號碼格式錯誤，請填寫 09 開頭共 10 碼'); return }
     setLoading(true); setError('')
-
+    logFunnelStep('register_submit', courseIds.join(','))
+    
     const roomNumber = isSocialHousing ? `${building} ${unitNumber}-${floor}F-${subUnit}` : '非社宅居民'
     const lineUserId = lineUser.lineUserId
 
@@ -170,8 +174,10 @@ function RegisterForm() {
         })
         if (regErr && regErr.code !== '23505') throw regErr
       }
+     logFunnelStep('register_success', courseIds.join(','))
       router.push('/register-success')
     } catch (err: any) {
+      logFunnelStep('register_error', courseIds.join(','), { message: err.message })
       setError(err.message || '報名失敗，請稍後再試')
     } finally { setLoading(false) }
   }
