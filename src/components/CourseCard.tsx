@@ -16,9 +16,9 @@ interface Course {
 const LINE_CHANNEL_ID = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2010077816'
 const LINE_CALLBACK_URL = process.env.NEXT_PUBLIC_LINE_CALLBACK_URL || 'https://yangbei-campaign.vercel.app/api/auth/line/callback'
 
-function getLineLoginUrl(returnUrl: string) {
+function getLineLoginUrl(courseIds: string) {
   const nonce = Math.random().toString(36).slice(2)
-  const statePayload = JSON.stringify({ url: returnUrl, nonce })
+  const statePayload = JSON.stringify({ courses: courseIds, nonce })
   sessionStorage.setItem('line_state_nonce', nonce)
   const params = new URLSearchParams({
     response_type: 'code',
@@ -130,10 +130,9 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
     } catch {}
     // 課程 id 直接寫進回跳網址（不只靠 sessionStorage）—— LINE App 內建瀏覽器在授權跳轉時
     // 常會清空或切換 sessionStorage，造成選課記錄遺失，這裡當作雙保險
-    sessionStorage.setItem('pending_courses', ids)
+   sessionStorage.setItem('pending_courses', ids)
     logFunnelStep('line_redirect', ids)
-    const registerUrl = `${window.location.origin}/register?courses=${ids}`
-    window.location.href = getLineLoginUrl(registerUrl)
+    window.location.href = getLineLoginUrl(ids)
   }
   
   const getLineUrl = (lineId?: string) => {
