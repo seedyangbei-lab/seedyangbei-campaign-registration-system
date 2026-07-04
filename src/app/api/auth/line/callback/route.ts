@@ -106,12 +106,16 @@ export async function GET(request: NextRequest) {
       email,
     }))
 
-   let redirectUrl = `${new URL(request.url).origin}/register`
+   const origin = new URL(request.url).origin
+   let redirectUrl = `${origin}/register`
     if (state) {
       try {
         const decoded = decodeURIComponent(state)
         const parsed = JSON.parse(decoded)
-        if (parsed.url && parsed.url.startsWith('http')) {
+        if (parsed.courses) {
+          redirectUrl = `${origin}/register?courses=${encodeURIComponent(parsed.courses)}`
+        } else if (parsed.url && parsed.url.startsWith('http')) {
+          // 相容舊格式（state 直接帶完整網址）
           redirectUrl = parsed.url
         }
       } catch {
