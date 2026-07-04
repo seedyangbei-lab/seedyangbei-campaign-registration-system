@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react' 
+import { logFunnelStep } from '@/lib/funnelLog'
 
 interface Category { id: string; name: string; color: string }
 interface Course {
@@ -118,6 +119,7 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
 
   const handleProceed = () => {
     const ids = selected.join(',')
+    logFunnelStep('select_course', ids)
     try {
       const stored = localStorage.getItem('line_user')
       if (stored) {
@@ -129,6 +131,7 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
     // 課程 id 直接寫進回跳網址（不只靠 sessionStorage）—— LINE App 內建瀏覽器在授權跳轉時
     // 常會清空或切換 sessionStorage，造成選課記錄遺失，這裡當作雙保險
     sessionStorage.setItem('pending_courses', ids)
+    logFunnelStep('line_redirect', ids)
     const registerUrl = `${window.location.origin}/register?courses=${ids}`
     window.location.href = getLineLoginUrl(registerUrl)
   }
