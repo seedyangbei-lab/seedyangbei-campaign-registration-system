@@ -53,6 +53,60 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/register?error=line_failed', request.url))
     }
 
+    // Step 2.5: 講師中台登入／邀請連結綁定分流（跟居民報名流程互不影響）
+    if (state) {
+      try {
+        const parsedState = JSON.parse(decodeURIComponent(state))
+        const origin = new URL(request.url).origin
+
+        if (parsedState.instructorClaim) {
+          const supabase = createServerClient()
+          const { data: matched } = await supabase
+            .from('instructors')
+            .select('id, claim_token_expires_at')
+            .eq('claim_token', parsedState.instructorClaim)
+            .maybeSingle()
+
+          if (!matched) {
+            return NextResponse.redirect(new URL('/instructor/claim?error=invalid', origin))
+          }
+          if (matched.claim_token_expires_at && new Date(matched.claim_token_expires_at) < new Date()) {
+            return NextResponse.redirect(new URL('/instructor/claim?error=expired', origin))
+          }
+
+          const { error: bindError } = await supabase
+            .from('instructors')
+            .update({ line_user_id: lineUserId, claim_token: null, claim_token_expires_at: null })
+            .eq('id', matched.id)
+
+          if (bindError) {
+            console.error('instructor claim bind error:', bindError)
+            return NextResponse.redirect(new URL('/instructor/claim?error=invalid', origin))
+          }
+
+          const userInfo = encodeURIComponent(JSON.stringify({ lineUserId, displayName, pictureUrl }))
+          return NextResponse.redirect(new URL(`/instructor?line_user=${userInfo}&claimed=1`, origin))
+        }
+
+        if (parsedState.instructorLogin) {
+          const supabase = createServerClient()
+          const { data: matched } = await supabase
+            .from('instructors')
+            .select('id')
+            .eq('line_user_id', lineUserId)
+            .maybeSingle()
+
+          const userInfo = encodeURIComponent(JSON.stringify({ lineUserId, displayName, pictureUrl }))
+          if (!matched) {
+            return NextResponse.redirect(new URL('/instructor?error=not_instructor', origin))
+          }
+          return NextResponse.redirect(new URL(`/instructor?line_user=${userInfo}`, origin))
+        }
+      } catch {
+        // state 不是講師相關 JSON，繼續走原本居民報名流程
+      }
+    }
+
     // Step 3: Parse email from id_token if available
     let email = ''
     if (tokenData.id_token) {
