@@ -43,6 +43,12 @@ export default function InstructorsPage() {
     }
   }
 
+  const handleUnbind = async (instructorId: string) => {
+    if (!confirm('確定要解除這位講師的中台綁定嗎？解除後他需要用新的邀請連結重新綁定。')) return
+    await supabase.from('instructors').update({ line_user_id: null }).eq('id', instructorId)
+    fetchInstructors()
+  }
+
   const fetchInstructors = async () => {
     const { data } = await supabase.from('instructors').select('*').order('created_at', { ascending: true })
     setInstructors(data || [])
@@ -164,7 +170,12 @@ export default function InstructorsPage() {
                   {expandedId === inst.id ? '收起' : '查看課程'}
                 </button>
                 {inst.line_user_id ? (
-                  <span className="text-xs px-2 py-1 rounded-lg bg-teal-50 text-teal-600 font-medium">已綁定中台</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs px-2 py-1 rounded-lg bg-teal-50 text-teal-600 font-medium">已綁定中台</span>
+                    <button onClick={() => handleUnbind(inst.id)} className="text-xs text-stone-400 hover:text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors">
+                      解除綁定
+                    </button>
+                  </div>
                 ) : (
                   <button
                     onClick={() => handleGenerateClaim(inst.id)}
