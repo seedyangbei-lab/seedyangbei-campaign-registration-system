@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase'
 interface Instructor {
   id: string; name: string; bio: string; avatar_url: string
   is_active: boolean; phone?: string; line_id?: string
+  line_user_id?: string | null
 }
 
 const emptyForm = { name: '', bio: '', avatar_url: '', phone: '', line_id: '' }
@@ -19,7 +20,28 @@ export default function InstructorsPage() {
   const [coursesByInstructor, setCoursesByInstructor] = useState<Record<string, any[]>>({})
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [pageLoading, setPageLoading] = useState(true)
+  const [claimLoadingId, setClaimLoadingId] = useState<string | null>(null)
+  const [claimUrl, setClaimUrl] = useState<string | null>(null)
+  const [claimError, setClaimError] = useState<string | null>(null)
   const supabase = createClient()
+
+  const handleGenerateClaim = async (instructorId: string) => {
+    setClaimLoadingId(instructorId); setClaimError(null)
+    try {
+      const res = await fetch('/api/instructor/generate-claim-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instructorId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'unknown')
+      setClaimUrl(data.claimUrl)
+    } catch (e) {
+      setClaimError('產生連結失敗，請稍後再試')
+    } finally {
+      setClaimLoadingId(null)
+    }
+  }
 
   const fetchInstructors = async () => {
     const { data } = await supabase.from('instructors').select('*').order('created_at', { ascending: true })
@@ -141,6 +163,17 @@ export default function InstructorsPage() {
                 <button onClick={() => loadCourses(inst.id)} className="text-xs bg-stone-100 hover:bg-stone-200 text-stone-600 px-3 py-1.5 rounded-lg transition-colors">
                   {expandedId === inst.id ? '收起' : '查看課程'}
                 </button>
+                {inst.line_user_id ? (
+                  <span className="text-xs px-2 py-1 rounded-lg bg-teal-50 text-teal-600 font-medium">已綁定中台</span>
+                ) : (
+                  <button
+                    onClick={() => handleGenerateClaim(inst.id)}
+                    disabled={claimLoadingId === inst.id}
+                    className="text-xs bg-stone-100 hover:bg-stone-200 disabled:opacity-50 text-stone-600 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    {claimLoadingId === inst.id ? '產生中...' : '產生邀請連結'}
+                  </button>
+                )}
                 <button onClick={() => openEdit(inst)} className="p-2 hover:bg-stone-100 rounded-lg transition-colors text-stone-500">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </button>
@@ -181,6 +214,34 @@ export default function InstructorsPage() {
           </div>
         ))}
       </div>
+
+      {/* 邀請連結 Modal */}
+      {(claimUrl || claimError) && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) { setClaimUrl(null); setClaimError(null) } }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <h3 className="text-stone-800 font-bold text-lg mb-3">講師邀請連結</h3>
+            {claimError ? (
+              <p className="text-red-500 text-sm">{claimError}</p>
+            ) : (
+              <>
+                <p className="text-stone-400 text-xs mb-3">7 天內有效，請直接傳送給講師本人，勿公開分享。</p>
+                <div className="flex items-center gap-2">
+                  <input readOnly value={claimUrl || ''} className="flex-1 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-600" />
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(claimUrl || ''); }}
+                    className="text-xs bg-rose-500 hover:bg-rose-600 text-white px-3 py-2 rounded-xl font-medium transition-colors"
+                  >
+                    複製
+                  </button>
+                </div>
+              </>
+            )}
+            <button onClick={() => { setClaimUrl(null); setClaimError(null) }} className="mt-5 w-full bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-2.5 rounded-xl text-sm transition-colors">
+              關閉
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       {showModal && (
