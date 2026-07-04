@@ -356,11 +356,13 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
   const onMouseUp   = useCallback(() => setIsDragging(false), [])
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     if (!imgSrc) return
+    e.preventDefault()
     const t=e.touches[0]; setIsDragging(true)
     dragStart.current = { mx:t.clientX, my:t.clientY, px:imgPos.x, py:imgPos.y }
   }, [imgSrc, imgPos])
   const onTouchMove = useCallback((e: React.TouchEvent) => {
     if (!isDragging) return
+    e.preventDefault()
     const t=e.touches[0]
     setImgPos({ x:dragStart.current.px+t.clientX-dragStart.current.mx, y:dragStart.current.py+t.clientY-dragStart.current.my })
   }, [isDragging])
@@ -502,9 +504,10 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
 
                   {/* photo zone */}
                   <div className="absolute left-0 right-0 top-0 overflow-hidden"
-                    style={{ height:PHOTO_H, cursor:imgSrc?(isDragging?'grabbing':'grab'):'default', zIndex:1 }}
-                    onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
-                    onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+                  style={{ height:PHOTO_H, cursor:imgSrc?(isDragging?'grabbing':'grab'):'default', zIndex:1, touchAction:'none' }}
+                  onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
+                  onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>                    
+                  style={{ height:PHOTO_H, cursor:imgSrc?(isDragging?'grabbing':'grab'):'default', zIndex:1, touchAction:'none' }}>
 
                     {imgSrc ? (
                       <div style={{ position:'absolute', inset:0, overflow:'hidden' }}>
@@ -657,12 +660,12 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
               {SCHEMES.map(s=>(
                 <button key={s.id} title={s.label} aria-label={s.label}
                   onClick={()=>{ setScheme(s); setCustomBg('') }}
-                  className="rounded flex-1 transition-transform hover:scale-105 flex-shrink-0"
-                  style={{ height:'28px', background:s.bg, outline:(!customBg&&scheme.id===s.id)?'2px solid #f97316':'2px solid transparent', outlineOffset:'2px',
+                 className="rounded flex-1 transition-transform active:scale-95 flex-shrink-0"
+                  style={{ height:'36px', background:s.bg, outline:(!customBg&&scheme.id===s.id)?'2px solid #f97316':'2px solid transparent', outlineOffset:'2px',
                     boxShadow:s.id==='white'?'inset 0 0 0 1px rgba(0,0,0,0.15)':'none' }} />
               ))}
               <label className="rounded cursor-pointer transition-transform hover:scale-105 flex items-center justify-center flex-1 flex-shrink-0 relative"
-                style={{ height:'28px', background:customBg||'#ffffff', outline:customBg?'2px solid #f97316':'2px solid transparent', outlineOffset:'2px',
+                style={{ height:'36px', background:customBg||'#ffffff', outline:customBg?'2px solid #f97316':'2px solid transparent', outlineOffset:'2px',
                   boxShadow:!customBg?'inset 0 0 0 1px rgba(0,0,0,0.15)':'none' }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={customBg?textCol(customBg):'#888'} strokeWidth="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
                 <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
