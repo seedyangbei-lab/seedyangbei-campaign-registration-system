@@ -27,6 +27,7 @@ const emptyForm = {
   location: '', custom_location: '', notes: '', suitable_age: '全年齡', poster_url: '',
 }
 
+const emptyProfileForm = { bio: '', avatar_url: '', phone: '', line_id: '' }
 function InstructorPortal() {
   const searchParams = useSearchParams()
   const supabase = createClient()
@@ -35,6 +36,10 @@ function InstructorPortal() {
   const [instructor, setInstructor] = useState<any>(null)
   const [courses, setCourses] = useState<any[]>([])
   const [coursesLoading, setCoursesLoading] = useState(true)
+  const [tab, setTab] = useState<'courses' | 'profile'>('courses')
+  const [profileForm, setProfileForm] = useState(emptyProfileForm)
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileSaved, setProfileSaved] = useState(false)
 
   const [showModal, setShowModal] = useState(false)
   const [editTarget, setEditTarget] = useState<any>(null)
@@ -71,9 +76,41 @@ function InstructorPortal() {
 
   const lookupInstructor = async (lineUserId: string) => {
     const { data } = await supabase.from('instructors').select('*').eq('line_user_id', lineUserId).maybeSingle()
-    if (data) { setInstructor(data); setStatus('ready'); fetchCourses(data.id) } else { setStatus('not_bound') }
+    if (data) {
+      setInstructor(data)
+      setProfileForm({ bio: data.bio || '', avatar_url: data.avatar_url || '', phone: data.phone || '', line_id: data.line_id || '' })
+      setStatus('ready')
+      fetchCourses(data.id)
+    } else {
+      setStatus('not_bound')
+    }
   }
 
+  const handleProfileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return
+    const filename = `avatars/${Date.now()}.${file.name.split('.').pop()}`
+    const { data, error } = await supabase.storage.from('images').upload(filename, file, { upsert: true })
+    if (!error && data) {
+      const { data: urlData } = supabase.storage.from('images').getPublicUrl(filename)
+      setProfileForm(f => ({ ...f, avatar_url: urlData.publicUrl }))
+    }
+  }
+
+  const handleProfileSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!instructor) return
+    setProfileSaving(true)
+    await supabase.from('instructors').update({
+      bio: profileForm.bio,
+      avatar_url: profileForm.avatar_url || null,
+      phone: profileForm.phone || null,
+      line_id: profileForm.line_id || null,
+    }).eq('id', instructor.id)
+    setInstructor({ ...instructor, ...profileForm })
+    setProfileSaving(false)
+    setProfileSaved(true)
+    setTimeout(() => setProfileSaved(false), 2000)
+  }
   const fetchCourses = async (instructorId: string) => {
     setCoursesLoading(true)
     const { data } = await supabase
@@ -168,8 +205,57 @@ function InstructorPortal() {
     <div className="min-h-screen p-6">
       <div className="max-w-2xl mx-auto">
         <p className="text-stone-400 text-xs tracking-widest uppercase mb-1">講師中台</p>
-        <h1 className="text-stone-800 text-2xl font-bold mb-6">{instructor?.name} 的課程</h1>
+        <h1 className="text-stone-800 text-2xl font-bold mb-4">{instructor?.name}</h1>
 
+        <div className="flex gap-2 mb-6 border-b border-stone-200">
+          <button onClick={() => setTab('courses')}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === 'courses' ? 'border-rose-500 text-rose-600' : 'border-transparent text-stone-400'}`}>
+            我的課程
+          </button>
+          <button onClick={() => setTab('profile')}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === 'profile' ? 'border-rose-500 text-rose-600' : 'border-transparent text-stone-400'}`}>
+            個人資料
+          </button>
+        </div>
+
+        {tab === 'profile' && (
+          <form onSubmit={handleProfileSave} className="bg-white border border-stone-200 rounded-2xl p-5 space-y-4">
+            <div className="flex items-center gap-4">
+              {profileForm.avatar_url ? (
+                <img src={profileForm.avatar_url} alt="大頭照" className="w-16 h-16 rounded-full object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center flex-shrink-0">
+                  <span className="text-rose-600 font-bold text-xl">{instructor?.name?.[0]}</span>
+                </div>
+              )}
+              <label className="text-xs bg-stone-100 hover:bg-stone-200 text-stone-600 px-3 py-2 rounded-lg transition-colors cursor-pointer">
+                更換大頭照
+                <input type="file" accept="image/*" className="hidden" onChange={handleProfileUpload} />
+              </label>
+            </div>
+            <div>
+              <label className="block text-stone-600 text-sm font-medium mb-1.5">簡介</label>
+              <textarea value={profileForm.bio} onChange={e => setProfileForm({ ...profileForm, bio: e.target.value })}
+                rows={3} placeholder="簡短介紹自己" className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 resize-none" />
+            </div>
+            <div>
+              <label className="block text-stone-600 text-sm font-medium mb-1.5">聯絡電話</label>
+              <input value={profileForm.phone} onChange={e => setProfileForm({ ...profileForm, phone: e.target.value })}
+                placeholder="例：0912345678" className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" />
+            </div>
+            <div>
+              <label className="block text-stone-600 text-sm font-medium mb-1.5">LINE ID 或課程群組連結</label>
+              <input value={profileForm.line_id} onChange={e => setProfileForm({ ...profileForm, line_id: e.target.value })}
+                placeholder="例：@abc1234 或 https://line.me/R/ti/g/xxxxxxxx" className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" />
+            </div>
+            <button type="submit" disabled={profileSaving}
+              className="w-full bg-rose-500 hover:bg-rose-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
+              {profileSaving ? '儲存中...' : profileSaved ? '已儲存 ✓' : '儲存個人資料'}
+            </button>
+          </form>
+        )}
+
+        {tab === 'courses' && (<>
         {coursesLoading && (
           <div className="space-y-3">
             {Array.from({ length: 2 }).map((_, i) => (
@@ -200,6 +286,7 @@ function InstructorPortal() {
             </div>
           ))}
         </div>
+        </>)}
       </div>
 
       {showModal && (
