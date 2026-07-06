@@ -506,8 +506,7 @@ export default function CoursePosterEditor({ course, initialImage, onClose }: Pr
                   <div className="absolute left-0 right-0 top-0 overflow-hidden"
                   style={{ height:PHOTO_H, cursor:imgSrc?(isDragging?'grabbing':'grab'):'default', zIndex:1, touchAction:'none' }}
                   onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
-                  onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>                    
-                  style={{ height:PHOTO_H, cursor:imgSrc?(isDragging?'grabbing':'grab'):'default', zIndex:1, touchAction:'none' }}>
+                  onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
 
                     {imgSrc ? (
                       <div style={{ position:'absolute', inset:0, overflow:'hidden' }}>
