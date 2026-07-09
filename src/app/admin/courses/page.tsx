@@ -337,7 +337,7 @@ export default function CoursesPage() {
   return (
     <div className="p-6 md:p-8">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-stone-800 text-2xl font-bold">課程管理</h2>
+        <h2 className="text-stone-800 text-[26px] leading-7 font-bold">課程管理</h2>
         {mainTab === 'courses' ? (
           <div className="flex items-center gap-2">
             <CourseScheduleExporter courses={courses} scheduleSettings={scheduleSettings} />
@@ -384,14 +384,14 @@ export default function CoursesPage() {
             <div className="flex items-center gap-2 mb-4 flex-wrap">
               <span className="text-xs text-stone-400 font-medium">篩選月份</span>
               <button onClick={() => setFilterMonth('')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterMonth === '' ? 'bg-stone-700 text-white' : 'bg-white border border-stone-200 text-stone-500 hover:bg-stone-50'}`}>
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterMonth === '' ? 'bg-stone-800 text-white' : 'bg-white border border-stone-300 text-stone-800 hover:bg-stone-50'}`}>
                 全部
               </button>
               {availableMonths.map(m => {
                 const [y, mo] = m.split('-')
                 return (
                   <button key={m} onClick={() => setFilterMonth(m)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterMonth === m ? 'bg-stone-700 text-white' : 'bg-white border border-stone-200 text-stone-500 hover:bg-stone-50'}`}>
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterMonth === m ? 'bg-stone-800 text-white' : 'bg-white border border-stone-300 text-stone-800 hover:bg-stone-50'}`}>
                     {y}/{parseInt(mo)}月
                   </button>
                 )
@@ -419,75 +419,131 @@ export default function CoursesPage() {
                 ? course.instructor_names.join('、')
                 : course.instructors?.name || ''
               return (
-                <div key={course.id} className="relative bg-white border border-stone-200 rounded-2xl p-5 shadow-[0px_1px_1px_rgba(0,0,0,0.05)]">
-                  <span className={`absolute top-2 right-2 text-xs font-medium px-2 py-0.5 rounded-full ${expired ? 'bg-stone-100 text-stone-500 border border-stone-300' : 'bg-green-100 text-green-700'}`}>
-                    {expired ? '已結束' : '開放報名'}
-                  </span>
+                <div key={course.id}>
+                  {/* 手機版：直式卡片（< md） */}
+                  <div className="md:hidden relative bg-white border border-stone-200 rounded-2xl p-5 shadow-[0px_1px_1px_rgba(0,0,0,0.05)]">
+                    <span className={`absolute top-2 right-2 text-xs font-medium px-2 py-0.5 rounded-full ${expired ? 'bg-stone-100 text-stone-500 border border-stone-300' : 'bg-green-100 text-green-700'}`}>
+                      {expired ? '已結束' : '開放報名'}
+                    </span>
 
-                  <div className="flex gap-4 items-center mb-3">
-                    <div className="w-[72px] h-[72px] rounded-xl overflow-hidden flex-shrink-0 bg-stone-100">
-                      {course.poster_url && <img src={course.poster_url} alt={course.title} className="w-full h-full object-cover" />}
+                    <div className="flex gap-4 items-center mb-3">
+                      <div className="w-[72px] h-[72px] rounded-xl overflow-hidden flex-shrink-0 bg-stone-100">
+                        {course.poster_url && <img src={course.poster_url} alt={course.title} className="w-full h-full object-cover" />}
+                      </div>
+                      <div className="flex-1 min-w-0 flex flex-col gap-1">
+                        <p className="text-stone-800 font-bold text-base leading-6 break-words">{course.title}</p>
+                        {course.course_categories && (
+                          <span className="inline-flex self-start text-xs px-2 py-0.5 rounded-full text-white font-medium" style={{ backgroundColor: course.course_categories.color }}>
+                            {course.course_categories.name}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0 flex flex-col gap-1">
-                      <p className="text-stone-800 font-bold text-base leading-6 break-words">{course.title}</p>
-                      {course.course_categories && (
-                        <span className="inline-flex self-start text-xs px-2 py-0.5 rounded-full text-white font-medium" style={{ backgroundColor: course.course_categories.color }}>
-                          {course.course_categories.name}
-                        </span>
+
+                    <div className="flex flex-col gap-2 mb-3">
+                      <div className="flex items-center gap-1.5 text-sm text-stone-400">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+                        <span>{course.date} · {course.time_start?.slice(0,5)}–{course.time_end?.slice(0,5)}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-sm text-stone-400">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <span>{course.location}</span>
+                      </div>
+                      {displayInstructors && (
+                        <div className="flex items-center gap-1.5 text-sm text-stone-400">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                          <span>{displayInstructors}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="h-px bg-stone-200 mb-3" />
+
+                    <div className="flex items-center gap-2">
+                      {!expired ? (
+                        <>
+                          <button onClick={() => openEdit(course)}
+                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 transition-colors font-medium">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            編輯課程
+                          </button>
+
+                          <button onClick={() => toggleActive(course.id, course.is_active)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ml-auto ${course.is_active ? 'bg-orange-500' : 'bg-stone-200'}`}
+                            title={course.is_active ? '關閉報名' : '開放報名'}>
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${course.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={() => openAttendance(course)}
+                            className="flex-1 flex items-center justify-center gap-1.5 text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-3 py-2 rounded-lg transition-colors font-medium">
+                            出席紀錄
+                          </button>
+                          <button onClick={() => openCopy(course)}
+                            className="flex-1 flex items-center justify-center gap-1.5 text-xs bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 px-3 py-2 rounded-lg transition-colors font-medium">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            複製課程
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-2 mb-3">
-                    <div className="flex items-center gap-1.5 text-sm text-stone-400">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
-                      <span>{course.date} · {course.time_start?.slice(0,5)}–{course.time_end?.slice(0,5)}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-sm text-stone-400">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                      <span>{course.location}</span>
-                    </div>
-                    {displayInstructors && (
-                      <div className="flex items-center gap-1.5 text-sm text-stone-400">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        <span>{displayInstructors}</span>
+                  {/* 桌機版：橫向 row（md 以上） */}
+                  <div className="hidden md:flex items-center justify-between bg-white border border-stone-200 rounded-2xl p-[17px] shadow-[0px_1px_1px_rgba(0,0,0,0.05)] w-full">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="flex flex-col items-center shrink-0">
+                        <div className="w-[60px] h-[60px] rounded-xl overflow-hidden bg-stone-100 -mb-2">
+                          {course.poster_url && <img src={course.poster_url} alt={course.title} className="w-full h-full object-cover" />}
+                        </div>
+                        {course.course_categories && (
+                          <span className="relative text-xs px-2 py-0.5 rounded-full text-white font-medium whitespace-nowrap" style={{ backgroundColor: course.course_categories.color }}>
+                            {course.course_categories.name}
+                          </span>
+                        )}
                       </div>
-                    )}
-                  </div>
-
-                  <div className="h-px bg-stone-200 mb-3" />
-
-                  <div className="flex items-center gap-2">
-                    {!expired ? (
-                      <>
-                        <button onClick={() => openEdit(course)}
-                          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 transition-colors font-medium">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                          編輯課程
-                        </button>
-
-                        <button onClick={() => toggleActive(course.id, course.is_active)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ml-auto ${course.is_active ? 'bg-orange-500' : 'bg-stone-200'}`}
-                          title={course.is_active ? '關閉報名' : '開放報名'}>
-                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${course.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
-                        </button>
-                        <button onClick={() => handleDelete(course.id)} className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-400 hover:text-red-600">
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button onClick={() => openAttendance(course)}
-                          className="flex-1 flex items-center justify-center gap-1.5 text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-3 py-2 rounded-lg transition-colors font-medium">
-                          出席紀錄
-                        </button>
-                        <button onClick={() => openCopy(course)}
-                          className="flex-1 flex items-center justify-center gap-1.5 text-xs bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 px-3 py-2 rounded-lg transition-colors font-medium">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                          複製課程
-                        </button>
-                      </>
-                    )}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-stone-800 font-bold text-base truncate">{course.title}</p>
+                          <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${expired ? 'bg-stone-100 text-stone-500 border border-stone-300' : 'bg-green-100 text-green-700'}`}>
+                            {expired ? '已結束' : '開放報名'}
+                          </span>
+                        </div>
+                        <p className="text-stone-400 text-sm truncate">
+                          {course.date} · {course.time_start?.slice(0,5)}–{course.time_end?.slice(0,5)} · {course.location}
+                          {displayInstructors && <span> · {displayInstructors}</span>}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-4">
+                      {!expired ? (
+                        <>
+                          <button onClick={() => openEdit(course)}
+                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 transition-colors font-medium">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            編輯課程
+                          </button>
+                          <button onClick={() => toggleActive(course.id, course.is_active)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${course.is_active ? 'bg-orange-500' : 'bg-stone-200'}`}
+                            title={course.is_active ? '關閉報名' : '開放報名'}>
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${course.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={() => openAttendance(course)}
+                            className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                            出席紀錄
+                          </button>
+                          <button onClick={() => openCopy(course)}
+                            className="flex items-center gap-1.5 text-xs bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            複製課程
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               )
