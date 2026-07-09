@@ -370,54 +370,55 @@ export default function CoursesPage() {
 
   return (
     <div className="p-6 md:p-8">
-      {/* 桌機：標題 + 按鈕同一列，底部一條分隔線 */}
-      <div className="hidden md:flex items-center justify-between pb-4 mb-4 border-b border-stone-200">
+      {/* 標題 + 按鈕同一列（桌機底部多一條分隔線） */}
+      <div className="flex items-center justify-between mb-4 pb-0 md:pb-4 md:border-b md:border-stone-200 gap-2">
         <h2 className="text-stone-800 text-[26px] leading-7 font-bold">課程管理</h2>
         <div className="flex items-center gap-2">
           {headerActions}
         </div>
       </div>
 
-      {/* 手機：標題單獨一列 */}
-      <h2 className="md:hidden text-stone-800 text-[26px] leading-7 font-bold mb-4">課程管理</h2>
-      {/* 手機：按鈕列（新增課程／課程類別 + 匯出課表 同一列） */}
-      <div className="md:hidden flex items-center justify-between mb-4 gap-2">
-        <div className="flex items-center gap-2">
-          {headerActions}
-        </div>
-        {mainTab === 'courses' && <CourseScheduleExporter courses={courses} scheduleSettings={scheduleSettings} />}
-      </div>
-
       {/* 課程列表 */}
       {mainTab === 'courses' && (
         <>
-          {/* 桌機：開放中/已結束 Tab + 匯出課表 同一列 */}
-          <div className="hidden md:flex items-center justify-between mb-4">
+          {/* 開放中/已結束 Tab + 匯出課表 同一列 */}
+          <div className="flex items-center justify-between mb-4 gap-2">
             {courseTabBar}
             <CourseScheduleExporter courses={courses} scheduleSettings={scheduleSettings} />
           </div>
-          {/* 手機：開放中/已結束 Tab 獨自一列 */}
-          <div className="md:hidden mb-4">
-            {courseTabBar}
-          </div>
 
           {courseTab === 'ended' && availableMonths.length > 0 && (
-            <div className="flex items-center gap-2 mb-4 flex-wrap">
-              <span className="text-xs text-stone-400 font-medium">篩選月份</span>
-              <button onClick={() => setFilterMonth('')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterMonth === '' ? 'bg-stone-800 text-white' : 'bg-white border border-stone-300 text-stone-800 hover:bg-stone-50'}`}>
-                全部
-              </button>
-              {availableMonths.map(m => {
-                const [y, mo] = m.split('-')
-                return (
-                  <button key={m} onClick={() => setFilterMonth(m)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterMonth === m ? 'bg-stone-800 text-white' : 'bg-white border border-stone-300 text-stone-800 hover:bg-stone-50'}`}>
-                    {y}/{parseInt(mo)}月
-                  </button>
-                )
-              })}
-            </div>
+            <>
+              {/* 桌機：月份篩選用按鈕列 */}
+              <div className="hidden md:flex items-center gap-2 mb-4 flex-wrap">
+                <span className="text-xs text-stone-400 font-medium">篩選月份</span>
+                <button onClick={() => setFilterMonth('')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterMonth === '' ? 'bg-stone-800 text-white' : 'bg-white border border-stone-300 text-stone-800 hover:bg-stone-50'}`}>
+                  全部
+                </button>
+                {availableMonths.map(m => {
+                  const [y, mo] = m.split('-')
+                  return (
+                    <button key={m} onClick={() => setFilterMonth(m)}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterMonth === m ? 'bg-stone-800 text-white' : 'bg-white border border-stone-300 text-stone-800 hover:bg-stone-50'}`}>
+                      {y}/{parseInt(mo)}月
+                    </button>
+                  )
+                })}
+              </div>
+              {/* 手機：月份篩選改用 Dropdown */}
+              <div className="md:hidden relative mb-4">
+                <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
+                  className="w-full appearance-none border border-stone-300 rounded-lg pl-4 pr-10 py-2.5 text-sm font-medium text-stone-800 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300">
+                  <option value="">全部</option>
+                  {availableMonths.map(m => {
+                    const [y, mo] = m.split('-')
+                    return <option key={m} value={m}>{y}/{parseInt(mo)}月</option>
+                  })}
+                </select>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </>
           )}
 
           <div className="space-y-3">
