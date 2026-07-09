@@ -334,50 +334,71 @@ export default function CoursesPage() {
   const notesCount = form.notes.length
   const notesOver = notesCount > NOTES_MAX
 
+  const primaryBtnCls = "flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+  const secondaryBtnCls = "flex items-center gap-1.5 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+  const openAddCat = () => { setEditCat(null); setCatForm({ name: '', color: '#e11d48' }); setShowCatModal(true) }
+  const headerActions = mainTab === 'courses' ? (
+    <>
+      <button onClick={openAdd} className={primaryBtnCls}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        新增課程
+      </button>
+      <button onClick={() => setMainTab('categories')} className={secondaryBtnCls}>課程類別</button>
+    </>
+  ) : (
+    <>
+      <button onClick={() => setMainTab('courses')} className={secondaryBtnCls}>課程列表</button>
+      <button onClick={openAddCat} className={primaryBtnCls}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        新增類別
+      </button>
+    </>
+  )
+  const courseTabBar = (
+    <div className="flex gap-1 p-1 bg-stone-50 border border-stone-200 rounded-lg w-fit">
+      {([['active', '開放中'], ['ended', '已結束']] as const).map(([t, label]) => (
+        <button key={t} onClick={() => { setCourseTab(t); setFilterMonth('') }}
+          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${courseTab === t ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400 hover:text-stone-600'}`}>
+          {label}
+          <span className={`ml-1 text-xs px-1 py-0.5 rounded-full ${courseTab === t ? 'bg-stone-100 text-stone-500' : 'bg-stone-100 text-stone-400'}`}>
+            {t === 'active' ? courses.filter((c: any) => c.is_active && !isExpired(c)).length : endedCourses.length}
+          </span>
+        </button>
+      ))}
+    </div>
+  )
+
   return (
     <div className="p-6 md:p-8">
-      <div className="flex items-center justify-between mb-6">
+      {/* 桌機：標題 + 按鈕同一列，底部一條分隔線 */}
+      <div className="hidden md:flex items-center justify-between pb-4 mb-4 border-b border-stone-200">
         <h2 className="text-stone-800 text-[26px] leading-7 font-bold">課程管理</h2>
-        {mainTab === 'courses' ? (
-          <div className="flex items-center gap-2">
-            <CourseScheduleExporter courses={courses} scheduleSettings={scheduleSettings} />
-            <button onClick={openAdd} className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              新增課程
-            </button>
-          </div>
-        ) : (
-          <button onClick={() => { setEditCat(null); setCatForm({ name: '', color: '#e11d48' }); setShowCatModal(true) }}
-            className="flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            新增類別
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {headerActions}
+        </div>
       </div>
 
-      {/* 主 Tab */}
-      <div className="flex gap-1 p-1 bg-stone-100 rounded-xl mb-4 w-fit">
-        {([['courses', '課程列表'], ['categories', '課程類別']] as const).map(([t, label]) => (
-          <button key={t} onClick={() => setMainTab(t)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${mainTab === t ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}>
-            {label}
-          </button>
-        ))}
+      {/* 手機：標題單獨一列 */}
+      <h2 className="md:hidden text-stone-800 text-[26px] leading-7 font-bold mb-4">課程管理</h2>
+      {/* 手機：按鈕列（新增課程／課程類別 + 匯出課表 同一列） */}
+      <div className="md:hidden flex items-center justify-between mb-4 gap-2">
+        <div className="flex items-center gap-2">
+          {headerActions}
+        </div>
+        {mainTab === 'courses' && <CourseScheduleExporter courses={courses} scheduleSettings={scheduleSettings} />}
       </div>
 
       {/* 課程列表 */}
       {mainTab === 'courses' && (
         <>
-          <div className="flex gap-1 p-1 bg-stone-50 border border-stone-200 rounded-lg mb-4 w-fit">
-            {([['active', '開放中'], ['ended', '已結束']] as const).map(([t, label]) => (
-              <button key={t} onClick={() => { setCourseTab(t); setFilterMonth('') }}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${courseTab === t ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400 hover:text-stone-600'}`}>
-                {label}
-                <span className={`ml-1 text-xs px-1 py-0.5 rounded-full ${courseTab === t ? 'bg-stone-100 text-stone-500' : 'bg-stone-100 text-stone-400'}`}>
-                  {t === 'active' ? courses.filter((c: any) => c.is_active && !isExpired(c)).length : endedCourses.length}
-                </span>
-              </button>
-            ))}
+          {/* 桌機：開放中/已結束 Tab + 匯出課表 同一列 */}
+          <div className="hidden md:flex items-center justify-between mb-4">
+            {courseTabBar}
+            <CourseScheduleExporter courses={courses} scheduleSettings={scheduleSettings} />
+          </div>
+          {/* 手機：開放中/已結束 Tab 獨自一列 */}
+          <div className="md:hidden mb-4">
+            {courseTabBar}
           </div>
 
           {courseTab === 'ended' && availableMonths.length > 0 && (
