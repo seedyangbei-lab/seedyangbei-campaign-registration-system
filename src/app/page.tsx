@@ -36,21 +36,22 @@ export default async function HomePage() {
       <HeroSection settings={s} />
       <SiteNavbar siteTitle={s.site_title} />
 
-      {/* 這裡開始才鋪頁面底色，讓底下固定的底圖只在留白處透出來 */}
+      {/* Hero Banner：KV 插圖橫幅，矮版設計，正常隨頁面捲動；這一段跟下面的 Steps/Greeting
+          都不鋪底色，才能讓上面固定的底圖透出來 */}
+      <HeroBanner settings={s} />
+
+      {/* 報名步驟 */}
+      <RegistrationSteps />
+
+      <GreetingBar course={activeCourses[0] ? {
+        title: activeCourses[0].title,
+        date: activeCourses[0].date,
+        time_start: activeCourses[0].time_start,
+        location: activeCourses[0].location,
+      } : null} />
+
+      {/* 從課程列表開始才鋪頁面底色 */}
       <div className="relative bg-stone-50">
-        {/* Hero Banner：KV 插圖橫幅，矮版設計，正常隨頁面捲動 */}
-        <HeroBanner settings={s} />
-
-        {/* 報名步驟 */}
-        <RegistrationSteps />
-
-        <GreetingBar course={activeCourses[0] ? {
-          title: activeCourses[0].title,
-          date: activeCourses[0].date,
-          time_start: activeCourses[0].time_start,
-          location: activeCourses[0].location,
-        } : null} />
-
         {/* Course List */}
         <section id="courses" className="max-w-5xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between border-b border-stone-200 pb-4 mb-4">

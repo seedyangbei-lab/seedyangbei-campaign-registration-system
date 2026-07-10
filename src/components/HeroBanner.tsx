@@ -17,18 +17,13 @@ export default function HeroBanner({ settings: s }: { settings: Record<string, s
   const cutoutImage = isMobile === null ? null : (isMobile ? (s.hero_cutout_mobile || s.hero_cutout_desktop) : s.hero_cutout_desktop) || '/illustrations/hero-banner-default.png'
 
   return (
-    <section className="relative w-full overflow-hidden bg-amber-50/40" style={{ height: 'clamp(180px, 30vh, 280px)' }}>
+    <section className="relative w-full overflow-hidden bg-amber-50/40" style={{ aspectRatio: '16 / 9' }}>
       {cutoutImage && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none hero-banner-float">
           <img src={cutoutImage} alt=""
             fetchPriority="high"
             decoding="async"
-            className="object-contain"
-            style={{
-              height: '100%',
-              width: 'auto',
-              maxWidth: '92vw',
-            }}
+            className="w-full h-full object-cover"
           />
         </div>
       )}

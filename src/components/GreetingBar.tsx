@@ -96,7 +96,7 @@ export default function GreetingBar({ course }: { course: Course | null }) {
   return (
     <div
       onClick={scrollToCourses}
-      className="border-t border-b border-orange-200 flex gap-2 items-center overflow-hidden px-4 py-2.5 relative w-full bg-gradient-to-r from-orange-50/40 to-orange-50/40 cursor-pointer"
+      className="border-b border-orange-200 flex gap-2 items-center overflow-hidden px-4 py-2.5 relative w-full bg-gradient-to-r from-orange-50/40 to-orange-50/40 cursor-pointer"
     >
       <PeriodIcon period={period} />
       <div className="flex-1 min-w-0 overflow-hidden">

@@ -30,7 +30,7 @@ export default function RegistrationSteps() {
   useEffect(() => {
     const timer = setInterval(() => {
       setActive(prev => (prev + 1) % STEPS.length)
-    }, 2600)
+    }, 1200)
     return () => clearInterval(timer)
   }, [])
 
@@ -49,7 +49,7 @@ export default function RegistrationSteps() {
               <p className={`text-xs font-bold transition-colors duration-500 ${isActive ? 'text-orange-500' : 'text-stone-500'}`}>
                 STEP {i + 1}
               </p>
-              <div className="flex items-center gap-1 text-stone-800">
+              <div className={`flex items-center gap-1 transition-colors duration-500 ${isActive ? 'text-orange-500' : 'text-stone-800'}`}>
                 {step.icon}
                 <span className="text-xs font-semibold whitespace-nowrap">{step.label}</span>
               </div>

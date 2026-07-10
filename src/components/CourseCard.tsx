@@ -257,11 +257,11 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
           return (
             <div key={course.id}
              onClick={() => !isDisabled && toggle(course.id)}
-              className={`relative bg-white rounded-2xl border transition-all overflow-hidden ${
+              className={`relative rounded-2xl border transition-all overflow-hidden ${
                 alreadyRegistered ? 'opacity-70 cursor-not-allowed border-green-200 bg-green-50/30'
-                : expired ? 'opacity-60 cursor-not-allowed border-stone-200'
-                : isSelected ? 'border-orange-400 shadow-lg shadow-orange-100 cursor-pointer'
-                : 'border-stone-200 hover:shadow-md cursor-pointer'
+                : expired ? 'opacity-60 cursor-not-allowed border-stone-200 bg-white'
+                : isSelected ? 'border-orange-400 shadow-lg shadow-orange-100 cursor-pointer bg-gradient-to-b from-orange-50/60 to-white'
+                : 'border-stone-200 hover:shadow-md cursor-pointer bg-gradient-to-b from-orange-50/60 to-white'
               }`}
               style={!isSelected ? { boxShadow: '0px 4px 12px 0px rgba(0,0,0,0.1)' } : undefined}>
 
@@ -294,8 +294,10 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
                       )}
                     </div>
 
-                    <div className="flex-1 min-w-0 bg-white border-l border-stone-200 flex flex-col gap-2 justify-center p-2">
-                      <p className="font-bold text-xl text-stone-800 leading-snug line-clamp-3">{course.title}</p>
+                    <div className="flex-1 min-w-0 bg-white border-l border-stone-200 h-full flex flex-col p-2">
+                      <div className="flex-1 flex items-center justify-center text-center">
+                        <p className="font-bold text-xl text-stone-800 leading-snug line-clamp-3">{course.title}</p>
+                      </div>
                       {course.instructors && (
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="bg-orange-500 text-white text-sm font-medium px-2 py-0.5 rounded flex-shrink-0">講師</span>
@@ -360,11 +362,11 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
               )}
 
               {alreadyRegistered ? (
-                <div className="absolute top-[19px] right-[19px] w-7 h-7 rounded-full bg-green-500 flex items-center justify-center">
+                <div className="absolute top-1 right-1 w-7 h-7 rounded-full bg-green-500 flex items-center justify-center">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
               ) : !expired && (
-                <div className={`absolute top-[19px] right-[19px] w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-orange-500 border-orange-500' : 'border-stone-300 bg-stone-100'}`}>
+                <div className={`absolute top-1 right-1 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-orange-500 border-orange-500' : 'border-stone-300 bg-stone-100'}`}>
                   {isSelected && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
                 </div>
               )}

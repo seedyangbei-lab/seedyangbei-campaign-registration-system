@@ -8,33 +8,43 @@ const LINE_CALLBACK_URL = process.env.NEXT_PUBLIC_LINE_CALLBACK_URL || 'https://
 
 type Step = 'prompt' | 'benefits'
 
+// 好處清單的 icon 用同一顆 sprite SVG 裁切三個 24x24 的 frame，統一主色橘 #F97316。
+function BenefitSpriteIcon({ y }: { y: number }) {
+  return (
+    <div className="w-6 h-6 overflow-hidden relative flex-shrink-0">
+      <svg width="24" height="216" viewBox="0 0 24 216" fill="none" className="absolute left-0" style={{ top: `-${y}px` }} aria-hidden="true">
+        {/* frame 1（0-24）：時鐘 - 報名更快速 */}
+        <circle cx="12" cy="12" r="9" stroke="#F97316" strokeWidth="1.8" />
+        <path d="M12 7v5l3.5 2" stroke="#F97316" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+
+        {/* frame 2（96-120）：旗標/紀錄 - 查看活動紀錄 */}
+        <path d="M9 99v18" stroke="#F97316" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M9 100c1.5-1.5 3-1.5 4.5 0s3 1.5 4.5 0v9c-1.5 1.5-3 1.5-4.5 0s-3-1.5-4.5 0z" stroke="#F97316" strokeWidth="1.8" strokeLinejoin="round" />
+        <circle cx="16.5" cy="105" r="0.75" fill="#78716C" />
+
+        {/* frame 3（192-216）：擴音器 - 第一手活動消息 */}
+        <path d="M3 199v6a2 2 0 0 0 2 2h1l1 5h2l-1-5h1l9 4v-16l-9 4H5a2 2 0 0 0-2 2z" stroke="#F97316" strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M19 200a5 5 0 0 1 0 8" stroke="#78716C" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    </div>
+  )
+}
+
 const BENEFITS: { title: string; desc: string; icon: React.ReactNode }[] = [
   {
     title: '報名更快速',
     desc: '自動帶入你的資料，下次報名不用重填',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15.5 14" />
-      </svg>
-    ),
+    icon: <BenefitSpriteIcon y={0} />,
   },
   {
     title: '查看活動紀錄',
     desc: '隨時回顧你參加過的所有活動',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-      </svg>
-    ),
+    icon: <BenefitSpriteIcon y={96} />,
   },
   {
     title: '第一手活動消息',
     desc: '最新活動資訊在這裡最快公布',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 11l18-6v14l-18-6v-2z" /><path d="M8 15v4a2 2 0 0 0 2 2h1v-6" />
-      </svg>
-    ),
+    icon: <BenefitSpriteIcon y={192} />,
   },
 ]
 
@@ -140,9 +150,13 @@ export default function FirstVisitLoginModal() {
               </div>
             </div>
             <div className="w-full flex flex-col gap-3">
-              {BENEFITS.map(b => (
-                <div key={b.title} className="w-full bg-stone-50 border border-stone-200 rounded-xl p-4 flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5 text-stone-800">
+              {BENEFITS.map((b, i) => (
+                <div
+                  key={b.title}
+                  className="w-full bg-stone-50 border border-stone-200 rounded-xl p-4 flex flex-col gap-1 benefit-slide-in"
+                  style={{ animationDelay: `${i * 150}ms` }}
+                >
+                  <div className="flex items-center gap-1.5 text-orange-500">
                     {b.icon}
                     <p className="text-base font-bold text-stone-800">{b.title}</p>
                   </div>
@@ -165,6 +179,17 @@ export default function FirstVisitLoginModal() {
           </>
         )}
       </div>
+      <style jsx>{`
+        .benefit-slide-in {
+          opacity: 0;
+          transform: translateX(24px);
+          animation: benefitSlideIn 0.4s ease-out forwards;
+        }
+        @keyframes benefitSlideIn {
+          from { opacity: 0; transform: translateX(24px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
     </div>
   )
 }
