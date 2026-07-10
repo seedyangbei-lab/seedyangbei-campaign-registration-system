@@ -202,28 +202,39 @@ function RegisterForm() {
   if (shouldRedirect) return null
 
   return (
-    <main className="min-h-screen bg-stone-50 py-10 px-4">
-      <div className="max-w-lg mx-auto">
-        <div className="mb-6">
-          <button onClick={() => router.back()} className="inline-flex items-center gap-1.5 text-stone-400 text-sm hover:text-stone-600">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-            返回
-          </button>
-          <h1 className="text-3xl font-bold text-stone-800 mt-4">填寫報名資料</h1>
-          <p className="text-stone-500 mt-2 text-sm">填寫一次即可同時報名以下課程</p>
+    <main className="min-h-screen bg-stone-50">
+      <div className="sticky top-0 z-30 bg-white shadow-[0px_4px_2px_rgba(0,0,0,0.03)] h-[52px] flex items-center justify-between px-4">
+        <button onClick={() => router.back()} className="inline-flex items-center gap-1.5 text-stone-800 text-sm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+          返回首頁
+        </button>
+        {lineUser && (
+          <div className="flex items-center gap-2 bg-white rounded-xl shadow-[0px_1px_1.5px_rgba(0,0,0,0.1),0px_1px_1px_rgba(0,0,0,0.1)] px-2 py-2">
+            {lineUser.pictureUrl
+              ? <img src={lineUser.pictureUrl} alt="" className="w-5 h-5 rounded-full flex-shrink-0" />
+              : <div className="w-5 h-5 rounded-full bg-green-200 flex items-center justify-center flex-shrink-0"><span className="text-green-700 text-[10px] font-bold">{lineUser.displayName?.[0]}</span></div>}
+            <span className="text-xs font-medium text-stone-700 max-w-[80px] truncate">{lineUser.displayName}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="max-w-lg mx-auto px-4 py-6">
+        <div className="mb-5 pb-4 border-b border-stone-200">
+          <h1 className="text-xl font-bold text-stone-600">填寫報名資料</h1>
+          <p className="text-stone-400 mt-1 text-sm">填寫一次即可同時報名以下課程</p>
         </div>
 
         {lineUser ? (
-          <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-5 flex items-center gap-3">
+          <div className="bg-green-50 border border-stone-200 rounded-2xl p-2.5 mb-5 flex items-center gap-3">
             {lineUser.pictureUrl
               ? <img src={lineUser.pictureUrl} alt="" className="w-10 h-10 rounded-full flex-shrink-0" />
               : <div className="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center flex-shrink-0"><span className="text-green-700 font-bold">{lineUser.displayName?.[0]}</span></div>}
             <div className="flex-1">
-              <p className="text-sm font-semibold text-green-700">已用 LINE 登入</p>
-              <p className="text-xs text-green-600">{lineUser.displayName}</p>
+              <p className="text-sm font-bold text-green-700">已用 LINE 登入</p>
+              <p className="text-xs text-green-700">{lineUser.displayName}</p>
             </div>
             {prefilled && (
-              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full border border-green-200 font-medium flex-shrink-0">
+              <span className="text-xs bg-green-100 text-green-700 px-2.5 py-1 rounded-full border border-green-200 font-medium flex-shrink-0">
                 已帶入上次資料
               </span>
             )}
@@ -235,8 +246,8 @@ function RegisterForm() {
         )}
 
         {courses.length > 0 && (
-          <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 mb-5">
-            <p className="text-sm font-semibold text-orange-700 mb-2">已選擇 {courses.length} 堂課程</p>
+          <div className="bg-orange-50 border border-stone-200 rounded-2xl p-2.5 mb-5">
+            <p className="text-sm font-bold text-orange-600 mb-2">已選擇 {courses.length} 堂課程</p>
             {courses.map(c => (
               <div key={c.id} className="flex items-center gap-2 text-sm text-orange-600 mt-1">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -252,14 +263,14 @@ function RegisterForm() {
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-stone-200 p-6 space-y-5 shadow-sm">
           <div>
-            <label className="block text-base font-medium text-stone-700 mb-2">姓名 <span className="text-orange-500">*</span></label>
+            <label className="block text-base font-medium text-stone-700 mb-2"><span className="text-orange-500">* </span>姓名</label>
             <input required type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})}
               placeholder="請輸入您的姓名"
               className="w-full border border-stone-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-300" />
           </div>
 
           <div>
-            <label className="block text-base font-medium text-stone-700 mb-3">居住身份 <span className="text-orange-500">*</span></label>
+            <label className="block text-base font-medium text-stone-700 mb-3"><span className="text-orange-500">* </span>居住身份</label>
             <div className="flex gap-3">
               {[{v: true, l: '社宅居民'}, {v: false, l: '非社宅居民'}].map(opt => (
                 <button key={String(opt.v)} type="button" onClick={() => setIsSocialHousing(opt.v)}
@@ -272,7 +283,7 @@ function RegisterForm() {
 
           {isSocialHousing && (
             <div>
-              <label className="block text-base font-medium text-stone-700 mb-3">房號 <span className="text-orange-500">*</span></label>
+              <label className="block text-base font-medium text-stone-700 mb-3"><span className="text-orange-500">* </span>房號</label>
 
               <div className="flex flex-col gap-1 mb-4">
                 <label className="text-sm text-stone-500">棟別</label>
@@ -337,7 +348,7 @@ function RegisterForm() {
 
           {!isSocialHousing && (
             <div>
-              <label className="block text-base font-medium text-stone-700 mb-2">請說明來自哪個社區 <span className="text-orange-500">*</span></label>
+              <label className="block text-base font-medium text-stone-700 mb-2"><span className="text-orange-500">* </span>請說明來自哪個社區</label>
               <input required type="text" value={form.other_community} onChange={e => setForm({...form, other_community: e.target.value})}
                 placeholder="例：附近里民、其他社宅"
                 className="w-full border border-stone-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-300" />
@@ -345,7 +356,7 @@ function RegisterForm() {
           )}
 
           <div>
-            <label className="block text-base font-medium text-stone-700 mb-2">手機號碼 <span className="text-orange-500">*</span></label>
+            <label className="block text-base font-medium text-stone-700 mb-2"><span className="text-orange-500">* </span>手機號碼</label>
             <input required type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})}
               placeholder="09XXXXXXXX（共 10 碼）" maxLength={10}
               className={`w-full border rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-300 ${form.phone && !validatePhone(form.phone) ? 'border-red-400 bg-red-50' : 'border-stone-300'}`} />
@@ -355,7 +366,7 @@ function RegisterForm() {
           </div>
 
           <div>
-            <label className="block text-base font-medium text-stone-700 mb-3">年齡區間 <span className="text-orange-500">*</span></label>
+            <label className="block text-base font-medium text-stone-700 mb-3"><span className="text-orange-500">* </span>年齡區間</label>
             <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
               {AGE_GROUPS.map(age => (
                 <button key={age} type="button" onClick={() => setForm({...form, age_group: age})}
