@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import AnimatedBackground from '@/components/AnimatedBackground'
 
+// 這是「底圖」：固定置頂、滾動時一直存在的裝飾背景層，跟下面 HeroBanner（KV 插圖橫幅）是分開的兩塊。
 export default function HeroSection({ settings: s }: { settings: Record<string, string> }) {
   const [isMobile, setIsMobile] = useState<boolean | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -47,12 +48,9 @@ export default function HeroSection({ settings: s }: { settings: Record<string, 
 
   const hasVideo = !!s.hero_video
   const bgImage = isMobile === null ? null : isMobile ? (s.hero_image_mobile || s.hero_image_desktop) : s.hero_image_desktop
-  const cutoutImage = isMobile === null ? null : isMobile ? (s.hero_cutout_mobile || s.hero_cutout_desktop) : s.hero_cutout_desktop
 
   return (
-    <section className="fixed inset-0 w-full overflow-hidden bg-amber-50 -z-10" style={{ height: '100svh' }}>
-
-      {/* 背景 */}
+    <section className="fixed inset-0 w-full h-full overflow-hidden bg-amber-50 -z-10">
       {hasVideo ? (
         <video ref={videoRef} key={s.hero_video} autoPlay muted playsInline
           className="absolute inset-0 w-full h-full object-cover object-center">
@@ -73,64 +71,6 @@ export default function HeroSection({ settings: s }: { settings: Record<string, 
           )}
         </>
       )}
-
-      {/* 去背人物圖：漂浮，直接壓底，無遮罩 */}
-      {cutoutImage && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none hero-cutout-float">
-          <img src={cutoutImage} alt=""
-            fetchPriority="high"
-            decoding="async"
-            className="object-contain"
-            style={{
-              height: s.site_title
-                ? 'clamp(55vh, 65vh, 72vh)'
-                : 'clamp(70vh, 78vh, 84vh)',
-              width: 'auto',
-              maxWidth: '95vw',
-            }}
-          />
-        </div>
-      )}
-
-      {/* 主標題：置頂，Bpmf Huninn */}
-      {s.site_title && (
-      <div className="absolute top-0 left-0 right-0 flex flex-col items-center pt-8 md:pt-10 px-6 text-center z-20 pointer-events-none">
-        <h1
-          className="text-3xl md:text-5xl font-bold leading-none tracking-tight whitespace-nowrap overflow-hidden"
-          style={{
-            fontFamily: "'Dela Gothic One', sans-serif",
-            color: s.hero_title_color || '#1c1917',
-            WebkitTextStroke: s.hero_title_stroke ? `3px ${s.hero_title_stroke}` : undefined,
-            textShadow: s.hero_title_stroke ? 'none' : '0 2px 12px rgba(255,255,255,0.9)',
-          }}
-        >
-          {s.site_title}
-        </h1>
-      </div>
-    )}
-
-      {/* 副標題：人物圖與 ClickHint 之間，GenSenRounded */}
-      {s.site_subtitle && (
-        <div className="absolute bottom-24 left-0 right-0 flex justify-center px-6 z-20 pointer-events-none">
-          <p
-            className="text-sm md:text-base text-stone-700 text-center px-4 py-2 rounded-full bg-white/60 backdrop-blur-sm"
-            style={{ textShadow: '0 1px 6px rgba(255,255,255,0.8)' }}
-          >
-            {s.site_subtitle}
-          </p>
-        </div>
-      )}
-
-      <style jsx>{`
-        .hero-cutout-float {
-          animation: heroFloat 4s ease-in-out infinite;
-        }
-       @keyframes heroFloat {
-          0%   { transform: translateY(0px); }
-          50%  { transform: translateY(-14px); }
-          100% { transform: translateY(0px); }
-        }
-      `}</style>
     </section>
   )
 }
