@@ -3,6 +3,7 @@ import HeroSection from '@/components/HeroSection'
 import CourseCard from '@/components/CourseCard'
 import GreetingBar from '@/components/GreetingBar'
 import RegistrationSteps from '@/components/RegistrationSteps'
+import FirstVisitLoginModal from '@/components/FirstVisitLoginModal'
 
 export const revalidate = 60
 
@@ -28,6 +29,7 @@ export default async function HomePage() {
   
   return (
     <main className="min-h-screen bg-stone-50">
+      <FirstVisitLoginModal />
       <HeroSection settings={s} />
       {/* 底圖已改為 fixed 置頂，這個 spacer 保留原本的捲動空間 */}
       <div aria-hidden style={{ height: '100svh' }} />
