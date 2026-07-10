@@ -136,13 +136,13 @@ export default function FirstVisitLoginModal() {
             <div className="w-full flex flex-col gap-3">
               <button
                 onClick={handleBind}
-                className="w-full bg-orange-500 hover:bg-orange-600 transition-colors text-white text-base font-medium rounded-xl px-4 py-2"
+                className="w-full bg-orange-500 hover:bg-orange-600 transition-colors text-white text-base font-medium rounded-[10px] px-4 py-2"
               >
                 綁定 LINE 帳號
               </button>
               <button
                 onClick={() => setStep('benefits')}
-                className="w-full text-center text-base font-medium text-stone-600 rounded-xl px-4 py-2 hover:bg-stone-100 transition-colors"
+                className="w-full text-center text-base font-medium text-stone-600 rounded-[10px] px-4 py-2 hover:bg-stone-100 transition-colors"
               >
                 我先了解一下
               </button>
