@@ -9,7 +9,14 @@ interface Course {
   location: string
 }
 
-function MarqueeIcon() {
+const PERIOD_ICON_Y: Record<Period, number> = {
+  morning: 0,
+  noon: 68,
+  evening: 131,
+  midnight: 190,
+}
+
+function PeriodIcon({ period }: { period: Period }) {
   return (
     <div className="w-6 h-6 overflow-hidden relative flex-shrink-0">
       <svg
@@ -17,8 +24,8 @@ function MarqueeIcon() {
         height="214"
         viewBox="0 0 24 214"
         fill="none"
-        className="absolute top-0 left-0"
-        style={{ animation: 'marqueeIconCycle 8s ease-in-out infinite' }}
+        className="absolute left-0"
+        style={{ top: `-${PERIOD_ICON_Y[period]}px` }}
         aria-hidden="true"
       >
         <path d="M17 12C17 13.3261 16.4732 14.5979 15.5355 15.5355C14.5979 16.4732 13.3261 17 12 17C10.6739 17 9.40215 16.4732 8.46447 15.5355C7.52678 14.5979 7 13.3261 7 12C7 10.6739 7.52678 9.40215 8.46447 8.46447C9.40215 7.52678 10.6739 7 12 7C13.3261 7 14.5979 7.52678 15.5355 8.46447C16.4732 9.40215 17 10.6739 17 12Z" fill="#F97316"/>
@@ -35,15 +42,6 @@ function MarqueeIcon() {
         <path opacity="0.4" d="M11.4393 207.561C11.7206 207.842 12.1022 208 12.5 208H12.879L11.44 209.44C11.2305 209.65 11.0878 209.917 11.0301 210.208C10.9723 210.499 11.002 210.8 11.1154 211.074C11.2288 211.348 11.4209 211.582 11.6673 211.747C11.9138 211.912 12.2035 212 12.5 212H16.5C16.8978 212 17.2794 211.842 17.5607 211.561C17.842 211.279 18 210.898 18 210.5C18 210.102 17.842 209.721 17.5607 209.439C17.2794 209.158 16.8978 209 16.5 209H16.121L17.56 207.56C17.7695 207.35 17.9122 207.083 17.9699 206.792C18.0277 206.501 17.998 206.2 17.8846 205.926C17.7712 205.652 17.5791 205.418 17.3327 205.253C17.0862 205.088 16.7965 205 16.5 205H12.5C12.1022 205 11.7206 205.158 11.4393 205.439C11.158 205.721 11 206.102 11 206.5C11 206.898 11.158 207.279 11.4393 207.561Z" fill="#292524"/>
         <path opacity="0.8" d="M2.43934 199.561C2.72064 199.842 3.10218 200 3.5 200H4.879L2.44 202.44C2.23049 202.65 2.08784 202.917 2.03007 203.208C1.9723 203.499 2.002 203.8 2.11543 204.074C2.22885 204.348 2.4209 204.582 2.66734 204.747C2.91377 204.912 3.20352 205 3.5 205H8.5C8.89782 205 9.27936 204.842 9.56066 204.561C9.84196 204.279 10 203.898 10 203.5C10 203.102 9.84196 202.721 9.56066 202.439C9.27936 202.158 8.89782 202 8.5 202H7.122L9.56 199.56C9.76951 199.35 9.91216 199.083 9.96993 198.792C10.0277 198.501 9.998 198.2 9.88457 197.926C9.77115 197.652 9.5791 197.418 9.33266 197.253C9.08623 197.088 8.79648 197 8.5 197H3.5C3.10218 197 2.72064 197.158 2.43934 197.439C2.15804 197.721 2 198.102 2 198.5C2 198.898 2.15804 199.279 2.43934 199.561Z" fill="#292524"/>
       </svg>
-      <style jsx>{`
-        @keyframes marqueeIconCycle {
-          0%, 20% { transform: translateY(0px); }
-          25%, 45% { transform: translateY(-68px); }
-          50%, 70% { transform: translateY(-131px); }
-          75%, 95% { transform: translateY(-194px); }
-          100% { transform: translateY(0px); }
-        }
-      `}</style>
     </div>
   )
 }
@@ -100,7 +98,7 @@ export default function GreetingBar({ course }: { course: Course | null }) {
       onClick={scrollToCourses}
       className="border-t border-b border-orange-200 flex gap-2 items-center overflow-hidden px-4 py-2.5 relative w-full bg-gradient-to-r from-orange-50/40 to-orange-50/40 cursor-pointer"
     >
-      <MarqueeIcon />
+      <PeriodIcon period={period} />
       <div className="flex-1 min-w-0 overflow-hidden">
         <div className="whitespace-nowrap inline-block animate-marquee text-sm text-stone-600">
           {prefix} <span className="font-bold">*{course.title}*</span> {suffix}

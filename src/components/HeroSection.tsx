@@ -121,17 +121,6 @@ export default function HeroSection({ settings: s }: { settings: Record<string, 
         </div>
       )}
 
-      {/* 向下滾動提示 */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-2">
-        <p className="text-sm font-medium text-stone-600" style={{ textShadow: '0 1px 4px rgba(255,255,255,0.9)', fontFamily: 'var(--font-body)' }}>往下滑</p>
-        <div className="flex items-center gap-1">
-          {[0, 1, 2].map(i => (
-            <div key={i} className="w-1.5 h-1.5 rounded-full bg-orange-400"
-              style={{ animation: `dotBounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
-          ))}
-        </div>
-      </div>
-
       <style jsx>{`
         .hero-cutout-float {
           animation: heroFloat 4s ease-in-out infinite;
@@ -140,11 +129,6 @@ export default function HeroSection({ settings: s }: { settings: Record<string, 
           0%   { transform: translateY(0px); }
           50%  { transform: translateY(-14px); }
           100% { transform: translateY(0px); }
-        }
-        
-        @keyframes dotBounce {
-          0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
-          40%            { transform: translateY(-6px); opacity: 1; }
         }
       `}</style>
     </section>

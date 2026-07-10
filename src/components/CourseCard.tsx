@@ -45,21 +45,29 @@ function InfoRow({ icon, children }: { icon: React.ReactNode; children: React.Re
   )
 }
 
-const IconPerson = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-  </svg>
-)
-const IconClock = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/>
-  </svg>
-)
-const IconPin = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-  </svg>
-)
+function InfoSpriteIcon({ y }: { y: number }) {
+  return (
+    <div className="w-6 h-6 overflow-hidden relative">
+      <svg width="24" height="80" viewBox="0 0 24 80" fill="none" className="absolute left-0" style={{ top: `-${y}px` }}>
+        <path d="M19.5 14.5C19.5 14.942 19.3244 15.366 19.0118 15.6785C18.6993 15.9911 18.2754 16.1667 17.8333 16.1667H7.83333L4.5 19.5V6.16667C4.5 5.72464 4.67559 5.30072 4.98816 4.98816C5.30072 4.67559 5.72464 4.5 6.16667 4.5H17.8333C18.2754 4.5 18.6993 4.67559 19.0118 4.98816C19.3244 5.30072 19.5 5.72464 19.5 6.16667V14.5Z" stroke="#F97316" strokeWidth="1.5"/>
+        <path d="M12.0001 48.3334C16.6025 48.3334 20.3334 44.6025 20.3334 40.0001C20.3334 35.3977 16.6025 31.6667 12.0001 31.6667C7.39771 31.6667 3.66675 35.3977 3.66675 40.0001C3.66675 44.6025 7.39771 48.3334 12.0001 48.3334Z" stroke="#F97316" strokeWidth="1.5"/>
+        <path d="M12 35V40L15.3333 41.6667" stroke="#F97316" strokeWidth="1.5"/>
+        <g clipPath="url(#courseInfoIconClip)">
+          <path d="M19.5 66.3333C19.5 72.1666 12 77.1666 12 77.1666C12 77.1666 4.5 72.1666 4.5 66.3333C4.5 64.3441 5.29018 62.4365 6.6967 61.03C8.10322 59.6234 10.0109 58.8333 12 58.8333C13.9891 58.8333 15.8968 59.6234 17.3033 61.03C18.7098 62.4365 19.5 64.3441 19.5 66.3333Z" stroke="#F97316" strokeWidth="1.5"/>
+          <path d="M12 68.8333C13.3807 68.8333 14.5 67.714 14.5 66.3333C14.5 64.9525 13.3807 63.8333 12 63.8333C10.6193 63.8333 9.5 64.9525 9.5 66.3333C9.5 67.714 10.6193 68.8333 12 68.8333Z" stroke="#F97316" strokeWidth="1.5"/>
+        </g>
+        <defs>
+          <clipPath id="courseInfoIconClip">
+            <rect width="20" height="20" fill="white" transform="translate(2 58)"/>
+          </clipPath>
+        </defs>
+      </svg>
+    </div>
+  )
+}
+const IconPerson = () => <InfoSpriteIcon y={0} />
+const IconClock = () => <InfoSpriteIcon y={28} />
+const IconPin = () => <InfoSpriteIcon y={56} />
 const IconNotice = () => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fa7315" strokeWidth="2" className="flex-shrink-0">
     <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
@@ -286,7 +294,7 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
                       )}
                     </div>
 
-                    <div className="flex-1 min-w-0 bg-white border-l border-stone-200 flex flex-col gap-2 justify-end p-2">
+                    <div className="flex-1 min-w-0 bg-white border-l border-stone-200 flex flex-col gap-2 justify-center p-2">
                       <p className="font-bold text-xl text-stone-800 leading-snug line-clamp-3">{course.title}</p>
                       {course.instructors && (
                         <div className="flex items-center gap-2 min-w-0">
@@ -368,15 +376,16 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
       {selected.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
           <button onClick={handleProceed}
-            className="w-full flex items-center justify-between bg-stone-900 hover:bg-stone-800 text-white px-5 py-4 rounded-2xl shadow-2xl transition-all active:scale-95">
+            style={{ boxShadow: '0px -1px 2px rgba(0,0,0,0.16)' }}
+            className="w-full flex items-center justify-between bg-stone-50 border border-stone-300 px-4 py-2.5 rounded-2xl transition-all active:scale-95">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">{selected.length}</div>
+              <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0">{selected.length}</div>
               <div className="text-left">
-                <p className="text-sm font-semibold">前往報名</p>
-                <p className="text-xs text-stone-400">已選 {selected.length} 堂課程</p>
+                <p className="text-base font-bold text-orange-600">前往報名</p>
+                <p className="text-sm text-stone-600">已選 {selected.length} 堂課程</p>
               </div>
             </div>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-stone-400 flex-shrink-0"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
         </div>
       )}

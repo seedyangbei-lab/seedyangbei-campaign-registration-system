@@ -35,7 +35,7 @@ export default function RegistrationSteps() {
   }, [])
 
   return (
-    <section className="bg-white border-b border-orange-500 sticky top-0 z-30">
+    <section className="bg-white border-b border-orange-500 sticky top-[52px] z-30">
       <div className="flex gap-4 items-stretch px-4 py-4 max-w-4xl mx-auto overflow-x-auto">
         {STEPS.map((step, i) => {
           const isActive = i === active
