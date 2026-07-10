@@ -192,8 +192,8 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
             aria-expanded={sortMenuOpen}
             className={`flex items-center justify-center w-[42px] h-[42px] rounded-xl border transition-colors ${sortMenuOpen ? 'border-orange-300 bg-orange-50 text-orange-500' : 'border-stone-200 bg-white text-stone-500 hover:bg-stone-50'}`}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 6h18M7 12h10M11 18h6"/>
+            <svg width="18" height="18" viewBox="0 0 30 30" fill="none">
+              <path d="M18.7502 22.814C19.268 22.814 19.6877 23.2337 19.6877 23.7515C19.6875 24.269 19.2679 24.689 18.7502 24.689H11.2502C10.7326 24.689 10.313 24.269 10.3127 23.7515C10.3127 23.2337 10.7325 22.814 11.2502 22.814H18.7502ZM22.5002 14.0627C23.018 14.0627 23.4377 14.4825 23.4377 15.0002C23.4376 15.5179 23.0179 15.9377 22.5002 15.9377H7.49902C6.98151 15.9375 6.56164 15.5178 6.56152 15.0002C6.56152 14.4826 6.98144 14.063 7.49902 14.0627H22.5002ZM27.5015 5.31152C28.019 5.31176 28.439 5.7314 28.439 6.24902C28.439 6.76664 28.019 7.18629 27.5015 7.18652H2.49902C1.98126 7.18652 1.56152 6.76679 1.56152 6.24902C1.56152 5.73126 1.98126 5.31152 2.49902 5.31152H27.5015Z" fill="currentColor"/>
             </svg>
           </button>
           {sortMenuOpen && (

@@ -48,15 +48,6 @@ export default async function HomePage() {
           location: activeCourses[0].location,
         } : null} />
 
-        {/* 活動介紹說明（如果有設定才顯示） */}
-        {s.site_description && (
-          <section className="max-w-4xl mx-auto px-6 pt-8">
-            <div className="bg-orange-50 border border-orange-100 rounded-2xl px-6 py-4">
-              <p className="text-stone-600 text-sm leading-relaxed whitespace-pre-line">{s.site_description}</p>
-            </div>
-          </section>
-        )}
-
         {/* Course List */}
         <section id="courses" className="max-w-5xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between border-b border-stone-200 pb-4 mb-4">

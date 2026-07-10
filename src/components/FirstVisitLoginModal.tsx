@@ -171,6 +171,18 @@ export default function FirstVisitLoginModal() {
                   <p className="text-sm text-stone-600">{b.desc}</p>
                 </div>
               ))}
+              <button
+                onClick={handleBind}
+                className="w-full bg-orange-500 hover:bg-orange-600 transition-colors text-white text-base font-medium rounded-[10px] px-4 py-2 mt-1"
+              >
+                綁定 LINE 帳號
+              </button>
+              <button
+                onClick={close}
+                className="w-full text-center text-base font-medium text-stone-600 rounded-[10px] px-4 py-2 hover:bg-stone-100 transition-colors"
+              >
+                先等等好了
+              </button>
             </div>
           </>
         )}
