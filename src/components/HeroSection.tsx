@@ -68,7 +68,7 @@ export default function HeroSection({ settings: s }: { settings: Record<string, 
   const handleLogout = () => { localStorage.removeItem('line_user'); setLineUser(null) }
 
   return (
-    <section className="relative w-full overflow-hidden bg-amber-50" style={{ height: '100svh' }}>
+    <section className="fixed inset-0 w-full overflow-hidden bg-amber-50 -z-10" style={{ height: '100svh' }}>
 
       {/* 背景 */}
       {hasVideo ? (

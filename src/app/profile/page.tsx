@@ -33,6 +33,7 @@ function ProfileContent() {
   const [selectedReward, setSelectedReward] = useState<any>(null)
   const [redeeming, setRedeeming] = useState(false)
   const [redeemSuccess, setRedeemSuccess] = useState(false)
+  const [pointsEnabled, setPointsEnabled] = useState(true)
   const supabase = createClient()
 
   useEffect(() => {
@@ -45,6 +46,8 @@ function ProfileContent() {
     } catch {
       router.push('/')
     }
+    supabase.from('site_settings').select('value').eq('key', 'points_enabled').maybeSingle()
+      .then(({ data }) => { if (data && data.value === 'false') setPointsEnabled(false) })
   }, [])
 
   const fetchHistory = async (lineUserId: string) => {
@@ -193,7 +196,7 @@ function ProfileContent() {
         </div>
 
          {/* 點數卡 */}
-        {memberPoints !== null && (
+        {pointsEnabled && memberPoints !== null && (
           <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm">
             <StampCard logs={pointLogs} totalPoints={memberPoints} />
             <div className="mt-4">

@@ -7,6 +7,8 @@ import { logFunnelStep } from '@/lib/funnelLog'
 
 const AGE_GROUPS = ['18歲以下','18~25歲','26~35歲','36~45歲','46~55歲','56~65歲','65歲以上']
 const BUILDINGS = ['A棟','B棟','C棟','D棟']
+const FLOORS = Array.from({ length: 17 }, (_, i) => String(i + 2)) // 2 ~ 18
+const SUB_UNITS = Array.from({ length: 9 }, (_, i) => String(i + 1)) // 1 ~ 9
 
 function RegisterForm() {
   const router = useRouter()
@@ -104,11 +106,17 @@ function RegisterForm() {
         isSocial = false
       } else {
         const match = roomRaw.match(/^([A-Z]棟)\s+(\d+)-(\d+)F-(\d+)$/)
+        const matchNoSub = !match && roomRaw.match(/^([A-Z]棟)\s+(\d+)-(\d+)F$/)
         if (match) {
           parsedBuilding = match[1]
           parsedUnit = match[2]
           parsedFloor = match[3]
           parsedSub = match[4]
+        } else if (matchNoSub) {
+          parsedBuilding = matchNoSub[1]
+          parsedUnit = matchNoSub[2]
+          parsedFloor = matchNoSub[3]
+          parsedSub = 'none'
         }
       }
 
@@ -139,7 +147,9 @@ function RegisterForm() {
     setLoading(true); setError('')
     logFunnelStep('register_submit', courseIds.join(','))
     
-    const roomNumber = isSocialHousing ? `${building} ${unitNumber}-${floor}F-${subUnit}` : '非社宅居民'
+    const roomNumber = isSocialHousing
+      ? (subUnit === 'none' ? `${building} ${unitNumber}-${floor}F` : `${building} ${unitNumber}-${floor}F-${subUnit}`)
+      : '非社宅居民'
     const lineUserId = lineUser.lineUserId
 
     try {
@@ -279,17 +289,31 @@ function RegisterForm() {
                 </div>
                 <div>
                   <label className="block text-xs text-stone-500 mb-1.5">樓層</label>
-                  <input required type="text" value={floor} onChange={e => setFloor(e.target.value)} placeholder="例：5"
-                    className="w-full border border-stone-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                  <select required value={floor} onChange={e => setFloor(e.target.value)}
+                    className="w-full border border-stone-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
+                    <option value="">選擇樓層</option>
+                    {FLOORS.map(f => <option key={f} value={f}>{f} 樓</option>)}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs text-stone-500 mb-1.5">之幾</label>
-                  <input required type="text" value={subUnit} onChange={e => setSubUnit(e.target.value)} placeholder="例：2"
-                    className="w-full border border-stone-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                  <select required value={subUnit} onChange={e => setSubUnit(e.target.value)}
+                    className="w-full border border-stone-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
+                    <option value="">選擇之幾</option>
+                    <option value="none">無</option>
+                    {SUB_UNITS.map(s => <option key={s} value={s}>之 {s}</option>)}
+                  </select>
                 </div>
               </div>
-              {building && unitNumber && floor && subUnit && (
-                <p className="mt-2 text-sm text-orange-600 font-medium">房號：{building} {unitNumber}-{floor}F-{subUnit}</p>
+              {(building || unitNumber || floor || subUnit) && (
+                <p className="mt-2 text-sm text-orange-600 font-medium">
+                  已填寫：{[
+                    building,
+                    unitNumber && `${unitNumber} 號`,
+                    floor && `${floor} 樓`,
+                    subUnit && (subUnit === 'none' ? '無之幾' : `之 ${subUnit}`),
+                  ].filter(Boolean).join(' ・ ')}
+                </p>
               )}
             </div>
           )}

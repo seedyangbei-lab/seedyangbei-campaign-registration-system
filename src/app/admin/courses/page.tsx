@@ -731,25 +731,13 @@ export default function CoursesPage() {
               </div>
               <div>
                 <label className="block text-stone-600 text-sm font-medium mb-1.5">課程類別</label>
-                <div className="flex flex-wrap gap-2">
-                  <button type="button"
-                    onClick={() => setForm({...form, category_id: ''})}
-                    className={`px-3 py-1.5 rounded-xl text-sm border transition-colors ${!form.category_id ? 'bg-stone-700 text-white border-stone-700' : 'bg-white text-stone-500 border-stone-300 hover:border-stone-400'}`}>
-                    不分類
-                  </button>
-                  {categories.map(c => {
-                    const selected = form.category_id === c.id
-                    return (
-                      <button key={c.id} type="button"
-                        onClick={() => setForm({...form, category_id: selected ? '' : c.id})}
-                        className="px-3 py-1.5 rounded-xl text-sm border font-medium transition-colors"
-                        style={selected
-                          ? { backgroundColor: c.color, borderColor: c.color, color: 'white' }
-                          : { backgroundColor: 'white', borderColor: '#d6d3d1', color: '#57534e' }}>
-                        {c.name}
-                      </button>
-                    )
-                  })}
+                <div className="relative">
+                  <select value={form.category_id} onChange={e => setForm({...form, category_id: e.target.value})}
+                    className="w-full appearance-none border border-stone-300 rounded-xl pl-4 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
+                    <option value="">不分類</option>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
               </div>
                     

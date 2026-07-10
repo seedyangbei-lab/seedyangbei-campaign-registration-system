@@ -1,6 +1,8 @@
 import { createServerClient } from '@/lib/supabase-server'
 import HeroSection from '@/components/HeroSection'
 import CourseCard from '@/components/CourseCard'
+import GreetingBar from '@/components/GreetingBar'
+import RegistrationSteps from '@/components/RegistrationSteps'
 
 export const revalidate = 60
 
@@ -27,21 +29,18 @@ export default async function HomePage() {
   return (
     <main className="min-h-screen bg-stone-50">
       <HeroSection settings={s} />
+      {/* 底圖已改為 fixed 置頂，這個 spacer 保留原本的捲動空間 */}
+      <div aria-hidden style={{ height: '100svh' }} />
 
       {/* 報名步驟 */}
-      <section className="bg-orange-50 border-b border-orange-100 sticky top-0 z-30">
-        <div className="max-w-4xl mx-auto px-6 py-3.5">
-          <div className="flex flex-wrap gap-3 md:gap-8 items-center text-sm text-stone-600">
-            <p className="text-sm font-bold text-stone-700 hidden md:block">如何報名？</p>
-            {['用 LINE 帳號登入', '勾選想參加的課程', '確認資料送出完成'].map((step, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-orange-500 text-white text-xs flex items-center justify-center font-bold flex-shrink-0">{i + 1}</span>
-                <span className="text-xs md:text-sm">{step}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <RegistrationSteps />
+
+      <GreetingBar course={activeCourses[0] ? {
+        title: activeCourses[0].title,
+        date: activeCourses[0].date,
+        time_start: activeCourses[0].time_start,
+        location: activeCourses[0].location,
+      } : null} />
 
       {/* 活動介紹說明（如果有設定才顯示） */}
       {s.site_description && (
@@ -53,7 +52,7 @@ export default async function HomePage() {
       )}
 
       {/* Course List */}
-      <section className="max-w-5xl mx-auto px-6 py-8">
+      <section id="courses" className="max-w-5xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-stone-700">近期課程活動</h2>
           {courses && courses.length > 0 && (

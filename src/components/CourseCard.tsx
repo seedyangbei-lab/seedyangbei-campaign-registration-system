@@ -113,6 +113,10 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
   const filtered = (activeCategory === 'all' ? courses : courses.filter(c => c.course_categories?.id === activeCategory))
     .slice()
     .sort((a, b) => {
+      // 已報名的課程一律排到最下面，其餘依開課日期排序
+      const aRegistered = registeredIds.has(a.id)
+      const bRegistered = registeredIds.has(b.id)
+      if (aRegistered !== bRegistered) return aRegistered ? 1 : -1
       const diff = new Date(a.date).getTime() - new Date(b.date).getTime()
       return sortOrder === 'asc' ? diff : -diff
     })
@@ -299,28 +303,26 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
                 </div>
               </div>
 
-            <div
+            {course.description && (
+              <div
                 className="relative border-t border-dashed border-[#dbdbdb] px-4 py-4 flex-1 flex items-center justify-center min-h-[80px]"
                 style={{ background: 'linear-gradient(to bottom, white 0%, white 26%, #ffefe4 100%)' }}
               >
-                {course.description ? (
-                  <>
-                    <span className="absolute top-2 left-2 text-orange-300 text-lg leading-none font-serif select-none">"</span>
-                    <span className="absolute top-2 right-2 text-orange-300 text-lg leading-none font-serif select-none rotate-180 inline-block">"</span>
-                    <p
-                      className="text-xs text-[#524e4e] text-center leading-[1.6] px-3"
-                      style={{
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {course.description}
-                    </p>
-                  </>
-                ) : null}
+                <span className="absolute top-2 left-2 text-orange-300 text-lg leading-none font-serif select-none">"</span>
+                <span className="absolute top-2 right-2 text-orange-300 text-lg leading-none font-serif select-none rotate-180 inline-block">"</span>
+                <p
+                  className="text-xs text-[#524e4e] text-center leading-[1.6] px-3"
+                  style={{
+                    display: '-webkit-box',
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {course.description}
+                </p>
               </div>
+            )}
 
               {course.course_categories && (
                 <div className="absolute top-3 left-3">

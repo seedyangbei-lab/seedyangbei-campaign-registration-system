@@ -29,11 +29,13 @@ const [settings, setSettings] = useState({
     schedule_logo_1_name: '新北市政府城鄉發展局',
     schedule_logo_2_name: '跨世代共居種子計畫',
     schedule_logo_3_name: '街道案子團隊',
+    points_enabled: 'true',
   })
   const [savedSettings, setSavedSettings] = useState({ ...settings })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [uploading, setUploading] = useState<Record<string, boolean>>({})
+  const [aspectWarning, setAspectWarning] = useState<Record<string, string>>({})
   const [isKvEditing, setIsKvEditing] = useState(false)
   const [kvSaved, setKvSaved] = useState(false)
   const [kvSaving, setKvSaving] = useState(false)
@@ -67,8 +69,34 @@ const [settings, setSettings] = useState({
     setIsEditing(false)
   }
 
+  // 首頁 banner（桌機版背景底圖）建議比例為 16:9，超出容許誤差時提示但仍允許上傳
+  const BANNER_RATIO_FIELDS: Record<string, number> = { hero_image_desktop: 16 / 9 }
+  const RATIO_TOLERANCE = 0.05
+
+  const checkAspectRatio = (field: string, file: File): Promise<void> => {
+    const target = BANNER_RATIO_FIELDS[field]
+    if (!target) return Promise.resolve()
+    return new Promise(resolve => {
+      const img = new Image()
+      const objectUrl = URL.createObjectURL(file)
+      img.onload = () => {
+        const ratio = img.width / img.height
+        if (Math.abs(ratio - target) / target > RATIO_TOLERANCE) {
+          setAspectWarning(w => ({ ...w, [field]: `目前圖片比例為 ${ratio.toFixed(2)}:1（建議 16:9 ≈ 1.78:1），畫面顯示時可能會被裁切` }))
+        } else {
+          setAspectWarning(w => { const next = { ...w }; delete next[field]; return next })
+        }
+        URL.revokeObjectURL(objectUrl)
+        resolve()
+      }
+      img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve() }
+      img.src = objectUrl
+    })
+  }
+
   const handleUpload = async (field: string, file: File) => {
     setUploading(u => ({ ...u, [field]: true }))
+    await checkAspectRatio(field, file)
     const ext = file.name.split('.').pop()
     const filename = `hero/${field}_${Date.now()}.${ext}`
     const { data, error } = await supabase.storage.from('images').upload(filename, file, { upsert: true })
@@ -86,6 +114,13 @@ const [settings, setSettings] = useState({
     hero_title_color: settings.hero_title_color,hero_title_stroke: settings.hero_title_stroke }))
     setKvSaved(true); setKvSaving(false); setIsKvEditing(false)
     setTimeout(() => setKvSaved(false), 3000)
+  }
+
+  const togglePoints = async () => {
+    const next = settings.points_enabled === 'true' ? 'false' : 'true'
+    setSettings(s => ({ ...s, points_enabled: next }))
+    setSavedSettings(s => ({ ...s, points_enabled: next }))
+    await supabase.from('site_settings').upsert({ key: 'points_enabled', value: next, updated_at: new Date().toISOString() }, { onConflict: 'key' })
   }
 
   const handleCancelKv = () => {
@@ -108,6 +143,9 @@ const [settings, setSettings] = useState({
         <div className="w-full border border-stone-200 rounded-xl py-3 px-4 bg-stone-50 text-sm text-stone-400 text-center">
           {(settings as any)[field] ? '已上傳' : '未設定'}
         </div>
+      )}
+      {aspectWarning[field] && (
+        <p className="text-xs text-orange-500 mt-1.5">{aspectWarning[field]}</p>
       )}
       {(settings as any)[field] && (
         <div className="mt-2 relative rounded-xl overflow-hidden border border-stone-200">
@@ -184,6 +222,22 @@ const [settings, setSettings] = useState({
       </div>
 
       {/* 網站文字內容 Tab */}
+      {tab === 'content' && (
+        <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden mb-4">
+          <div className="flex items-center justify-between px-6 py-4">
+            <div>
+              <h3 className="font-semibold text-stone-700">集點功能</h3>
+              <p className="text-stone-400 text-xs mt-0.5">關閉後，前台個人中心不會顯示集點卡與兌換項目</p>
+            </div>
+            <button onClick={togglePoints}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${settings.points_enabled === 'true' ? 'bg-orange-500' : 'bg-stone-200'}`}
+              title={settings.points_enabled === 'true' ? '關閉集點功能' : '開啟集點功能'}>
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${settings.points_enabled === 'true' ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {tab === 'content' && (
         <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100">
@@ -448,7 +502,7 @@ const [settings, setSettings] = useState({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <p className="text-xs font-bold text-stone-500 uppercase tracking-wider">桌機版（16:9）</p>
-                  <UploadField field="hero_image_desktop" label="背景底圖" hint="建議：1920 × 1080px，JPG/PNG，小於 3MB" />
+                  <UploadField field="hero_image_desktop" label="背景底圖" hint="建議比例 16:9（例如 1920 × 1080px），JPG/PNG，小於 3MB" />
                   <UploadField field="hero_cutout_desktop" label="人物去背圖（PNG）" hint="PNG 透明背景，建議人物高度 800px 以上" accept="image/png" />
                 </div>
                 <div className="space-y-4">
