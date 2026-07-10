@@ -37,26 +37,26 @@ function isExpired(c: Course) {
 function InfoRow({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2">
-      <div className="w-5 h-5 rounded-full bg-[#fa7315] flex items-center justify-center flex-shrink-0">
+      <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 text-stone-500">
         {icon}
       </div>
-      <span className="text-sm font-bold text-black leading-tight">{children}</span>
+      <span className="text-[17px] text-stone-600 leading-tight">{children}</span>
     </div>
   )
 }
 
 const IconPerson = () => (
-  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
   </svg>
 )
 const IconClock = () => (
-  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/>
   </svg>
 )
 const IconPin = () => (
-  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
   </svg>
 )
@@ -249,121 +249,115 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
           return (
             <div key={course.id}
              onClick={() => !isDisabled && toggle(course.id)}
-              className={`relative bg-white rounded-2xl border-2 transition-all overflow-hidden flex flex-col ${
+              className={`relative bg-white rounded-2xl border transition-all overflow-hidden ${
                 alreadyRegistered ? 'opacity-70 cursor-not-allowed border-green-200 bg-green-50/30'
-                : expired ? 'opacity-60 cursor-not-allowed border-[#dbdbdb]'
+                : expired ? 'opacity-60 cursor-not-allowed border-stone-200'
                 : isSelected ? 'border-orange-400 shadow-lg shadow-orange-100 cursor-pointer'
-                : 'border-[#dbdbdb] hover:border-stone-300 hover:shadow-md cursor-pointer'
-              }`}>
+                : 'border-stone-200 hover:shadow-md cursor-pointer'
+              }`}
+              style={!isSelected ? { boxShadow: '0px 4px 12px 0px rgba(0,0,0,0.1)' } : undefined}>
 
-              <div className="flex p-2 gap-2">
-                <div className="w-[141px] flex-shrink-0 relative self-stretch rounded-[10px] overflow-hidden">
-                  {course.poster_url ? (
-                    <img src={course.poster_url} alt={course.title} className="absolute inset-0 w-full h-full object-cover" />
-                  ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-stone-100 flex items-center justify-center min-h-[199px]">
-                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d1c0a8" strokeWidth="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                    </div>
-                  )}
-                  {alreadyRegistered && (
-                    <div className="absolute inset-0 bg-green-900/50 flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">已報名</span>
-                    </div>
-                  )}
-                  {!alreadyRegistered && expired && (
-                    <div className="absolute inset-0 bg-stone-900/60 flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">報名截止</span>
-                    </div>
-                  )}
-                  
-                </div>
-
-                <div className="flex-1 flex flex-col gap-2 py-2 min-w-0" style={{ minHeight: '199px' }}>
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-bold text-base text-black leading-snug">{course.title}</p>
-                    {alreadyRegistered ? (
-                      <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 bg-green-500">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-                      </div>
-                    ) : !expired && (
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${isSelected ? 'bg-orange-500 border-orange-500' : 'border-stone-300 bg-white'}`}>
-                        {isSelected && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
-                      </div>
-                    )}
-                  </div>
-
-                  {course.instructors && (
-                    <div className="flex items-center gap-1.5">
-                      <div className="bg-[#fff7ed] px-1.5 rounded-sm flex-shrink-0 flex items-center self-stretch">
-                        <span className="text-[#ee7235] text-xs font-bold leading-none">講師</span>
-                      </div>
-                      <span className="text-sm font-bold text-black leading-none">{course.instructors.name}</span>
-                      {lineUrl && (
-                        <button
-                          onClick={e => {
-                            e.stopPropagation()
-                            if (isMobile()) {
-                              window.open(lineUrl, '_blank')
-                            } else {
-                              setQrTarget(lineUrl)
-                            }
-                          }}
-                          className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 hover:opacity-80 transition-opacity"
-                          style={{ backgroundColor: '#06C755' }}
-                          title={course.course_line_group_url ? '加入課程 LINE 群組' : '加講師 LINE 好友'}
-                        >
-                          <IconLINE />
-                        </button>
+              <div className="flex flex-col gap-4 py-4">
+                <div className="px-4">
+                  <div className="flex h-[156px] border border-stone-200 rounded-xl overflow-hidden">
+                    <div className="relative w-[156px] flex-shrink-0">
+                      {course.poster_url ? (
+                        <img src={course.poster_url} alt={course.title} className="absolute inset-0 w-full h-full object-cover" />
+                      ) : (
+                        <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-stone-100 flex items-center justify-center">
+                          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d1c0a8" strokeWidth="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        </div>
+                      )}
+                      {course.course_categories && (
+                        <span className="absolute top-2 left-2 text-sm font-medium text-white px-2 py-0.5 rounded-md"
+                          style={{ backgroundColor: course.course_categories.color }}>
+                          {course.course_categories.name}
+                        </span>
+                      )}
+                      {alreadyRegistered && (
+                        <div className="absolute inset-0 bg-green-900/50 flex items-center justify-center">
+                          <span className="text-white text-xs font-bold">已報名</span>
+                        </div>
+                      )}
+                      {!alreadyRegistered && expired && (
+                        <div className="absolute inset-0 bg-stone-900/60 flex items-center justify-center">
+                          <span className="text-white text-xs font-bold">報名截止</span>
+                        </div>
                       )}
                     </div>
-                  )}
 
+                    <div className="flex-1 min-w-0 bg-white border-l border-stone-200 flex flex-col gap-2 justify-end p-2">
+                      <p className="font-bold text-xl text-stone-800 leading-snug line-clamp-3">{course.title}</p>
+                      {course.instructors && (
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="bg-orange-500 text-white text-sm font-medium px-2 py-0.5 rounded flex-shrink-0">講師</span>
+                          <span className="text-[17px] text-stone-800 truncate">{course.instructors.name}</span>
+                          {lineUrl && (
+                            <button
+                              onClick={e => {
+                                e.stopPropagation()
+                                if (isMobile()) {
+                                  window.open(lineUrl, '_blank')
+                                } else {
+                                  setQrTarget(lineUrl)
+                                }
+                              }}
+                              className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 hover:opacity-80 transition-opacity"
+                              style={{ backgroundColor: '#06C755' }}
+                              title="加入 LINE 群組/好友"
+                            >
+                              <IconLINE />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1 px-4">
                   <InfoRow icon={<IconPerson />}>{course.suitable_age || '全年齡'}</InfoRow>
                   <InfoRow icon={<IconClock />}>{dateStr} {course.time_start?.slice(0,5)}–{course.time_end?.slice(0,5)}</InfoRow>
                   <InfoRow icon={<IconPin />}>{course.location}</InfoRow>
+                </div>
 
-                  <div className="mt-auto">
-                    <div className={`flex items-start gap-1.5 rounded-lg px-2 py-1.5 border ${course.notes ? 'border-[#fa7315]' : 'border-transparent'}`}>
-                      {course.notes ? (
-                        <>
-                          <IconNotice />
-                          <p className="text-xs font-bold text-[#252525] line-clamp-2 flex-1">{course.notes}</p>
-                        </>
-                      ) : (
-                        <div className="h-8" aria-hidden />
-                      )}
-                    </div>
+                <div className="px-4">
+                  <div className={`flex items-start gap-1.5 rounded-lg px-2 py-1.5 border ${course.notes ? 'border-orange-500' : 'border-transparent'}`}>
+                    {course.notes ? (
+                      <>
+                        <IconNotice />
+                        <p className="text-xs font-bold text-stone-700 line-clamp-2 flex-1">{course.notes}</p>
+                      </>
+                    ) : (
+                      <div className="h-8" aria-hidden />
+                    )}
                   </div>
                 </div>
               </div>
 
-            {course.description && (
-              <div
-                className="relative border-t border-dashed border-[#dbdbdb] px-4 py-4 flex-1 flex items-center justify-center min-h-[80px]"
-                style={{ background: 'linear-gradient(to bottom, white 0%, white 26%, #ffefe4 100%)' }}
-              >
-                <span className="absolute top-2 left-2 text-orange-300 text-lg leading-none font-serif select-none">"</span>
-                <span className="absolute top-2 right-2 text-orange-300 text-lg leading-none font-serif select-none rotate-180 inline-block">"</span>
-                <p
-                  className="text-xs text-[#524e4e] text-center leading-[1.6] px-3"
-                  style={{
-                    display: '-webkit-box',
-                    WebkitLineClamp: 3,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                  }}
-                >
-                  {course.description}
-                </p>
-              </div>
-            )}
+              {course.description && (
+                <div className="bg-stone-100 px-4 py-4">
+                  <p
+                    className="text-sm text-stone-400 leading-relaxed"
+                    style={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {course.description}
+                  </p>
+                </div>
+              )}
 
-              {course.course_categories && (
-                <div className="absolute top-3 left-3">
-                  <span className="text-xs font-bold px-2 py-1 rounded-lg text-white shadow-sm"
-                    style={{ backgroundColor: course.course_categories.color }}>
-                    {course.course_categories.name}
-                  </span>
+              {alreadyRegistered ? (
+                <div className="absolute top-[19px] right-[19px] w-7 h-7 rounded-full bg-green-500 flex items-center justify-center">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+              ) : !expired && (
+                <div className={`absolute top-[19px] right-[19px] w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-orange-500 border-orange-500' : 'border-stone-300 bg-stone-100'}`}>
+                  {isSelected && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
                 </div>
               )}
             </div>

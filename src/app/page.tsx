@@ -4,6 +4,7 @@ import CourseCard from '@/components/CourseCard'
 import GreetingBar from '@/components/GreetingBar'
 import RegistrationSteps from '@/components/RegistrationSteps'
 import FirstVisitLoginModal from '@/components/FirstVisitLoginModal'
+import SiteNavbar from '@/components/SiteNavbar'
 
 export const revalidate = 60
 
@@ -30,6 +31,7 @@ export default async function HomePage() {
   return (
     <main className="min-h-screen">
       <FirstVisitLoginModal />
+      <SiteNavbar siteTitle={s.site_title} />
       <HeroSection settings={s} />
       {/* 底圖已改為 fixed 置頂，這個 spacer 保留原本的捲動空間（此區保持透明，才看得到底下固定的 Hero） */}
       <div aria-hidden style={{ height: '100svh' }} />
@@ -57,10 +59,10 @@ export default async function HomePage() {
 
         {/* Course List */}
         <section id="courses" className="max-w-5xl mx-auto px-6 py-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-stone-700">近期課程活動</h2>
+          <div className="flex items-center justify-between border-b border-stone-200 pb-4 mb-4">
+            <h2 className="text-xl font-bold text-stone-600">近期課程活動</h2>
             {courses && courses.length > 0 && (
-               <span className="text-sm text-stone-400">{activeCourses.length} 個課程開放報名</span>
+               <span className="text-sm text-stone-500">{activeCourses.length} 個課程開放報名</span>
             )}
           </div>
           {!activeCourses || activeCourses.length === 0 ? (
