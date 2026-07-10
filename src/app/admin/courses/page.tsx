@@ -334,24 +334,18 @@ export default function CoursesPage() {
   const notesCount = form.notes.length
   const notesOver = notesCount > NOTES_MAX
 
-  const primaryBtnCls = "flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
-  const secondaryBtnCls = "flex items-center gap-1.5 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+  const primaryBtnCls = "bg-orange-500 hover:bg-orange-600 text-white p-2 rounded-md text-xs font-medium transition-colors whitespace-nowrap"
+  const secondaryBtnCls = "bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 p-2 rounded-md text-xs font-medium transition-colors whitespace-nowrap"
   const openAddCat = () => { setEditCat(null); setCatForm({ name: '', color: '#e11d48' }); setShowCatModal(true) }
   const headerActions = mainTab === 'courses' ? (
     <>
-      <button onClick={openAdd} className={primaryBtnCls}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        新增課程
-      </button>
+      <button onClick={openAdd} className={primaryBtnCls}>新增課程</button>
       <button onClick={() => setMainTab('categories')} className={secondaryBtnCls}>課程類別</button>
     </>
   ) : (
     <>
       <button onClick={() => setMainTab('courses')} className={secondaryBtnCls}>課程列表</button>
-      <button onClick={openAddCat} className={primaryBtnCls}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        新增類別
-      </button>
+      <button onClick={openAddCat} className={primaryBtnCls}>新增類別</button>
     </>
   )
   const courseTabBar = (
@@ -370,9 +364,9 @@ export default function CoursesPage() {
 
   return (
     <div className="p-6 md:p-8">
-      {/* 標題 + 按鈕同一列（桌機底部多一條分隔線） */}
-      <div className="flex items-center justify-between mb-4 pb-0 md:pb-4 md:border-b md:border-stone-200 gap-2">
-        <h2 className="text-stone-800 text-[26px] leading-7 font-bold">課程管理</h2>
+      {/* 標題 + 按鈕同一列，底部一條分隔線 */}
+      <div className="flex items-center justify-between mb-4 pb-4 border-b border-stone-200 gap-2">
+        <h2 className="text-stone-600 text-[26px] leading-7 font-bold">課程管理</h2>
         <div className="flex items-center gap-2">
           {headerActions}
         </div>
@@ -444,7 +438,7 @@ export default function CoursesPage() {
                 <div key={course.id}>
                   {/* 手機版：直式卡片（< md） */}
                   <div className="md:hidden relative bg-white border border-stone-200 rounded-2xl p-5 shadow-[0px_1px_1px_rgba(0,0,0,0.05)]">
-                    <span className={`absolute top-2 right-2 text-xs font-medium px-2 py-0.5 rounded-full ${expired ? 'bg-stone-100 text-stone-500 border border-stone-300' : 'bg-green-100 text-green-700'}`}>
+                    <span className={`absolute top-2 right-2 text-sm font-medium px-2 py-0.5 rounded-md ${expired ? 'bg-stone-100 text-stone-500 border border-stone-300' : 'bg-green-100 text-green-700'}`}>
                       {expired ? '已結束' : '開放報名'}
                     </span>
 
@@ -455,7 +449,7 @@ export default function CoursesPage() {
                       <div className="flex-1 min-w-0 flex flex-col gap-1">
                         <p className="text-stone-800 font-bold text-base leading-6 break-words">{course.title}</p>
                         {course.course_categories && (
-                          <span className="inline-flex self-start text-xs px-2 py-0.5 rounded-full text-white font-medium" style={{ backgroundColor: course.course_categories.color }}>
+                          <span className="inline-flex self-start text-sm px-2 py-0.5 rounded-md text-white font-medium" style={{ backgroundColor: course.course_categories.color }}>
                             {course.course_categories.name}
                           </span>
                         )}
@@ -520,7 +514,7 @@ export default function CoursesPage() {
                           {course.poster_url && <img src={course.poster_url} alt={course.title} className="w-full h-full object-cover" />}
                         </div>
                         {course.course_categories && (
-                          <span className="relative text-xs px-2 py-0.5 rounded-full text-white font-medium whitespace-nowrap" style={{ backgroundColor: course.course_categories.color }}>
+                          <span className="relative text-sm px-2 py-0.5 rounded-md text-white font-medium whitespace-nowrap" style={{ backgroundColor: course.course_categories.color }}>
                             {course.course_categories.name}
                           </span>
                         )}
@@ -528,7 +522,7 @@ export default function CoursesPage() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-stone-800 font-bold text-base truncate">{course.title}</p>
-                          <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${expired ? 'bg-stone-100 text-stone-500 border border-stone-300' : 'bg-green-100 text-green-700'}`}>
+                          <span className={`shrink-0 text-sm font-medium px-2 py-0.5 rounded-md ${expired ? 'bg-stone-100 text-stone-500 border border-stone-300' : 'bg-green-100 text-green-700'}`}>
                             {expired ? '已結束' : '開放報名'}
                           </span>
                         </div>
@@ -584,7 +578,7 @@ export default function CoursesPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
                   <span className="text-stone-700 font-medium">{cat.name}</span>
-                  <span className="text-xs px-2.5 py-1 rounded-full text-white font-medium" style={{ backgroundColor: cat.color }}>{cat.name}</span>
+                  <span className="text-sm px-2.5 py-1 rounded-md text-white font-medium" style={{ backgroundColor: cat.color }}>{cat.name}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button onClick={() => { setEditCat(cat); setCatForm({ name: cat.name, color: cat.color }); setShowCatModal(true) }}
@@ -630,7 +624,7 @@ export default function CoursesPage() {
                 </div>
                 <div className="mt-3 flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full" style={{ backgroundColor: catForm.color }} />
-                  <span className="text-xs px-3 py-1.5 rounded-full text-white font-medium" style={{ backgroundColor: catForm.color }}>{catForm.name || '預覽'}</span>
+                  <span className="text-sm px-3 py-1.5 rounded-md text-white font-medium" style={{ backgroundColor: catForm.color }}>{catForm.name || '預覽'}</span>
                 </div>
               </div>
               <div className="flex gap-3 pt-2">
