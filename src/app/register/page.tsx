@@ -7,6 +7,7 @@ import { logFunnelStep } from '@/lib/funnelLog'
 
 const AGE_GROUPS = ['18歲以下','18~25歲','26~35歲','36~45歲','46~55歲','56~65歲','65歲以上']
 const BUILDINGS = ['A棟','B棟','C棟','D棟']
+const UNIT_NUMBERS = ['398','400','135','137']
 const FLOORS = Array.from({ length: 17 }, (_, i) => String(i + 2)) // 2 ~ 18
 const SUB_UNITS = Array.from({ length: 9 }, (_, i) => String(i + 1)) // 1 ~ 9
 
@@ -287,8 +288,14 @@ function RegisterForm() {
 
               <div className="flex flex-col gap-1 mb-4">
                 <label className="text-sm text-stone-500">號數</label>
-                <input required type="text" value={unitNumber} onChange={e => setUnitNumber(e.target.value)} placeholder="例：400"
-                  className="w-full border border-stone-200 rounded-lg px-4 py-3 text-lg text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                <div className="grid grid-cols-4 gap-2">
+                  {UNIT_NUMBERS.map(n => (
+                    <button key={n} type="button" onClick={() => setUnitNumber(n)}
+                      className={`h-[50px] rounded-[10px] border text-base font-medium transition-colors ${unitNumber === n ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-stone-600 border-stone-300'}`}>
+                      {n}號
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="flex gap-2">
