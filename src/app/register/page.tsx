@@ -262,7 +262,7 @@ function RegisterForm() {
             <div className="flex gap-3">
               {[{v: true, l: '社宅居民'}, {v: false, l: '非社宅居民'}].map(opt => (
                 <button key={String(opt.v)} type="button" onClick={() => setIsSocialHousing(opt.v)}
-                  className={`flex-1 py-3 rounded-xl border text-base font-medium transition-colors ${isSocialHousing === opt.v ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-stone-600 border-stone-300'}`}>
+                  className={`flex-1 h-[50px] rounded-[10px] border text-base font-medium transition-colors ${isSocialHousing === opt.v ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-stone-600 border-stone-300'}`}>
                   {opt.l}
                 </button>
               ))}
@@ -271,49 +271,59 @@ function RegisterForm() {
 
           {isSocialHousing && (
             <div>
-              <label className="block text-base font-medium text-stone-700 mb-1">房號 <span className="text-orange-500">*</span></label>
-              <p className="text-sm text-stone-400 mb-3">格式：A棟 400-5F-2</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-stone-500 mb-1.5">棟別</label>
-                  <select required value={building} onChange={e => setBuilding(e.target.value)}
-                    className="w-full border border-stone-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-                    <option value="">選擇棟別</option>
-                    {BUILDINGS.map(b => <option key={b} value={b}>{b}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-stone-500 mb-1.5">號數</label>
-                  <input required type="text" value={unitNumber} onChange={e => setUnitNumber(e.target.value)} placeholder="例：400"
-                    className="w-full border border-stone-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-300" />
-                </div>
-                <div>
-                  <label className="block text-xs text-stone-500 mb-1.5">樓層</label>
-                  <select required value={floor} onChange={e => setFloor(e.target.value)}
-                    className="w-full border border-stone-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-                    <option value="">選擇樓層</option>
-                    {FLOORS.map(f => <option key={f} value={f}>{f} 樓</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-stone-500 mb-1.5">之幾</label>
-                  <select required value={subUnit} onChange={e => setSubUnit(e.target.value)}
-                    className="w-full border border-stone-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-                    <option value="">選擇之幾</option>
-                    <option value="none">無</option>
-                    {SUB_UNITS.map(s => <option key={s} value={s}>之 {s}</option>)}
-                  </select>
+              <label className="block text-base font-medium text-stone-700 mb-3">房號 <span className="text-orange-500">*</span></label>
+
+              <div className="flex flex-col gap-1 mb-4">
+                <label className="text-sm text-stone-500">棟別</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {BUILDINGS.map(b => (
+                    <button key={b} type="button" onClick={() => setBuilding(b)}
+                      className={`h-[50px] rounded-[10px] border text-base font-medium transition-colors ${building === b ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-stone-600 border-stone-300'}`}>
+                      {b}
+                    </button>
+                  ))}
                 </div>
               </div>
-              {(building || unitNumber || floor || subUnit) && (
-                <p className="mt-2 text-sm text-orange-600 font-medium">
-                  已填寫：{[
-                    building,
-                    unitNumber && `${unitNumber} 號`,
-                    floor && `${floor} 樓`,
-                    subUnit && (subUnit === 'none' ? '無之幾' : `之 ${subUnit}`),
-                  ].filter(Boolean).join(' ・ ')}
-                </p>
+
+              <div className="flex flex-col gap-1 mb-4">
+                <label className="text-sm text-stone-500">號數</label>
+                <input required type="text" value={unitNumber} onChange={e => setUnitNumber(e.target.value)} placeholder="例：400"
+                  className="w-full border border-stone-200 rounded-lg px-4 py-3 text-lg text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-300" />
+              </div>
+
+              <div className="flex gap-2">
+                <div className="flex-1 flex flex-col gap-1 min-w-0">
+                  <label className="text-sm text-stone-500">樓層</label>
+                  <div className="relative">
+                    <select required value={floor} onChange={e => setFloor(e.target.value)}
+                      className="w-full appearance-none border border-stone-200 rounded-lg pl-4 pr-9 py-3 text-lg text-stone-800 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
+                      <option value="">請選擇樓層</option>
+                      {FLOORS.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                    <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </div>
+                </div>
+                <div className="flex-1 flex flex-col gap-1 min-w-0">
+                  <label className="text-sm text-stone-500">之幾</label>
+                  <div className="relative">
+                    <select required value={subUnit} onChange={e => setSubUnit(e.target.value)}
+                      className="w-full appearance-none border border-stone-200 rounded-lg pl-4 pr-9 py-3 text-lg text-stone-800 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
+                      <option value="">請選擇幾之幾</option>
+                      <option value="none">無</option>
+                      {SUB_UNITS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </div>
+                </div>
+              </div>
+
+              {building && unitNumber && floor && subUnit && (
+                <div className="mt-3 bg-stone-100 border border-stone-300 rounded-lg p-2.5">
+                  <p className="text-sm text-stone-500">請確認您的房號為</p>
+                  <p className="text-lg font-bold text-stone-800">
+                    {building} {unitNumber}-{floor}F{subUnit !== 'none' ? `-${subUnit}` : ''}
+                  </p>
+                </div>
               )}
             </div>
           )}
@@ -339,10 +349,10 @@ function RegisterForm() {
 
           <div>
             <label className="block text-base font-medium text-stone-700 mb-3">年齡區間 <span className="text-orange-500">*</span></label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
               {AGE_GROUPS.map(age => (
                 <button key={age} type="button" onClick={() => setForm({...form, age_group: age})}
-                  className={`py-3 rounded-xl border text-base transition-colors font-medium ${form.age_group === age ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-stone-600 border-stone-300 hover:border-orange-300'}`}>
+                  className={`h-[50px] rounded-[10px] border text-base transition-colors font-medium ${form.age_group === age ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-stone-600 border-stone-300 hover:border-orange-300'}`}>
                   {age}
                 </button>
               ))}
@@ -360,7 +370,7 @@ function RegisterForm() {
 
           <button type="submit"
             disabled={loading || !form.age_group || !lineUser || (isSocialHousing && (!building || !unitNumber || !floor || !subUnit))}
-            className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-bold py-4 rounded-xl text-lg transition-colors">
+            className="w-full h-[50px] bg-orange-50 hover:bg-orange-100 disabled:opacity-50 disabled:cursor-not-allowed border border-orange-200 text-orange-600 font-medium rounded-[10px] text-base transition-colors">
             {loading ? '報名中...' : `確認報名 ${courseIds.length} 堂課程`}
           </button>
         </form>

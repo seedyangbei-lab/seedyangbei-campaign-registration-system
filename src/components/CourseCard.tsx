@@ -260,8 +260,8 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
               className={`relative rounded-2xl border transition-all overflow-hidden ${
                 alreadyRegistered ? 'opacity-70 cursor-not-allowed border-green-200 bg-green-50/30'
                 : expired ? 'opacity-60 cursor-not-allowed border-stone-200 bg-white'
-                : isSelected ? 'border-orange-400 shadow-lg shadow-orange-100 cursor-pointer bg-gradient-to-b from-orange-50/60 to-white'
-                : 'border-stone-200 hover:shadow-md cursor-pointer bg-gradient-to-b from-orange-50/60 to-white'
+                : isSelected ? 'border-orange-400 shadow-lg shadow-orange-100 cursor-pointer bg-gradient-to-t from-orange-50/60 to-white'
+                : 'border-stone-200 hover:shadow-md cursor-pointer bg-gradient-to-t from-orange-50/60 to-white'
               }`}
               style={!isSelected ? { boxShadow: '0px 4px 12px 0px rgba(0,0,0,0.1)' } : undefined}>
 
@@ -283,9 +283,12 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
                         </span>
                       )}
                       {alreadyRegistered && (
-                        <div className="absolute inset-0 bg-green-900/50 flex items-center justify-center">
-                          <span className="text-white text-xs font-bold">已報名</span>
-                        </div>
+                        <>
+                          <div className="absolute inset-0 bg-black/50" />
+                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-green-200 rounded-lg px-2.5 py-2 flex items-center justify-center">
+                            <span className="text-white text-base font-bold whitespace-nowrap">已報名</span>
+                          </div>
+                        </>
                       )}
                       {!alreadyRegistered && expired && (
                         <div className="absolute inset-0 bg-stone-900/60 flex items-center justify-center">
@@ -294,14 +297,14 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
                       )}
                     </div>
 
-                    <div className="flex-1 min-w-0 bg-white border-l border-stone-200 h-full flex flex-col p-2">
-                      <div className="flex-1 flex items-center justify-center text-center">
+                    <div className="flex-1 min-w-0 bg-white border-l border-stone-200 h-full flex flex-col justify-end gap-2 p-2">
+                      <div className="flex-1 flex flex-col justify-center w-full">
                         <p className="font-bold text-xl text-stone-800 leading-snug line-clamp-3">{course.title}</p>
                       </div>
                       {course.instructors && (
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="bg-orange-500 text-white text-sm font-medium px-2 py-0.5 rounded flex-shrink-0">講師</span>
-                          <span className="text-[17px] text-stone-800 truncate">{course.instructors.name}</span>
+                          <span className="bg-orange-500 text-white text-xs font-medium px-2 py-0.5 rounded flex-shrink-0">講師</span>
+                          <span className="text-sm text-stone-800 truncate">{course.instructors.name}</span>
                           {lineUrl && (
                             <button
                               onClick={e => {
@@ -331,18 +334,14 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
                   <InfoRow icon={<IconPin />}>{course.location}</InfoRow>
                 </div>
 
-                <div className="px-4">
-                  <div className={`flex items-start gap-1.5 rounded-lg px-2 py-1.5 border ${course.notes ? 'border-orange-500' : 'border-transparent'}`}>
-                    {course.notes ? (
-                      <>
-                        <IconNotice />
-                        <p className="text-xs font-bold text-stone-700 line-clamp-2 flex-1">{course.notes}</p>
-                      </>
-                    ) : (
-                      <div className="h-8" aria-hidden />
-                    )}
+                {course.notes && (
+                  <div className="px-4">
+                    <div className="flex items-start gap-1.5 rounded-lg px-2 py-1.5 border border-orange-500">
+                      <IconNotice />
+                      <p className="text-xs font-bold text-stone-700 line-clamp-2 flex-1">{course.notes}</p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {course.description && (
@@ -362,11 +361,11 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
               )}
 
               {alreadyRegistered ? (
-                <div className="absolute top-1 right-1 w-7 h-7 rounded-full bg-green-500 flex items-center justify-center">
+                <div className="absolute top-[19px] right-[19px] w-7 h-7 rounded-full bg-green-500 flex items-center justify-center">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
               ) : !expired && (
-                <div className={`absolute top-1 right-1 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-orange-500 border-orange-500' : 'border-stone-300 bg-stone-100'}`}>
+                <div className={`absolute top-[19px] right-[19px] w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-orange-500 border-orange-500' : 'border-stone-300 bg-stone-100'}`}>
                   {isSelected && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
                 </div>
               )}
