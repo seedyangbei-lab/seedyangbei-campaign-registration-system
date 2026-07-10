@@ -38,28 +38,6 @@ const BENEFITS: { title: string; desc: string; icon: React.ReactNode }[] = [
   },
 ]
 
-function BindIllustration() {
-  return (
-    <svg width="88" height="88" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="7" y="2" width="10" height="20" rx="2.2" />
-      <path d="M11 18h2" />
-      <path d="M3 8c1.4 0 2.4 1 2.4 2.4S4.4 12.8 3 12.8" />
-      <path d="M21 8c-1.4 0-2.4 1-2.4 2.4S19.6 12.8 21 12.8" />
-      <path d="M9.5 7.5l1.3 1.6L14 6.8" />
-    </svg>
-  )
-}
-
-function BenefitsIllustration() {
-  return (
-    <svg width="88" height="88" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.7 21a2 2 0 0 1-3.4 0" />
-      <circle cx="18" cy="6" r="3.4" fill="#f97316" stroke="none" />
-      <path d="M16.7 6l1 1 1.8-1.8" stroke="white" strokeWidth="1.4" />
-    </svg>
-  )
-}
 
 export default function FirstVisitLoginModal() {
   const [mounted, setMounted] = useState(false)
@@ -122,8 +100,8 @@ export default function FirstVisitLoginModal() {
         {step === 'prompt' ? (
           <>
             <div className="w-full flex flex-col items-center gap-4">
-              <div className="w-[200px] h-[200px] rounded-full bg-orange-50 flex items-center justify-center flex-shrink-0">
-                <BindIllustration />
+              <div className="w-[200px] h-[200px] flex items-center justify-center flex-shrink-0">
+                <img src="/illustrations/modal-login-guide.png" alt="" width={200} height={200} className="w-full h-full object-contain" />
               </div>
               <div className="flex flex-col items-center gap-2 text-center">
                 <p className="text-xl font-bold text-stone-600 leading-7">
@@ -151,8 +129,8 @@ export default function FirstVisitLoginModal() {
         ) : (
           <>
             <div className="w-full flex flex-col items-center gap-4">
-              <div className="w-[200px] h-[200px] rounded-full bg-orange-50 flex items-center justify-center flex-shrink-0">
-                <BenefitsIllustration />
+              <div className="w-[200px] h-[200px] flex items-center justify-center flex-shrink-0">
+                <img src="/illustrations/modal-benefits.png" alt="" width={200} height={200} className="w-full h-full object-contain" />
               </div>
               <div className="flex flex-col items-center gap-2 text-center">
                 <p className="text-xl font-bold text-stone-600 leading-7">

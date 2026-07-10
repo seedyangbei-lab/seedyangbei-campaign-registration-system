@@ -14,9 +14,7 @@ export default function HeroBanner({ settings: s }: { settings: Record<string, s
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  const cutoutImage = isMobile === null ? null : isMobile ? (s.hero_cutout_mobile || s.hero_cutout_desktop) : s.hero_cutout_desktop
-
-  if (!cutoutImage && !s.site_title && !s.site_subtitle) return null
+  const cutoutImage = isMobile === null ? null : (isMobile ? (s.hero_cutout_mobile || s.hero_cutout_desktop) : s.hero_cutout_desktop) || '/illustrations/hero-banner-default.png'
 
   return (
     <section className="relative w-full overflow-hidden bg-amber-50/40" style={{ height: 'clamp(180px, 30vh, 280px)' }}>
