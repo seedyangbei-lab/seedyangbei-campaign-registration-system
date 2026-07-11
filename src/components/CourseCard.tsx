@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { logFunnelStep } from '@/lib/funnelLog'
-import { getTutorialStep, setTutorialStep as saveTutorialStep, shouldAutoStartTutorial } from '@/lib/tutorial'
+import { getTutorialStep, setTutorialStep as saveTutorialStep, shouldAutoStartTutorial, DEMO_COURSE_ID } from '@/lib/tutorial'
 import { useTutorialRect } from '@/lib/useTutorialRect'
 import TutorialMask from '@/components/TutorialMask'
 import TutorialTooltip from '@/components/TutorialTooltip'
@@ -16,6 +16,26 @@ interface Course {
   line_group_url?: string
   instructors?: { id: string; name: string; phone?: string; line_id?: string } | null
   course_categories?: { id: string; name: string; color: string } | null
+}
+
+// 教學導覽用的示範課程：固定不過期、不會被標記已報名，確保教學時一定有東西可以聚光燈引導點選
+function makeDemoCourse(): Course {
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  const dateStr = d.toISOString().split('T')[0]
+  return {
+    id: DEMO_COURSE_ID,
+    title: '範例課程（僅供教學示範）',
+    description: '',
+    date: dateStr,
+    time_start: '10:00',
+    time_end: '12:00',
+    location: '示範地點',
+    max_seats: 10,
+    suitable_age: '全年齡',
+    instructors: { id: 'demo-instructor', name: '示範講師' },
+    course_categories: { id: 'demo', name: '教學示範', color: '#8b5cf6' },
+  }
 }
 
 const LINE_CHANNEL_ID = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2010077816'
@@ -104,17 +124,25 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
   const firstCardRef = useRef<HTMLDivElement>(null)
   const ctaRef = useRef<HTMLDivElement>(null)
 
+  const startTutorialStep1 = () => {
+    saveTutorialStep('1')
+    setTutorialStepState('1')
+    // Hero 區塊較高，第一屏看不到課程列表，教學開始時直接捲動過去
+    setTimeout(() => {
+      document.getElementById('courses')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 300)
+  }
+
   useEffect(() => {
     // 開發／預覽用：網址加上 ?tutorial=1 可強制從頭看一次教學，不受「已看過」狀態影響
     if (new URLSearchParams(window.location.search).get('tutorial') === '1') {
-      saveTutorialStep('1')
-      setTutorialStepState('1')
+      startTutorialStep1()
       return
     }
     let step = getTutorialStep()
     if (!step && shouldAutoStartTutorial()) {
-      step = '1'
-      saveTutorialStep('1')
+      startTutorialStep1()
+      return
     }
     if (step === '1' || step === '2') setTutorialStepState(step)
   }, [])
@@ -177,6 +205,12 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
       const diff = new Date(a.date).getTime() - new Date(b.date).getTime()
       return sortOrder === 'asc' ? diff : -diff
     })
+
+  // 教學導覽時，把示範課程釘在最前面，確保聚光燈一定指向一張「可以點」的卡片，
+  // 不會剛好對到已報名或已截止的真實課程
+  const displayList = (tutorialStep === '1' || tutorialStep === '2')
+    ? [makeDemoCourse(), ...filtered]
+    : filtered
 
   const handleProceed = () => {
     if (tutorialStep === '2') saveTutorialStep('3')
@@ -279,12 +313,12 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
         </div>
       )}
 
-      {filtered.length === 0 && (
+      {displayList.length === 0 && (
         <div className="text-center py-16 text-stone-400"><p>此類別目前沒有開放中的課程</p></div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {filtered.map((course, courseIdx) => {
+        {displayList.map((course, courseIdx) => {
           const d = new Date(course.date + 'T00:00:00')
           const weekdays = ['日','一','二','三','四','五','六']
           const dateStr = `${d.getMonth()+1}/${d.getDate()}（${weekdays[d.getDay()]}）`
@@ -473,7 +507,7 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
       )}
       {tutorialStep === '2' && (
         <>
-          <TutorialMask holes={[firstCardHoleStep2, ctaHole]} />
+          <TutorialMask holes={[firstCardHoleStep2, ctaHole]} pulse={[false, true]} />
           <TutorialTooltip hole={firstCardHoleStep2} number={2} text="已選好課程後，點選前往報名" placement="above" />
           <TutorialTooltip hole={ctaHole} number={1} text="前往報名" placement="above" widthClass="whitespace-nowrap" />
           <TutorialSkipButton onSkip={skipTutorial} />

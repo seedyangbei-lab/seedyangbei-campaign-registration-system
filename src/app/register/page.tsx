@@ -4,11 +4,13 @@ import React, { useEffect, useRef, useState, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { logFunnelStep } from '@/lib/funnelLog'
-import { getTutorialStep, setTutorialStep as saveTutorialStep } from '@/lib/tutorial'
+import { getTutorialStep, setTutorialStep as saveTutorialStep, DEMO_COURSE_ID } from '@/lib/tutorial'
 import { useTutorialRect } from '@/lib/useTutorialRect'
 import TutorialMask from '@/components/TutorialMask'
 import TutorialTooltip from '@/components/TutorialTooltip'
 import TutorialSkipButton from '@/components/TutorialSkipButton'
+
+const DEMO_COURSE_DISPLAY = { id: DEMO_COURSE_ID, title: '範例課程（僅供教學示範）', date: new Date().toISOString().split('T')[0], time_start: '10:00', time_end: '12:00', location: '示範地點' }
 
 const AGE_GROUPS = ['18歲以下','18~25歲','26~35歲','36~45歲','46~55歲','56~65歲','65歲以上']
 const BUILDINGS = ['A棟','B棟','C棟','D棟']
@@ -92,10 +94,19 @@ function RegisterForm() {
     if (errParam === 'line_denied') setError('LINE 登入已取消')
     if (errParam === 'line_failed') setError('LINE 登入失敗，請稍後再試')
 
-    supabase.from('courses')
-      .select('id, title, date, time_start, time_end, location')
-      .in('id', ids)
-      .then(({ data }) => setCourses(data || []))
+    const realIds = ids.filter(id => id !== DEMO_COURSE_ID)
+    const hasDemo = realIds.length !== ids.length
+    if (realIds.length > 0) {
+      supabase.from('courses')
+        .select('id, title, date, time_start, time_end, location')
+        .in('id', realIds)
+        .then(({ data }) => setCourses([
+          ...(hasDemo ? [DEMO_COURSE_DISPLAY] : []),
+          ...(data || []),
+        ]))
+    } else if (hasDemo) {
+      setCourses([DEMO_COURSE_DISPLAY])
+    }
 
     setInitialized(true)
   }, [])
@@ -159,9 +170,19 @@ function RegisterForm() {
     e.preventDefault()
     if (!lineUser) { setError('請先用 LINE 帳號登入'); return }
     if (!validatePhone(form.phone)) { setError('手機號碼格式錯誤，請填寫 09 開頭共 10 碼'); return }
+
+    // 教學導覽的示範課程：不寫入任何真實資料，只是走一次流程給使用者看
+    if (courseIds.includes(DEMO_COURSE_ID)) {
+      setLoading(true); setError('')
+      logFunnelStep('register_submit', courseIds.join(','))
+      if (tutorialStep === '3') saveTutorialStep('4')
+      setTimeout(() => router.push('/register-success'), 400)
+      return
+    }
+
     setLoading(true); setError('')
     logFunnelStep('register_submit', courseIds.join(','))
-    
+
     const roomNumber = isSocialHousing
       ? (subUnit === 'none' ? `${building} ${unitNumber}-${floor}F` : `${building} ${unitNumber}-${floor}F-${subUnit}`)
       : '非社宅居民'

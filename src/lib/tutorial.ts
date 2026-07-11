@@ -3,6 +3,9 @@
 const STEP_KEY = 'yangbei_onboarding_step'
 const SEEN_KEY = 'yangbei_seen_onboarding'
 
+// 教學導覽用的示範課程 id：不是真實課程，選擇它、送出表單都不會寫入真實報名紀錄
+export const DEMO_COURSE_ID = '__tutorial_demo__'
+
 export function getTutorialStep(): string | null {
   try { return localStorage.getItem(STEP_KEY) } catch { return null }
 }
