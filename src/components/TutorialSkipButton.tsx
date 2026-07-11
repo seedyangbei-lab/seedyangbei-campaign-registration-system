@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { markTutorialSeen } from '@/lib/tutorial'
 
@@ -9,10 +10,18 @@ export default function TutorialSkipButton({ onSkip }: { onSkip: () => void }) {
   const router = useRouter()
   const pathname = usePathname()
 
+  // 提前 prefetch 首頁，跳過時才不會因為現場載入頁面資源而卡一拍
+  useEffect(() => {
+    if (pathname !== '/') router.prefetch('/')
+  }, [pathname, router])
+
   const handleSkip = () => {
     markTutorialSeen()
-    onSkip()
-    if (pathname !== '/') router.push('/')
+    if (pathname !== '/') {
+      router.push('/')
+    } else {
+      onSkip()
+    }
   }
 
   return (

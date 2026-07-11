@@ -157,7 +157,11 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
     saveTutorialStep(step)
     setTutorialStepState(step)
   }
-  const skipTutorial = () => setTutorialStepState(null)
+  // 跳過時把示範課程從已選清單移除，避免回到首頁後 CTA 誤以為選了真實課程
+  const skipTutorial = () => {
+    setTutorialStepState(null)
+    setSelected(prev => prev.filter(id => id !== DEMO_COURSE_ID))
+  }
 
   const firstCardHoleStep1 = useTutorialRect(firstCardRef, tutorialStep === '1', 4, 16)
   const firstCardHoleStep2 = useTutorialRect(firstCardRef, tutorialStep === '2', 4, 16)
@@ -330,7 +334,9 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
           const isSelected = selected.includes(course.id)
           const expired = isExpired(course)
           const alreadyRegistered = registeredIds.has(course.id)
-          const isDisabled = expired || alreadyRegistered
+          // 教學導覽 step1/2 時，只有示範課程可以點選，其餘卡片鎖住不能互動
+          const tutorialLocked = (tutorialStep === '1' || tutorialStep === '2') && course.id !== DEMO_COURSE_ID
+          const isDisabled = expired || alreadyRegistered || tutorialLocked
           const lineUrl = course.line_group_url || getLineUrl(course.instructors?.line_id)
 
           return (
@@ -340,6 +346,7 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
               className={`relative rounded-2xl border transition-all overflow-hidden ${
                 alreadyRegistered ? 'opacity-70 cursor-not-allowed border-green-200 bg-green-50/30'
                 : expired ? 'opacity-60 cursor-not-allowed border-stone-200 bg-white'
+                : tutorialLocked ? 'cursor-not-allowed border-stone-200 bg-white'
                 : isSelected ? 'border-orange-400 shadow-lg shadow-orange-100 cursor-pointer bg-gradient-to-t from-orange-50/60 to-white'
                 : 'border-stone-200 hover:shadow-md cursor-pointer bg-gradient-to-t from-orange-50/60 to-white'
               }`}
