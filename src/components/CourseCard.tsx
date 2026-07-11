@@ -201,6 +201,8 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
   const toggle = (id: string) => setSelected(prev => {
     const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     if (tutorialStep === '1' && next.length > 0) advanceTutorial('2')
+    // 取消勾選回到 0 堂課程時，CTA 按鈕本身會整個消失，教學也退回 step1（重新引導選課）
+    else if (tutorialStep === '2' && next.length === 0) advanceTutorial('1')
     return next
   })
 

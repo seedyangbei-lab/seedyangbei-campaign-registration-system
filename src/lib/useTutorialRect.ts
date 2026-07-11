@@ -28,7 +28,13 @@ export function useTutorialRect(
     let raf: number
     const update = () => {
       const el = ref.current
-      if (!el) return
+      // 目標元素暫時不存在（例如取消勾選後 CTA 按鈕整個從畫面消失）就把洞收掉，
+      // 不然會停在最後一次量到的舊座標，變成一個對不到任何東西的殘影框
+      if (!el) {
+        setRect(null)
+        raf = requestAnimationFrame(update)
+        return
+      }
       const r = el.getBoundingClientRect()
       setRect({
         top: r.top - padding,
