@@ -3,17 +3,17 @@
 import { Fragment, useEffect, useState } from 'react'
 
 const IconLineLogin = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M22 11h-6" />
   </svg>
 )
 const IconSelectCourse = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
     <path d="M3 6h18M3 12h18M3 18h18" />
   </svg>
 )
 const IconComplete = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
     <circle cx="12" cy="12" r="9" /><path d="M8 12.5l2.5 2.5L16 9.5" />
   </svg>
 )
@@ -51,8 +51,9 @@ export default function RegistrationSteps() {
   return (
     <section className="bg-white sticky top-[52px] z-30">
       {/* 手機版：拿掉巢狀 wrapper，3 張卡片＋2 個箭頭都在同一層 flex 子元素，flex-1 才能真正平分寬度，
-          左右 padding 才會對稱、不會右邊被壓縮。電腦版維持置中＋固定寬度卡片，視覺不變。 */}
-      <div className="flex items-center gap-4 px-4 py-4 md:justify-center max-w-4xl mx-auto">
+          左右 padding 才會對稱、不會右邊被壓縮。gap/padding 縮小＋icon 改 16px＋文字允許換行，
+          三重保險確保「LINE 登入」這種較長label 在窄螢幕也不會撐爆卡片寬度。電腦版視覺不變。 */}
+      <div className="flex items-center gap-2 md:gap-4 px-4 py-4 md:justify-center max-w-4xl mx-auto">
         {STEPS.map((step, i) => {
           const isActive = i === active
           // 箭頭代表「剛從上一步走到這一步」，所以第 i 個箭頭只在 active 剛好等於 i 時亮起
@@ -61,7 +62,7 @@ export default function RegistrationSteps() {
             <Fragment key={i}>
               {i > 0 && <IconArrow active={arrowActive} />}
               <div
-                className={`flex-1 min-w-0 md:flex-none md:w-[235px] flex flex-col gap-1 items-start md:items-center p-3 rounded-xl transition-colors duration-500 ${
+                className={`flex-1 min-w-0 md:flex-none md:w-[235px] flex flex-col gap-1 items-start md:items-center p-2 md:p-3 rounded-xl transition-colors duration-500 ${
                   isActive ? 'bg-orange-50 border border-orange-500' : 'bg-white md:bg-stone-100'
                 }`}
               >
@@ -70,7 +71,7 @@ export default function RegistrationSteps() {
                 </p>
                 <div className={`flex items-center justify-center gap-1 transition-colors duration-500 ${isActive ? 'text-orange-500' : 'text-stone-800'}`}>
                   {step.icon}
-                  <span className="text-xs font-semibold whitespace-nowrap">{step.label}</span>
+                  <span className="text-xs font-semibold text-center md:whitespace-nowrap">{step.label}</span>
                 </div>
               </div>
             </Fragment>
