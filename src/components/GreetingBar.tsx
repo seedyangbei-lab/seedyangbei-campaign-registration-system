@@ -93,22 +93,37 @@ export default function GreetingBar({ course }: { course: Course | null }) {
     document.getElementById('courses')?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  // 單則跑馬燈文字：課程名稱拿掉星號、改成主色橘色；每則文字後面留 16px 當作與下一則的間距。
+  // 因為每一則的間距都固定 16px（含首尾銜接處），整段內容重複兩次搭配 translateX(-50%) 就能無縫循環。
+  const Phrase = ({ textClass }: { textClass: string }) => (
+    <span className={`mr-4 ${textClass} text-stone-600`}>
+      {prefix} <span className="font-bold text-primary-600">{course.title}</span> {suffix}
+    </span>
+  )
+
   return (
     <div
       onClick={scrollToCourses}
       className="border-b border-orange-200 flex gap-2 items-center overflow-hidden px-4 py-2.5 relative w-full bg-gradient-to-r from-orange-50/40 to-orange-50/40 cursor-pointer"
     >
       <PeriodIcon period={period} />
-      <div className="flex-1 min-w-0 overflow-hidden">
-        <div className="whitespace-nowrap inline-block animate-marquee text-sm text-stone-600">
-          {prefix} <span className="font-bold">*{course.title}*</span> {suffix}
-          <span className="inline-block w-16" aria-hidden="true" />
-          {prefix} <span className="font-bold">*{course.title}*</span> {suffix}
+
+      {/* 手機版：14px 字級，內容重複 2 次做無縫跑馬燈 */}
+      <div className="flex-1 min-w-0 overflow-hidden md:hidden">
+        <div className="whitespace-nowrap inline-block animate-marquee">
+          <Phrase textClass="text-sm" />
+          <Phrase textClass="text-sm" />
         </div>
       </div>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-stone-400" aria-hidden="true">
-        <path d="M9 6l6 6-6 6"/>
-      </svg>
+
+      {/* 電腦版：16px 字級 + Medium 字重，畫面較寬所以多重複幾次確保填滿、循環不露白 */}
+      <div className="flex-1 min-w-0 overflow-hidden hidden md:block">
+        <div className="whitespace-nowrap inline-block animate-marquee">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Phrase key={i} textClass="text-base font-medium" />
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
