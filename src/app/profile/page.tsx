@@ -181,9 +181,9 @@ function ProfileContent() {
   const tag = getParticipationTag(registrations.length)
 
   return (
-    <main className="min-h-screen bg-stone-50">
-      {/* Header：手機版右側多一個大頭貼＋名字，電腦版只有返回／登出 */}
-      <div className="bg-white border-b border-stone-200 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between sticky top-0 z-10">
+    <main className="h-screen bg-stone-50 flex flex-col overflow-hidden">
+      {/* Header：手機版右側多一個大頭貼＋名字，電腦版只有返回／登出。固定高度，不參與捲動 */}
+      <div className="flex-shrink-0 bg-white border-b border-stone-200 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-1.5 text-stone-500 hover:text-stone-700 text-sm">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
           返回
@@ -203,10 +203,11 @@ function ProfileContent() {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6 pb-28 md:pb-8">
+      {/* 整頁固定 100vh，不捲動；只有下面「我的報名記錄」卡片內部的列表會自己捲動 */}
+      <div className="flex-1 min-h-0 max-w-2xl w-full mx-auto px-4 md:px-6 py-6 md:py-8 flex flex-col gap-6 pb-28 md:pb-8 overflow-hidden">
 
-        {/* 個人資料卡：手機版橫式排版＋左右漸層，電腦版直式置中＋上下漸層 */}
-        <div className="rounded-2xl overflow-hidden shadow-sm border" style={{ borderColor: '#f2d8c4' }}>
+        {/* 個人資料卡：手機版橫式排版＋左右漸層，電腦版直式置中＋上下漸層。固定高度，不參與捲動 */}
+        <div className="flex-shrink-0 rounded-2xl overflow-hidden shadow-sm border" style={{ borderColor: '#f2d8c4' }}>
           {/* 手機版 */}
           <div className="md:hidden flex items-center gap-4 p-[17px] bg-gradient-to-r from-white via-orange-50 to-orange-100">
             {lineUser.pictureUrl ? (
@@ -249,9 +250,9 @@ function ProfileContent() {
           </div>
         </div>
 
-         {/* 點數卡 */}
+         {/* 點數卡：固定高度，不參與捲動 */}
         {pointsEnabled && memberPoints !== null && (
-          <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm">
+          <div className="flex-shrink-0 bg-white border border-stone-200 rounded-2xl p-6 shadow-sm">
             <StampCard logs={pointLogs} totalPoints={memberPoints} />
             <div className="mt-4">
             {redeemSuccess && (
@@ -313,23 +314,24 @@ function ProfileContent() {
           </div>
         )}
 
-        {/* 報名記錄 */}
-        <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-6 pt-4 pb-4 border-b border-stone-200 flex items-center justify-center">
+        {/* 報名記錄：flex-1 撐滿剩餘高度，內部列表區域自己捲動 */}
+        <div className="flex-1 min-h-0 flex flex-col bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex-shrink-0 px-6 pt-4 pb-4 border-b border-stone-200 flex items-center justify-center">
             <h2 className="text-xl font-bold text-stone-600">我的報名記錄</h2>
           </div>
 
           {cancelSuccess && (
-            <div className="mx-6 mt-4 bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 text-sm flex items-center gap-2">
+            <div className="flex-shrink-0 mx-6 mt-4 bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 text-sm flex items-center gap-2">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
               已成功取消報名
             </div>
           )}
 
+          <div className="flex-1 min-h-0 flex flex-col">
           {loading ? (
-            <div className="px-6 py-12 text-center text-stone-400 text-sm">載入中...</div>
+            <div className="flex-1 flex items-center justify-center text-stone-400 text-sm">載入中...</div>
           ) : registrations.length === 0 ? (
-            <div className="px-6 py-12 text-center">
+            <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-3 text-stone-300">
                 <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/>
               </svg>
@@ -377,56 +379,62 @@ function ProfileContent() {
 
             return (
               <>
-                {/* Tab */}
-                <div className="flex gap-1 p-1 mx-6 mt-4 bg-stone-100 rounded-xl w-fit">
+                {/* Tab：填滿整個寬度，兩個按鈕平分 */}
+                <div className="flex-shrink-0 flex gap-1 p-1 mx-6 mt-4 h-11 bg-stone-100 rounded-xl">
                   {([['upcoming', '即將開課', upcoming.length], ['past', '已結束', past.length]] as const).map(([t, label, count]) => (
                     <button key={t} onClick={() => setRegTab(t)}
-                      className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${regTab === t ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}>
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${regTab === t ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}>
                       {label}
-                      <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${regTab === t ? 'bg-orange-100 text-orange-600' : 'bg-stone-200 text-stone-500'}`}>
+                      <span className={`text-xs font-normal w-5 h-5 flex items-center justify-center rounded-full ${regTab === t ? 'bg-stone-100 text-stone-600' : 'bg-stone-200 text-stone-400'}`}>
                         {count}
                       </span>
                     </button>
                   ))}
                 </div>
 
-                {/* 已結束：月份/年份篩選 */}
+                {/* 已結束：月份/年份篩選（原生 select 隱藏預設箭頭，換成間距正確的自訂 icon） */}
                 {regTab === 'past' && periodOptions.length > 0 && (
-                  <div className="px-6 mt-3">
-                    <select
-                      value={filterPeriod}
-                      onChange={e => setFilterPeriod(e.target.value)}
-                      className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300 w-full"
-                    >
-                      <option value="all">全部紀錄</option>
-                      {(() => {
-                        const thisYearOptions = periodOptions.filter(([, v]) => v.month !== undefined)
-                        const otherYearOptions = periodOptions.filter(([, v]) => v.month === undefined)
-                        return (
-                          <>
-                            {thisYearOptions.length > 0 && (
-                              <optgroup label={`${currentYear} 年`}>
-                                {thisYearOptions.map(([key, v]) => (
-                                  <option key={key} value={key}>{v.label}</option>
-                                ))}
-                              </optgroup>
-                            )}
-                            {otherYearOptions.length > 0 && (
-                              <optgroup label="過去年份">
-                                {otherYearOptions.map(([key, v]) => (
-                                  <option key={key} value={key}>{v.label}</option>
-                                ))}
-                              </optgroup>
-                            )}
-                          </>
-                        )
-                      })()}
-                    </select>
+                  <div className="flex-shrink-0 px-6 mt-3">
+                    <div className="relative">
+                      <select
+                        value={filterPeriod}
+                        onChange={e => setFilterPeriod(e.target.value)}
+                        className="appearance-none border border-stone-200 rounded-lg pl-3 pr-9 py-2 text-base text-stone-800 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300 w-full"
+                      >
+                        <option value="all">全部紀錄</option>
+                        {(() => {
+                          const thisYearOptions = periodOptions.filter(([, v]) => v.month !== undefined)
+                          const otherYearOptions = periodOptions.filter(([, v]) => v.month === undefined)
+                          return (
+                            <>
+                              {thisYearOptions.length > 0 && (
+                                <optgroup label={`${currentYear} 年`}>
+                                  {thisYearOptions.map(([key, v]) => (
+                                    <option key={key} value={key}>{v.label}</option>
+                                  ))}
+                                </optgroup>
+                              )}
+                              {otherYearOptions.length > 0 && (
+                                <optgroup label="過去年份">
+                                  {otherYearOptions.map(([key, v]) => (
+                                    <option key={key} value={key}>{v.label}</option>
+                                  ))}
+                                </optgroup>
+                              )}
+                            </>
+                          )
+                        })()}
+                      </select>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" aria-hidden="true">
+                        <path d="M6 9l6 6 6-6"/>
+                      </svg>
+                    </div>
                   </div>
                 )}
 
-                {/* 列表：固定高度＋內部捲動，避免清單一長頁面就一直往下延伸 */}
-                <div className="mt-3 max-h-[420px] md:max-h-[400px] overflow-y-auto px-6 pb-6">
+                {/* 列表：撐滿卡片剩餘高度，只有這裡可以內部捲動 */}
+                <div className="flex-1 min-h-0 overflow-y-auto mt-3 px-6 pb-6">
                   {displayList.length === 0 ? (
                     <div className="py-10 text-center text-stone-400 text-sm">
                       {regTab === 'upcoming' ? '目前沒有即將開課的報名' : '此期間無紀錄'}
@@ -524,17 +532,18 @@ function ProfileContent() {
               </>
             )
           })()}
+          </div>
         </div>
 
         {registrations.length > 0 && (
           <>
             {/* 電腦版：跟頁面內容一起排列 */}
             <Link href="/"
-              className="hidden md:flex items-center justify-center gap-2 w-full h-[50px] bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-xl transition-colors">
+              className="hidden md:flex flex-shrink-0 items-center justify-center gap-2 w-full h-[50px] bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-xl transition-colors">
               繼續報名其他課程
             </Link>
-            {/* 手機版：sticky 在畫面底部的 modal 按鈕 */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 z-20 bg-white p-4" style={{ boxShadow: '0px -3px 4px 0px rgba(0,0,0,0.08)' }}>
+            {/* 手機版：sticky 在畫面底部的 modal 按鈕，左右上角要是圓角 */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 z-20 bg-white p-4 rounded-tl-2xl rounded-tr-2xl" style={{ boxShadow: '0px -3px 4px 0px rgba(0,0,0,0.08)' }}>
               <Link href="/"
                 className="flex items-center justify-center gap-2 w-full h-[50px] bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-[10px] transition-colors">
                 繼續報名其他課程
