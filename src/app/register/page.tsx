@@ -1,9 +1,14 @@
 'use client'
 
-import React, { useEffect, useState, Suspense } from 'react'
+import React, { useEffect, useRef, useState, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase' 
+import { createClient } from '@/lib/supabase'
 import { logFunnelStep } from '@/lib/funnelLog'
+import { getTutorialStep, setTutorialStep as saveTutorialStep } from '@/lib/tutorial'
+import { useTutorialRect } from '@/lib/useTutorialRect'
+import TutorialMask from '@/components/TutorialMask'
+import TutorialTooltip from '@/components/TutorialTooltip'
+import TutorialSkipButton from '@/components/TutorialSkipButton'
 
 const AGE_GROUPS = ['18歲以下','18~25歲','26~35歲','36~45歲','46~55歲','56~65歲','65歲以上']
 const BUILDINGS = ['A棟','B棟','C棟','D棟']
@@ -30,6 +35,15 @@ function RegisterForm() {
   const [floor, setFloor] = useState('')
   const [subUnit, setSubUnit] = useState('')
   const [form, setForm] = useState({ name: '', phone: '', age_group: '', other_community: '', questions: '' })
+
+  // 首次登入教學導覽 step3：填寫報名資料
+  const [tutorialStep, setTutorialStepState] = useState<string | null>(null)
+  const tutorialTargetRef = useRef<HTMLDivElement>(null)
+  const tutorialHole = useTutorialRect(tutorialTargetRef, tutorialStep === '3', 6, 20)
+
+  useEffect(() => {
+    if (getTutorialStep() === '3') setTutorialStepState('3')
+  }, [])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -186,6 +200,7 @@ function RegisterForm() {
         if (regErr && regErr.code !== '23505') throw regErr
       }
      logFunnelStep('register_success', courseIds.join(','))
+      if (tutorialStep === '3') saveTutorialStep('4')
       router.push('/register-success')
     } catch (err: any) {
       logFunnelStep('register_error', courseIds.join(','), { message: err.message })
@@ -224,6 +239,7 @@ function RegisterForm() {
           <p className="text-stone-400 mt-1 text-sm">填寫一次即可同時報名以下課程</p>
         </div>
 
+        <div ref={tutorialTargetRef}>
         {lineUser ? (
           <div className="bg-green-50 border border-stone-200 rounded-2xl p-2.5 mb-5 flex items-center gap-3">
             {lineUser.pictureUrl
@@ -392,7 +408,16 @@ function RegisterForm() {
             {loading ? '報名中...' : `確認報名 ${courseIds.length} 堂課程`}
           </button>
         </form>
+        </div>
       </div>
+
+      {tutorialStep === '3' && (
+        <>
+          <TutorialMask holes={[tutorialHole]} />
+          <TutorialTooltip hole={tutorialHole} number={3} text="填寫報名資料，填完後點選確認報名" placement="above" widthClass="max-w-[220px]" />
+          <TutorialSkipButton onSkip={() => setTutorialStepState(null)} />
+        </>
+      )}
     </main>
   )
 }

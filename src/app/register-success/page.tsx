@@ -1,8 +1,12 @@
 'use client'
 
-import React, { Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import React, { Suspense, useEffect, useRef, useState } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { getTutorialStep, setTutorialStep as saveTutorialStep, markTutorialSeen } from '@/lib/tutorial'
+import { useTutorialRect } from '@/lib/useTutorialRect'
+import TutorialMask from '@/components/TutorialMask'
+import TutorialTooltip from '@/components/TutorialTooltip'
 
 // 報名記錄 icon（橘色按鈕內，白色），從 Figma 提供的合併 SVG 裁切出來
 function IconRegistrationList() {
@@ -28,33 +32,76 @@ function IconBack() {
 
 function SuccessContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const profileUrl = '/profile'
+
+  // 首次登入教學導覽 step4：報名成功
+  const [tutorialStep, setTutorialStepState] = useState<string | null>(null)
+  const spotlightRef = useRef<HTMLDivElement>(null)
+  const spotlightHole = useTutorialRect(spotlightRef, tutorialStep === '4', 12, 20)
+
+  useEffect(() => {
+    if (getTutorialStep() === '4') setTutorialStepState('4')
+  }, [])
+
+  const finishTutorial = () => {
+    markTutorialSeen()
+    router.push(profileUrl)
+  }
+  const replayTutorial = () => {
+    saveTutorialStep('1')
+    router.push('/')
+  }
 
   return (
     <main className="min-h-screen bg-stone-50 flex items-center justify-center px-4">
       <div className="text-center max-w-md">
-        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12" pathLength="1" strokeDasharray="1" className="animate-draw-check" />
-          </svg>
+        <div ref={spotlightRef} className="inline-block">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" pathLength="1" strokeDasharray="1" className="animate-draw-check" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold text-stone-800 mb-4">報名成功！</h1>
+          <p className="text-stone-500 mb-8 leading-relaxed text-lg">
+            感謝您的報名！<br />我們將透過 LINE 與您聯繫課程相關資訊。
+          </p>
         </div>
-        <h1 className="text-3xl font-bold text-stone-800 mb-4">報名成功！</h1>
-        <p className="text-stone-500 mb-8 leading-relaxed text-lg">
-          感謝您的報名！<br />我們將透過 LINE 與您聯繫課程相關資訊。
-        </p>
-        <div className="flex flex-col gap-3">
-          <a href={profileUrl}
-            className="inline-flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-medium px-8 py-3.5 rounded-xl transition-colors text-base">
-            <IconRegistrationList />
-            查看我的報名記錄
-          </a>
-          <Link href="/"
-            className="inline-flex items-center justify-center gap-2 bg-white border border-stone-300 hover:bg-stone-50 text-stone-600 font-medium px-8 py-3.5 rounded-xl transition-colors text-base">
-            <IconBack />
-            返回課程列表
-          </Link>
-        </div>
+        {tutorialStep !== '4' && (
+          <div className="flex flex-col gap-3">
+            <a href={profileUrl}
+              className="inline-flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-medium px-8 py-3.5 rounded-xl transition-colors text-base">
+              <IconRegistrationList />
+              查看我的報名記錄
+            </a>
+            <Link href="/"
+              className="inline-flex items-center justify-center gap-2 bg-white border border-stone-300 hover:bg-stone-50 text-stone-600 font-medium px-8 py-3.5 rounded-xl transition-colors text-base">
+              <IconBack />
+              返回課程列表
+            </Link>
+          </div>
+        )}
       </div>
+
+      {tutorialStep === '4' && (
+        <>
+          <TutorialMask holes={[spotlightHole]} />
+          <TutorialTooltip hole={spotlightHole} number={4} text="完成報名！" placement="above" widthClass="whitespace-nowrap" />
+          <div className="fixed z-50 left-1/2 -translate-x-1/2 bottom-10 w-full max-w-sm px-4 flex flex-col gap-2">
+            <button onClick={finishTutorial}
+              className="w-full h-[50px] flex items-center justify-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-[10px] text-base transition-colors">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              開始報名活動！
+            </button>
+            <button onClick={replayTutorial}
+              className="w-full h-[50px] flex items-center justify-center gap-1.5 bg-orange-50 border border-orange-200 text-orange-600 font-medium rounded-[10px] text-base transition-colors hover:bg-orange-100">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              再看一次教學
+            </button>
+          </div>
+        </>
+      )}
+
       <style jsx>{`
         .animate-draw-check {
           stroke-dashoffset: 1;

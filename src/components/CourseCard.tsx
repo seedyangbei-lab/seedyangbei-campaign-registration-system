@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { logFunnelStep } from '@/lib/funnelLog'
+import { getTutorialStep, setTutorialStep as saveTutorialStep, shouldAutoStartTutorial } from '@/lib/tutorial'
+import { useTutorialRect } from '@/lib/useTutorialRect'
+import TutorialMask from '@/components/TutorialMask'
+import TutorialTooltip from '@/components/TutorialTooltip'
+import TutorialSkipButton from '@/components/TutorialSkipButton'
 
 interface Category { id: string; name: string; color: string }
 interface Course {
@@ -93,6 +98,38 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
   const [sortMenuOpen, setSortMenuOpen] = useState(false)
   const sortMenuRef = useRef<HTMLDivElement>(null)
 
+  // 首次登入教學導覽（step 1：篩選+選課程 / step 2：前往報名）
+  const [tutorialStep, setTutorialStepState] = useState<string | null>(null)
+  const filterRowRef = useRef<HTMLDivElement>(null)
+  const firstCardRef = useRef<HTMLDivElement>(null)
+  const ctaRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    // 開發／預覽用：網址加上 ?tutorial=1 可強制從頭看一次教學，不受「已看過」狀態影響
+    if (new URLSearchParams(window.location.search).get('tutorial') === '1') {
+      saveTutorialStep('1')
+      setTutorialStepState('1')
+      return
+    }
+    let step = getTutorialStep()
+    if (!step && shouldAutoStartTutorial()) {
+      step = '1'
+      saveTutorialStep('1')
+    }
+    if (step === '1' || step === '2') setTutorialStepState(step)
+  }, [])
+
+  const advanceTutorial = (step: string) => {
+    saveTutorialStep(step)
+    setTutorialStepState(step)
+  }
+  const skipTutorial = () => setTutorialStepState(null)
+
+  const filterHole = useTutorialRect(filterRowRef, tutorialStep === '1', 8, 12)
+  const firstCardHoleStep1 = useTutorialRect(firstCardRef, tutorialStep === '1', 4, 16)
+  const firstCardHoleStep2 = useTutorialRect(firstCardRef, tutorialStep === '2', 4, 16)
+  const ctaHole = useTutorialRect(ctaRef, tutorialStep === '2', 6, 16)
+
   useEffect(() => {
     const onClickOutside = (e: MouseEvent) => {
       if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) setSortMenuOpen(false)
@@ -124,9 +161,11 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
   }, [])
 
   const isMobile = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-  const toggle = (id: string) => setSelected(prev =>
-    prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-  )
+  const toggle = (id: string) => setSelected(prev => {
+    const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    if (tutorialStep === '1' && next.length > 0) advanceTutorial('2')
+    return next
+  })
 
   const filtered = (activeCategory === 'all' ? courses : courses.filter(c => c.course_categories?.id === activeCategory))
     .slice()
@@ -140,6 +179,7 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
     })
 
   const handleProceed = () => {
+    if (tutorialStep === '2') saveTutorialStep('3')
     const ids = selected.join(',')
     logFunnelStep('select_course', ids)
     try {
@@ -175,7 +215,7 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
   return (
     <div>
       {/* 類別篩選（Dropdown）+ 排序（Icon 點擊選單） */}
-      <div className="flex items-center gap-2.5 mb-4">
+      <div ref={filterRowRef} className="flex items-center gap-2.5 mb-4">
         <div className="relative flex-1 min-w-0">
           <select
             value={activeCategory}
@@ -244,7 +284,7 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {filtered.map(course => {
+        {filtered.map((course, courseIdx) => {
           const d = new Date(course.date + 'T00:00:00')
           const weekdays = ['日','一','二','三','四','五','六']
           const dateStr = `${d.getMonth()+1}/${d.getDate()}（${weekdays[d.getDay()]}）`
@@ -253,9 +293,10 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
           const alreadyRegistered = registeredIds.has(course.id)
           const isDisabled = expired || alreadyRegistered
           const lineUrl = course.line_group_url || getLineUrl(course.instructors?.line_id)
-      
+
           return (
             <div key={course.id}
+             ref={courseIdx === 0 ? firstCardRef : undefined}
              onClick={() => !isDisabled && toggle(course.id)}
               className={`relative rounded-2xl border transition-all overflow-hidden ${
                 alreadyRegistered ? 'opacity-70 cursor-not-allowed border-green-200 bg-green-50/30'
@@ -375,7 +416,7 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
       </div>
 
       {selected.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
+        <div ref={ctaRef} className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
           <button onClick={handleProceed}
             style={{ boxShadow: '0px -1px 2px rgba(0,0,0,0.16)' }}
             className="w-full flex items-center justify-between bg-stone-50 border border-stone-300 px-4 py-2.5 rounded-2xl transition-all active:scale-95">
@@ -420,6 +461,23 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
             </button>
           </div>
         </div>
+      )}
+
+      {/* 首次登入教學：step1 篩選+選課程 / step2 前往報名 */}
+      {tutorialStep === '1' && (
+        <>
+          <TutorialMask holes={[filterHole, firstCardHoleStep1]} />
+          <TutorialTooltip hole={filterHole} number={1} text="點選您有興趣的活動課程" placement="below" />
+          <TutorialSkipButton onSkip={skipTutorial} />
+        </>
+      )}
+      {tutorialStep === '2' && (
+        <>
+          <TutorialMask holes={[firstCardHoleStep2, ctaHole]} />
+          <TutorialTooltip hole={firstCardHoleStep2} number={2} text="已選好課程後，點選前往報名" placement="above" />
+          <TutorialTooltip hole={ctaHole} number={1} text="前往報名" placement="above" widthClass="whitespace-nowrap" />
+          <TutorialSkipButton onSkip={skipTutorial} />
+        </>
       )}
     </div>
   )
