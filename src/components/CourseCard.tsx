@@ -328,7 +328,7 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
         <div className="text-center py-16 text-stone-400"><p>此類別目前沒有開放中的課程</p></div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {displayList.map((course, courseIdx) => {
           const d = new Date(course.date + 'T00:00:00')
           const weekdays = ['日','一','二','三','四','五','六']
@@ -356,8 +356,8 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
 
               <div className="flex flex-col gap-4 py-4">
                 <div className="px-4">
-                  <div className="flex h-[156px] border border-stone-200 rounded-xl overflow-hidden">
-                    <div className="relative w-[156px] flex-shrink-0">
+                  <div className="flex h-[156px] md:h-[172px] border border-stone-200 rounded-xl overflow-hidden">
+                    <div className="relative w-[156px] md:w-[172px] flex-shrink-0">
                       {course.poster_url ? (
                         <img src={course.poster_url} alt={course.title} className="absolute inset-0 w-full h-full object-cover" />
                       ) : (
@@ -386,9 +386,15 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
                       )}
                     </div>
 
-                    <div className="flex-1 min-w-0 bg-white border-l border-stone-200 h-full flex flex-col justify-end gap-2 p-2">
-                      <div className="flex-1 flex flex-col justify-center w-full">
-                        <p className="font-bold text-xl text-stone-800 leading-snug line-clamp-3">{course.title}</p>
+                    <div className="flex-1 min-w-0 bg-white border-l border-stone-200 h-full flex flex-col justify-end gap-2 p-2 md:p-3">
+                      <div className="flex-1 flex flex-col justify-center md:justify-end w-full">
+                        <p className="font-bold text-xl md:text-[26px] md:leading-[28px] text-stone-800 leading-snug line-clamp-3 md:line-clamp-2">{course.title}</p>
+                      </div>
+                      {/* 電腦版：meta 移進圖片右側欄位，順序改為 時間→地點→年齡（比照 Figma List Row） */}
+                      <div className="hidden md:flex md:flex-col md:gap-1.5">
+                        <InfoRow icon={<IconClock />}>{dateStr} {course.time_start?.slice(0,5)}–{course.time_end?.slice(0,5)}</InfoRow>
+                        <InfoRow icon={<IconPin />}>{course.location}</InfoRow>
+                        <InfoRow icon={<IconPerson />}>{course.suitable_age || '全年齡'}</InfoRow>
                       </div>
                       {course.instructors && (
                         <div className="flex items-center gap-2 min-w-0">
@@ -417,7 +423,7 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-1 px-4">
+                <div className="flex flex-col gap-1 px-4 md:hidden">
                   <InfoRow icon={<IconPerson />}>{course.suitable_age || '全年齡'}</InfoRow>
                   <InfoRow icon={<IconClock />}>{dateStr} {course.time_start?.slice(0,5)}–{course.time_end?.slice(0,5)}</InfoRow>
                   <InfoRow icon={<IconPin />}>{course.location}</InfoRow>
@@ -434,9 +440,9 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
               </div>
 
               {course.description && (
-                <div className="bg-stone-100 px-4 py-4">
+                <div className="bg-stone-100 md:bg-[#fafaf9] px-4 py-4">
                   <p
-                    className="text-sm text-stone-400 leading-relaxed"
+                    className="text-sm md:text-base text-stone-400 leading-relaxed"
                     style={{
                       display: '-webkit-box',
                       WebkitLineClamp: 3,
@@ -450,11 +456,11 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
               )}
 
               {alreadyRegistered ? (
-                <div className="absolute top-[19px] right-[19px] w-7 h-7 rounded-full bg-green-500 flex items-center justify-center">
+                <div className="absolute top-[19px] right-[19px] md:top-[25px] md:right-[23px] w-7 h-7 md:w-8 md:h-8 rounded-full bg-green-500 flex items-center justify-center">
                   <IconCheck />
                 </div>
               ) : !expired && (
-                <div className={`absolute top-[19px] right-[19px] w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-orange-500 border-orange-500' : 'border-stone-300 bg-stone-100'}`}>
+                <div className={`absolute top-[19px] right-[19px] md:top-[25px] md:right-[23px] w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-orange-500 border-orange-500' : 'border-stone-300 bg-stone-100'}`}>
                   {isSelected && <IconCheck />}
                 </div>
               )}

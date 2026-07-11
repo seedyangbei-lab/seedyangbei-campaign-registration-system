@@ -18,17 +18,17 @@ function getParticipationTag(count: number) {
 
 // 報名記錄 list row 用的三個小 icon：時間／地點／講師，統一 stone-400、跟文字對齊用 flex-shrink-0
 const IconClock = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-stone-400" aria-hidden="true">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-orange-500" aria-hidden="true">
     <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
   </svg>
 )
 const IconPin = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-stone-400" aria-hidden="true">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-orange-500" aria-hidden="true">
     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
   </svg>
 )
 const IconPerson = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-stone-400" aria-hidden="true">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-orange-500" aria-hidden="true">
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
   </svg>
 )
@@ -184,7 +184,7 @@ function ProfileContent() {
       </div>
 
       {/* 整頁固定 100vh，不捲動；只有下面「我的報名記錄」卡片內部的列表會自己捲動 */}
-      <div className="flex-1 min-h-0 max-w-2xl w-full mx-auto px-4 md:px-6 py-6 md:py-8 flex flex-col gap-6 pb-28 md:pb-8 overflow-hidden">
+      <div className="flex-1 min-h-0 max-w-2xl md:max-w-[800px] w-full mx-auto px-4 md:px-6 py-6 md:py-8 flex flex-col gap-6 pb-28 md:pb-8 overflow-hidden">
 
         {/* 個人資料卡：手機版橫式排版＋左右漸層，電腦版直式置中＋上下漸層。固定高度，不參與捲動 */}
         <div className="flex-shrink-0 rounded-2xl overflow-hidden shadow-sm border" style={{ borderColor: '#f2d8c4' }}>
