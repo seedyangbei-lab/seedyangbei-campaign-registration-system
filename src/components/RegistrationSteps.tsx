@@ -18,6 +18,20 @@ const IconComplete = () => (
   </svg>
 )
 
+// step 與 step 之間的箭頭：目前流程走到這一段時（active 剛跨過去）會變成主色橘色並跳動一下，
+// 其餘時間維持淺灰色，讓整條 STEP 1→2→3 的流程感覺像有東西在往前流動。
+const IconArrow = ({ active }: { active: boolean }) => (
+  <svg
+    width="16" height="16" viewBox="0 0 24 24" fill="none"
+    stroke={active ? '#f97316' : '#a8a29e'}
+    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+    className={`flex-shrink-0 transition-colors duration-300 ${active ? 'animate-stepPulse' : ''}`}
+    aria-hidden="true"
+  >
+    <path d="M9 6l6 6-6 6" />
+  </svg>
+)
+
 const STEPS = [
   { label: 'LINE 登入', icon: <IconLineLogin /> },
   { label: '挑選課程', icon: <IconSelectCourse /> },
@@ -36,22 +50,26 @@ export default function RegistrationSteps() {
 
   return (
     <section className="bg-white sticky top-[52px] z-30">
-      <div className="flex gap-4 items-stretch px-4 py-4 max-w-4xl mx-auto overflow-x-auto">
+      <div className="flex gap-4 items-center px-4 py-4 max-w-4xl mx-auto overflow-x-auto">
         {STEPS.map((step, i) => {
           const isActive = i === active
+          // 箭頭代表「剛從上一步走到這一步」，所以第 i 個箭頭只在 active 剛好等於 i 時亮起
+          const arrowActive = i === active && i > 0
           return (
-            <div
-              key={i}
-              className={`flex-1 min-w-[108px] flex flex-col gap-1 items-start p-3 rounded-xl transition-colors duration-500 ${
-                isActive ? 'bg-orange-50 border border-orange-500' : 'bg-white'
-              }`}
-            >
-              <p className={`text-xs font-bold transition-colors duration-500 ${isActive ? 'text-orange-500' : 'text-stone-500'}`}>
-                STEP {i + 1}
-              </p>
-              <div className={`flex items-center gap-1 transition-colors duration-500 ${isActive ? 'text-orange-500' : 'text-stone-800'}`}>
-                {step.icon}
-                <span className="text-xs font-semibold whitespace-nowrap">{step.label}</span>
+            <div key={i} className="flex items-center gap-4">
+              {i > 0 && <IconArrow active={arrowActive} />}
+              <div
+                className={`flex-1 min-w-[108px] flex flex-col gap-1 items-start p-3 rounded-xl transition-colors duration-500 ${
+                  isActive ? 'bg-orange-50 border border-orange-500' : 'bg-white'
+                }`}
+              >
+                <p className={`text-xs font-bold transition-colors duration-500 ${isActive ? 'text-orange-500' : 'text-stone-500'}`}>
+                  STEP {i + 1}
+                </p>
+                <div className={`flex items-center gap-1 transition-colors duration-500 ${isActive ? 'text-orange-500' : 'text-stone-800'}`}>
+                  {step.icon}
+                  <span className="text-xs font-semibold whitespace-nowrap">{step.label}</span>
+                </div>
               </div>
             </div>
           )
