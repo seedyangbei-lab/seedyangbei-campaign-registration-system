@@ -53,6 +53,12 @@
   --font-body: 'GenSenRounded2TW', 'Noto Sans TC', sans-serif;
 }
 
+html, body {
+  /* 關掉手機瀏覽器捲到頂/底後繼續拉的「橡皮筋」回彈效果，
+     避免導覽列上方在過拉時露出一截空白，視覺上比較不會覺得醜 */
+  overscroll-behavior-y: none;
+}
+
 body {
   font-family: var(--font-body);
   background: var(--background);

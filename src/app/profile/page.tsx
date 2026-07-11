@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import StampCard from '@/components/StampCard'
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock'
+import SiteNavbar from '@/components/SiteNavbar'
 
 function getParticipationTag(count: number) {
   if (count === 0) return { label: '尚未參與', color: '#9ca3af', bg: '#f3f4f6' }
@@ -171,36 +172,15 @@ function ProfileContent() {
     }
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('line_user')
-    router.push('/')
-  }
-
   if (!lineUser) return null
 
   const tag = getParticipationTag(registrations.length)
 
   return (
     <main className="h-screen bg-stone-50 flex flex-col overflow-hidden">
-      {/* Header：手機版右側多一個大頭貼＋名字，電腦版只有返回／登出。固定高度，不參與捲動 */}
-      <div className="flex-shrink-0 bg-white border-b border-stone-200 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-1.5 text-stone-500 hover:text-stone-700 text-sm">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-          返回
-        </Link>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 md:hidden">
-            {lineUser.pictureUrl ? (
-              <img src={lineUser.pictureUrl} alt="" className="w-6 h-6 rounded-full flex-shrink-0" />
-            ) : (
-              <div className="w-6 h-6 rounded-full bg-green-400 flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-[10px] font-bold">{lineUser.displayName?.[0]}</span>
-              </div>
-            )}
-            <span className="text-sm font-medium text-stone-700 max-w-[100px] truncate">{lineUser.displayName}</span>
-          </div>
-          <button onClick={handleLogout} className="text-sm text-stone-400 hover:text-red-500 transition-colors">登出</button>
-        </div>
+      {/* Header：全站共用導覽列元件，內頁樣式（返回首頁）。固定高度，不參與捲動 */}
+      <div className="flex-shrink-0">
+        <SiteNavbar variant="inner" onLogout={() => router.push('/')} />
       </div>
 
       {/* 整頁固定 100vh，不捲動；只有下面「我的報名記錄」卡片內部的列表會自己捲動 */}

@@ -7,6 +7,7 @@ import { getTutorialStep, setTutorialStep as saveTutorialStep, markTutorialSeen 
 import { useTutorialRect } from '@/lib/useTutorialRect'
 import TutorialMask from '@/components/TutorialMask'
 import TutorialTooltip from '@/components/TutorialTooltip'
+import SiteNavbar from '@/components/SiteNavbar'
 
 // 報名記錄 icon（橘色按鈕內，白色），從 Figma 提供的合併 SVG 裁切出來
 function IconRegistrationList() {
@@ -54,7 +55,9 @@ function SuccessContent() {
   }
 
   return (
-    <main className="min-h-screen bg-stone-50 flex items-center justify-center px-4">
+    <main className="min-h-screen bg-stone-50 flex flex-col">
+      <SiteNavbar variant="inner" />
+      <div className="flex-1 flex items-center justify-center px-4">
       <div className="text-center max-w-md">
         <div ref={spotlightRef} className="inline-block">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -81,6 +84,7 @@ function SuccessContent() {
             </Link>
           </div>
         )}
+      </div>
       </div>
 
       {tutorialStep === '4' && (

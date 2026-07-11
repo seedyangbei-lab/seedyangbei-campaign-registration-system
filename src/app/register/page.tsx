@@ -9,6 +9,7 @@ import { useTutorialRect } from '@/lib/useTutorialRect'
 import TutorialMask from '@/components/TutorialMask'
 import TutorialTooltip from '@/components/TutorialTooltip'
 import TutorialSkipButton from '@/components/TutorialSkipButton'
+import SiteNavbar from '@/components/SiteNavbar'
 
 const DEMO_COURSE_DISPLAY = { id: DEMO_COURSE_ID, title: '範例課程（僅供教學示範）', date: new Date().toISOString().split('T')[0], time_start: '10:00', time_end: '12:00', location: '示範地點' }
 
@@ -239,20 +240,7 @@ function RegisterForm() {
 
   return (
     <main className="min-h-screen bg-stone-50">
-      <div className="sticky top-0 z-30 bg-white shadow-[0px_4px_2px_rgba(0,0,0,0.03)] h-[52px] flex items-center justify-between px-4">
-        <button onClick={() => router.back()} className="inline-flex items-center gap-1.5 text-stone-800 text-sm">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-          返回首頁
-        </button>
-        {lineUser && (
-          <div className="flex items-center gap-2 bg-white rounded-xl shadow-[0px_1px_1.5px_rgba(0,0,0,0.1),0px_1px_1px_rgba(0,0,0,0.1)] px-2 py-2">
-            {lineUser.pictureUrl
-              ? <img src={lineUser.pictureUrl} alt="" className="w-5 h-5 rounded-full flex-shrink-0" />
-              : <div className="w-5 h-5 rounded-full bg-green-200 flex items-center justify-center flex-shrink-0"><span className="text-green-700 text-[10px] font-bold">{lineUser.displayName?.[0]}</span></div>}
-            <span className="text-xs font-medium text-stone-700 max-w-[80px] truncate">{lineUser.displayName}</span>
-          </div>
-        )}
-      </div>
+      <SiteNavbar variant="inner" />
 
       <div className="max-w-lg mx-auto px-4 py-6">
         <div className="mb-5 pb-4 border-b border-stone-200">
