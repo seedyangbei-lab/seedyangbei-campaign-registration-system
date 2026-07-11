@@ -388,7 +388,7 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
 
                     <div className="flex-1 min-w-0 bg-white border-l border-stone-200 h-full flex flex-col justify-end gap-2 p-2 md:p-3">
                       <div className="flex-1 flex flex-col justify-center md:justify-end w-full">
-                        <p className="font-bold text-xl md:text-[26px] md:leading-[28px] text-stone-800 leading-snug line-clamp-3 md:line-clamp-2">{course.title}</p>
+                        <p className="font-bold text-xl md:text-[20px] md:leading-[28px] text-stone-800 leading-snug line-clamp-3 md:line-clamp-2">{course.title}</p>
                       </div>
                       {/* 電腦版：meta 移進圖片右側欄位，順序改為 時間→地點→年齡（比照 Figma List Row） */}
                       <div className="hidden md:flex md:flex-col md:gap-1.5">
