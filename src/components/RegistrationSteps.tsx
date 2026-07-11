@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 
 const IconLineLogin = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -50,14 +50,15 @@ export default function RegistrationSteps() {
 
   return (
     <section className="bg-white sticky top-[52px] z-30">
-      {/* 手機版：卡片用 flex-1 + min-w-0 平分寬度，填滿螢幕、不會橫向溢出捲動。電腦版整排置中、卡片改固定寬度＋內容置中 */}
-      <div className="flex gap-4 items-center justify-center px-4 py-4 max-w-4xl mx-auto">
+      {/* 手機版：拿掉巢狀 wrapper，3 張卡片＋2 個箭頭都在同一層 flex 子元素，flex-1 才能真正平分寬度，
+          左右 padding 才會對稱、不會右邊被壓縮。電腦版維持置中＋固定寬度卡片，視覺不變。 */}
+      <div className="flex items-center gap-4 px-4 py-4 md:justify-center max-w-4xl mx-auto">
         {STEPS.map((step, i) => {
           const isActive = i === active
           // 箭頭代表「剛從上一步走到這一步」，所以第 i 個箭頭只在 active 剛好等於 i 時亮起
           const arrowActive = i === active && i > 0
           return (
-            <div key={i} className="flex items-center gap-4 min-w-0">
+            <Fragment key={i}>
               {i > 0 && <IconArrow active={arrowActive} />}
               <div
                 className={`flex-1 min-w-0 md:flex-none md:w-[235px] flex flex-col gap-1 items-start md:items-center p-3 rounded-xl transition-colors duration-500 ${
@@ -72,7 +73,7 @@ export default function RegistrationSteps() {
                   <span className="text-xs font-semibold whitespace-nowrap">{step.label}</span>
                 </div>
               </div>
-            </div>
+            </Fragment>
           )
         })}
       </div>

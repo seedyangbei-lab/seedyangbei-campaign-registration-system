@@ -9,10 +9,12 @@ interface Course {
   location: string
 }
 
+// 每個 icon 在 sprite 裡的實際圖形不是剛好卡在 24px 格線上，
+// 這裡的 Y 值已微調成讓 icon 圖形在 24x24 的裁切框內垂直置中（原本 noon/evening 圖形偏上、下方留白過多）
 const PERIOD_ICON_Y: Record<Period, number> = {
   morning: 0,
-  noon: 68,
-  evening: 131,
+  noon: 64,
+  evening: 128,
   midnight: 190,
 }
 
