@@ -9,7 +9,7 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
- const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true)
     try {
       const res = await fetch('/api/admin/login', {
@@ -30,33 +30,68 @@ export default function AdminLoginPage() {
       setLoading(false)
     }
   }
+
   return (
-    <main className="min-h-screen bg-stone-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-orange-100 rounded-2xl mb-4">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <main className="min-h-screen bg-stone-50 flex flex-col">
+      {/* 導覽列：跟全站其他頁面同樣的白底＋陰影樣式，後台登入頁不需要 LINE 登入/返回連結，只顯示站名 */}
+      <div className="bg-white drop-shadow-[0px_4px_2px_rgba(0,0,0,0.03)] h-[52px] md:h-14 flex items-center px-4 md:px-6 flex-shrink-0">
+        <p className="text-sm md:text-xl font-bold text-stone-600 tracking-[3px]">央北種子計畫</p>
+      </div>
+
+      <div className="flex-1 flex items-center justify-center px-4 py-10 md:py-[100px]">
+        {/* 手機版：圖片＋標題＋表單直排置中 */}
+        <div className="md:hidden w-full max-w-[384px] flex flex-col items-center gap-4">
+          <img src="/illustrations/modal%20instructor.png" alt="" className="w-[200px] h-[200px] object-cover" />
+          <div className="text-center -mt-2">
+            <p className="font-['GenSenRounded2TW'] text-xs text-stone-400 tracking-[1.4px] uppercase">央北社宅</p>
+            <p className="font-['GenSenRounded2TW'] font-bold text-2xl text-stone-800">後台登入</p>
           </div>
-          <p className="text-stone-400 text-sm tracking-widest uppercase mb-1">央北社宅</p>
-          <h1 className="text-stone-800 text-2xl font-bold">後台登入</h1>
+          <form onSubmit={handleLogin} className="bg-white rounded-2xl border border-stone-200 p-[25px] space-y-4 shadow-sm w-full">
+            <div>
+              <label className="block font-['GenSenRounded2TW'] font-medium text-sm text-stone-600 mb-2">帳號</label>
+              <input type="text" value={account} onChange={e => setAccount(e.target.value)} placeholder="請輸入管理帳號"
+                className="w-full border border-stone-200 rounded-lg px-3 py-2 text-lg text-stone-800 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400" />
+            </div>
+            <div>
+              <label className="block font-['GenSenRounded2TW'] font-medium text-sm text-stone-600 mb-2">密碼</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="請輸入管理密碼"
+                className="w-full border border-stone-200 rounded-lg px-3 py-2 text-lg text-stone-800 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400" />
+            </div>
+            {error && <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 text-sm">{error}</div>}
+            <button type="submit" disabled={loading}
+              className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-lg transition-colors">
+              {loading ? '登入中...' : '登入'}
+            </button>
+          </form>
         </div>
-        <form onSubmit={handleLogin} className="bg-white rounded-2xl border border-stone-200 p-6 space-y-4 shadow-sm">
-          <div>
-            <label className="block text-stone-600 text-sm font-medium mb-2">管理帳號</label>
-            <input type="text" value={account} onChange={e => setAccount(e.target.value)} placeholder="請輸入管理帳號"
-              className="w-full border border-stone-300 rounded-xl px-4 py-3 text-stone-800 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400" />
+
+        {/* 電腦版：圖片在左，標題＋表單在右（比照 Figma 兩欄式） */}
+        <div className="hidden md:flex items-center justify-center gap-8">
+          <img src="/illustrations/modal%20instructor.png" alt="" className="w-[429px] h-[429px] object-cover flex-shrink-0" />
+          <div className="w-[451px] flex flex-col gap-8">
+            <div className="text-center">
+              <p className="font-['GenSenRounded2TW'] text-sm text-stone-400 tracking-[1.4px] uppercase">央北社宅</p>
+              <p className="font-['GenSenRounded2TW'] font-bold text-2xl text-stone-800">後台登入</p>
+            </div>
+            <form onSubmit={handleLogin} className="bg-white rounded-2xl border border-stone-200 p-[25px] space-y-4 shadow-sm w-full">
+              <div>
+                <label className="block font-['GenSenRounded2TW'] font-medium text-sm text-stone-600 mb-2">帳號</label>
+                <input type="text" value={account} onChange={e => setAccount(e.target.value)} placeholder="請輸入管理帳號"
+                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-lg text-stone-800 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400" />
+              </div>
+              <div>
+                <label className="block font-['GenSenRounded2TW'] font-medium text-sm text-stone-600 mb-2">密碼</label>
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="請輸入管理密碼"
+                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-lg text-stone-800 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400" />
+              </div>
+              {error && <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 text-sm">{error}</div>}
+              <button type="submit" disabled={loading}
+                className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-lg transition-colors">
+                {loading ? '登入中...' : '登入'}
+              </button>
+            </form>
           </div>
-          <div>
-            <label className="block text-stone-600 text-sm font-medium mb-2">管理密碼</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="請輸入管理密碼"
-              className="w-full border border-stone-300 rounded-xl px-4 py-3 text-stone-800 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400" />
-          </div>
-          {error && <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 text-sm">{error}</div>}
-          <button type="submit" disabled={loading}
-            className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl transition-colors">
-            {loading ? '登入中...' : '登入'}
-          </button>
-        </form>
+        </div>
       </div>
     </main>
   )
