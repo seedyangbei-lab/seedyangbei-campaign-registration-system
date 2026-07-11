@@ -50,17 +50,17 @@ export default function RegistrationSteps() {
 
   return (
     <section className="bg-white sticky top-[52px] z-30">
-      {/* 電腦版（md 以上）整排置中、卡片改固定寬度＋內容置中；手機版維持原本靠左、可橫向滑動 */}
-      <div className="flex gap-4 items-center justify-center px-4 py-4 max-w-4xl mx-auto overflow-x-auto md:overflow-visible">
+      {/* 手機版：卡片用 flex-1 + min-w-0 平分寬度，填滿螢幕、不會橫向溢出捲動。電腦版整排置中、卡片改固定寬度＋內容置中 */}
+      <div className="flex gap-4 items-center justify-center px-4 py-4 max-w-4xl mx-auto">
         {STEPS.map((step, i) => {
           const isActive = i === active
           // 箭頭代表「剛從上一步走到這一步」，所以第 i 個箭頭只在 active 剛好等於 i 時亮起
           const arrowActive = i === active && i > 0
           return (
-            <div key={i} className="flex items-center gap-4">
+            <div key={i} className="flex items-center gap-4 min-w-0">
               {i > 0 && <IconArrow active={arrowActive} />}
               <div
-                className={`flex-1 min-w-[108px] md:flex-none md:w-[235px] flex flex-col gap-1 items-start md:items-center p-3 rounded-xl transition-colors duration-500 ${
+                className={`flex-1 min-w-0 md:flex-none md:w-[235px] flex flex-col gap-1 items-start md:items-center p-3 rounded-xl transition-colors duration-500 ${
                   isActive ? 'bg-orange-50 border border-orange-500' : 'bg-white md:bg-stone-100'
                 }`}
               >
