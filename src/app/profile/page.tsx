@@ -14,6 +14,23 @@ function getParticipationTag(count: number) {
   return { label: '積極參與', color: '#16a34a', bg: '#f0fdf4' }
 }
 
+// 報名記錄 list row 用的三個小 icon：時間／地點／講師，統一 stone-400、跟文字對齊用 flex-shrink-0
+const IconClock = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-stone-400" aria-hidden="true">
+    <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
+  </svg>
+)
+const IconPin = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-stone-400" aria-hidden="true">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+  </svg>
+)
+const IconPerson = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-stone-400" aria-hidden="true">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+  </svg>
+)
+
 function ProfileContent() {
   const router = useRouter()
   const [lineUser, setLineUser] = useState<any>(null)
@@ -160,38 +177,70 @@ function ProfileContent() {
 
   return (
     <main className="min-h-screen bg-stone-50">
-      {/* Header */}
-      <div className="bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-        <Link href="/" className="flex items-center gap-2 text-stone-500 hover:text-stone-700 text-sm">
+      {/* Header：手機版右側多一個大頭貼＋名字，電腦版只有返回／登出 */}
+      <div className="bg-white border-b border-stone-200 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between sticky top-0 z-10">
+        <Link href="/" className="flex items-center gap-1.5 text-stone-500 hover:text-stone-700 text-sm">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-          返回首頁
+          返回
         </Link>
-        <button onClick={handleLogout} className="text-sm text-stone-400 hover:text-red-500 transition-colors">登出</button>
-      </div>
-
-      <div className="max-w-2xl mx-auto px-6 py-8 space-y-6">
-
-        {/* 個人資料卡 */}
-        <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center gap-4 mb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:hidden">
             {lineUser.pictureUrl ? (
-              <img src={lineUser.pictureUrl} alt="" className="w-16 h-16 rounded-full" />
+              <img src={lineUser.pictureUrl} alt="" className="w-6 h-6 rounded-full flex-shrink-0" />
             ) : (
-              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-                <span className="text-green-600 text-2xl font-bold">{lineUser.displayName?.[0]}</span>
+              <div className="w-6 h-6 rounded-full bg-green-400 flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-[10px] font-bold">{lineUser.displayName?.[0]}</span>
               </div>
             )}
-            <div>
-              <h1 className="text-xl font-bold text-stone-800">{lineUser.displayName}</h1>
-              <p className="text-stone-400 text-sm mt-0.5">LINE 會員</p>
+            <span className="text-sm font-medium text-stone-700 max-w-[100px] truncate">{lineUser.displayName}</span>
+          </div>
+          <button onClick={handleLogout} className="text-sm text-stone-400 hover:text-red-500 transition-colors">登出</button>
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6 pb-28 md:pb-8">
+
+        {/* 個人資料卡：手機版橫式排版＋左右漸層，電腦版直式置中＋上下漸層 */}
+        <div className="rounded-2xl overflow-hidden shadow-sm border" style={{ borderColor: '#f2d8c4' }}>
+          {/* 手機版 */}
+          <div className="md:hidden flex items-center gap-4 p-[17px] bg-gradient-to-r from-white via-orange-50 to-orange-100">
+            {lineUser.pictureUrl ? (
+              <img src={lineUser.pictureUrl} alt="" className="w-[50px] h-[50px] rounded-full flex-shrink-0" />
+            ) : (
+              <div className="w-[50px] h-[50px] rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                <span className="text-green-600 text-xl font-bold">{lineUser.displayName?.[0]}</span>
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h1 className="text-xl font-bold text-stone-800 truncate">{lineUser.displayName}</h1>
+                <span className="text-sm font-medium px-2 py-0.5 rounded-md flex-shrink-0"
+                  style={{ color: tag.color, backgroundColor: tag.bg }}>
+                  {tag.label}
+                </span>
+              </div>
+              <p className="text-stone-400 text-sm">共參與 {registrations.length} 堂課程</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-bold px-3 py-1.5 rounded-full"
-              style={{ color: tag.color, backgroundColor: tag.bg }}>
-              {tag.label}
-            </span>
-            <span className="text-stone-400 text-sm">共參與 {registrations.length} 堂課程</span>
+          {/* 電腦版 */}
+          <div className="hidden md:flex flex-col items-center gap-2 px-8 py-4 bg-gradient-to-b from-orange-100 via-orange-50 to-white">
+            {lineUser.pictureUrl ? (
+              <img src={lineUser.pictureUrl} alt="" className="w-[100px] h-[100px] rounded-full" />
+            ) : (
+              <div className="w-[100px] h-[100px] rounded-full bg-green-100 flex items-center justify-center">
+                <span className="text-green-600 text-4xl font-bold">{lineUser.displayName?.[0]}</span>
+              </div>
+            )}
+            <div className="border-t border-stone-100 w-full pt-2 flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-stone-800">{lineUser.displayName}</h1>
+                <span className="text-sm font-medium px-2 py-0.5 rounded-md"
+                  style={{ color: tag.color, backgroundColor: tag.bg }}>
+                  {tag.label}
+                </span>
+              </div>
+              <p className="text-stone-400 text-sm">共參與 {registrations.length} 堂課程</p>
+            </div>
           </div>
         </div>
 
@@ -261,9 +310,8 @@ function ProfileContent() {
 
         {/* 報名記錄 */}
         <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-stone-100">
-            <h2 className="font-semibold text-stone-700">我的報名記錄</h2>
-            <p className="text-stone-400 text-xs mt-0.5">所有已報名的課程記錄</p>
+          <div className="px-6 pt-4 pb-4 border-b border-stone-200 flex items-center justify-center">
+            <h2 className="text-xl font-bold text-stone-600">我的報名記錄</h2>
           </div>
 
           {cancelSuccess && (
@@ -326,10 +374,13 @@ function ProfileContent() {
               <>
                 {/* Tab */}
                 <div className="flex gap-1 p-1 mx-6 mt-4 bg-stone-100 rounded-xl w-fit">
-                  {([['upcoming', `即將開課 ${upcoming.length}`], ['past', `已結束 ${past.length}`]] as const).map(([t, label]) => (
+                  {([['upcoming', '即將開課', upcoming.length], ['past', '已結束', past.length]] as const).map(([t, label, count]) => (
                     <button key={t} onClick={() => setRegTab(t)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${regTab === t ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}>
+                      className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${regTab === t ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}>
                       {label}
+                      <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${regTab === t ? 'bg-orange-100 text-orange-600' : 'bg-stone-200 text-stone-500'}`}>
+                        {count}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -369,50 +420,101 @@ function ProfileContent() {
                   </div>
                 )}
 
-                {/* 列表 */}
-                <div className="divide-y divide-stone-100 mt-3">
+                {/* 列表：固定高度＋內部捲動，避免清單一長頁面就一直往下延伸 */}
+                <div className="mt-3 max-h-[420px] md:max-h-[400px] overflow-y-auto px-6 pb-6">
                   {displayList.length === 0 ? (
-                    <div className="px-6 py-10 text-center text-stone-400 text-sm">
+                    <div className="py-10 text-center text-stone-400 text-sm">
                       {regTab === 'upcoming' ? '目前沒有即將開課的報名' : '此期間無紀錄'}
                     </div>
-                  ) : displayList.map((reg: any, i: number) => {
-                    const course = reg.courses
-                    const isPast = regTab === 'past'
-                    const d = course?.date ? new Date(course.date + 'T00:00:00') : null
-                    const weekdays = ['日','一','二','三','四','五','六']
-                    const dateStr = d ? `${d.getMonth()+1}/${d.getDate()}（${weekdays[d.getDay()]}）` : ''
-                    return (
-                      <div key={reg.id} className="px-6 py-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <button onClick={() => setSelectedReg(reg)} className="flex items-start gap-3 min-w-0 flex-1 text-left">
-                            <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 text-orange-600 font-bold text-xs mt-0.5">
-                              {i + 1}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-semibold text-stone-800 truncate">{course?.title}</p>
-                              <p className="text-stone-400 text-xs mt-0.5">
-                                {dateStr} · {course?.time_start?.slice(0,5)}–{course?.time_end?.slice(0,5)}
-                              </p>
-                              <p className="text-stone-400 text-xs">{course?.location}</p>
-                            </div>
-                          </button>
-                          <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                            <span className={`text-xs px-2 py-1 rounded-full font-medium ${isPast ? 'bg-stone-100 text-stone-500' : 'bg-green-100 text-green-700'}`}>
-                              {isPast ? '已結束' : '即將開課'}
-                            </span>
-                            {!isPast && (
-                              <button
-                                onClick={() => setCancelTarget(reg)}
-                                className="text-xs text-red-400 hover:text-red-600 transition-colors underline underline-offset-2"
-                              >
-                                取消報名
+                  ) : (
+                    <>
+                      {/* 手機版：每筆是獨立的邊框卡片，堆疊顯示（含講師） */}
+                      <div className="flex flex-col gap-3 md:hidden">
+                        {displayList.map((reg: any, i: number) => {
+                          const course = reg.courses
+                          const isPast = regTab === 'past'
+                          const d = course?.date ? new Date(course.date + 'T00:00:00') : null
+                          const weekdays = ['日','一','二','三','四','五','六']
+                          const dateStr = d ? `${d.getMonth()+1}/${d.getDate()}（${weekdays[d.getDay()]}）` : ''
+                          return (
+                            <div key={reg.id} className="border border-stone-200 rounded-lg px-4 py-3 flex flex-col gap-2">
+                              <button onClick={() => setSelectedReg(reg)} className="flex items-center gap-2 text-left w-full">
+                                <span className="w-[26px] h-[26px] rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0 text-orange-600 font-bold text-sm">
+                                  {i + 1}
+                                </span>
+                                <span className="font-bold text-stone-800 truncate flex-1 min-w-0">{course?.title}</span>
+                                {isPast && (
+                                  <span className="text-xs font-medium px-2 py-1 rounded-md bg-stone-100 text-stone-400 flex-shrink-0">已結束</span>
+                                )}
                               </button>
-                            )}
-                          </div>
-                        </div>
+                              <div className="flex items-center gap-1 text-sm text-stone-500">
+                                <IconClock /> {dateStr} · {course?.time_start?.slice(0,5)}–{course?.time_end?.slice(0,5)}
+                              </div>
+                              <div className="flex items-center gap-1 text-sm text-stone-500">
+                                <IconPin /> {course?.location}
+                              </div>
+                              {course?.instructors?.name && (
+                                <div className="flex items-center gap-1 text-sm text-stone-500">
+                                  <IconPerson /> {course.instructors.name}
+                                </div>
+                              )}
+                              {!isPast && (
+                                <div className="flex justify-end">
+                                  <button
+                                    onClick={() => setCancelTarget(reg)}
+                                    className="text-xs font-medium px-3 py-1.5 rounded-md border border-red-600 text-red-600 hover:bg-red-50 transition-colors"
+                                  >
+                                    取消報名
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
                       </div>
-                    )
-                  })}
+
+                      {/* 電腦版：單行 list，divider 分隔 */}
+                      <div className="hidden md:flex md:flex-col divide-y divide-stone-100">
+                        {displayList.map((reg: any, i: number) => {
+                          const course = reg.courses
+                          const isPast = regTab === 'past'
+                          const d = course?.date ? new Date(course.date + 'T00:00:00') : null
+                          const weekdays = ['日','一','二','三','四','五','六']
+                          const dateStr = d ? `${d.getMonth()+1}/${d.getDate()}（${weekdays[d.getDay()]}）` : ''
+                          return (
+                            <div key={reg.id} className="flex items-center gap-4 py-4">
+                              <button onClick={() => setSelectedReg(reg)} className="flex items-center gap-4 min-w-0 flex-1 text-left">
+                                <span className="w-[26px] h-[26px] rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0 text-orange-600 font-bold text-sm">
+                                  {i + 1}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="font-bold text-base text-stone-800 truncate">{course?.title}</p>
+                                  <div className="flex items-center gap-4 mt-1">
+                                    <span className="flex items-center gap-1 text-sm text-stone-600">
+                                      <IconClock /> {dateStr} {course?.time_start?.slice(0,5)}–{course?.time_end?.slice(0,5)}
+                                    </span>
+                                    <span className="flex items-center gap-1 text-sm text-stone-600">
+                                      <IconPin /> {course?.location}
+                                    </span>
+                                  </div>
+                                </div>
+                              </button>
+                              {isPast ? (
+                                <span className="text-xs font-medium px-3 py-1.5 rounded-md bg-stone-100 text-stone-400 flex-shrink-0">已結束</span>
+                              ) : (
+                                <button
+                                  onClick={() => setCancelTarget(reg)}
+                                  className="text-xs font-medium px-3 py-1.5 rounded-md border border-red-600 text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
+                                >
+                                  取消報名
+                                </button>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
               </>
             )
@@ -420,11 +522,20 @@ function ProfileContent() {
         </div>
 
         {registrations.length > 0 && (
-          <Link href="/"
-            className="flex items-center justify-center gap-2 w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-3.5 rounded-xl transition-colors">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-            繼續報名其他課程
-          </Link>
+          <>
+            {/* 電腦版：跟頁面內容一起排列 */}
+            <Link href="/"
+              className="hidden md:flex items-center justify-center gap-2 w-full h-[50px] bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-xl transition-colors">
+              繼續報名其他課程
+            </Link>
+            {/* 手機版：sticky 在畫面底部的 modal 按鈕 */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 z-20 bg-white p-4" style={{ boxShadow: '0px -3px 4px 0px rgba(0,0,0,0.08)' }}>
+              <Link href="/"
+                className="flex items-center justify-center gap-2 w-full h-[50px] bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-[10px] transition-colors">
+                繼續報名其他課程
+              </Link>
+            </div>
+          </>
         )}
       </div>
 
