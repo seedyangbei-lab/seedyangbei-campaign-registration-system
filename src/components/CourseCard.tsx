@@ -99,6 +99,12 @@ const IconNotice = () => (
   </svg>
 )
 
+const IconCheck = () => (
+  <svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round">
+    <path d="M16.3505 7.50018C16.693 9.18115 16.4489 10.9287 15.6588 12.4515C14.8688 13.9743 13.5806 15.1802 12.0091 15.8682C10.4376 16.5561 8.67768 16.6845 7.02293 16.232C5.36819 15.7794 3.9186 14.7732 2.91592 13.3812C1.91323 11.9893 1.41805 10.2956 1.51296 8.58271C1.60786 6.86983 2.28712 5.24124 3.43745 3.96855C4.58778 2.69586 6.13964 1.856 7.83426 1.58902C9.52887 1.32203 11.2638 1.64407 12.7497 2.50143M6.75 8.24982L9 10.4998L16.5 2.99982" />
+  </svg>
+)
+
 const IconLINE = () => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="white" style={{ display: 'block' }}>
     <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
@@ -122,7 +128,7 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
   const [tutorialStep, setTutorialStepState] = useState<string | null>(null)
   const filterRowRef = useRef<HTMLDivElement>(null)
   const firstCardRef = useRef<HTMLDivElement>(null)
-  const ctaRef = useRef<HTMLDivElement>(null)
+  const ctaRef = useRef<HTMLButtonElement>(null)
 
   const startTutorialStep1 = () => {
     saveTutorialStep('1')
@@ -153,10 +159,9 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
   }
   const skipTutorial = () => setTutorialStepState(null)
 
-  const filterHole = useTutorialRect(filterRowRef, tutorialStep === '1', 8, 12)
   const firstCardHoleStep1 = useTutorialRect(firstCardRef, tutorialStep === '1', 4, 16)
   const firstCardHoleStep2 = useTutorialRect(firstCardRef, tutorialStep === '2', 4, 16)
-  const ctaHole = useTutorialRect(ctaRef, tutorialStep === '2', 6, 16)
+  const ctaHole = useTutorialRect(ctaRef, tutorialStep === '2', 4, 16)
 
   useEffect(() => {
     const onClickOutside = (e: MouseEvent) => {
@@ -437,11 +442,11 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
 
               {alreadyRegistered ? (
                 <div className="absolute top-[19px] right-[19px] w-7 h-7 rounded-full bg-green-500 flex items-center justify-center">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  <IconCheck />
                 </div>
               ) : !expired && (
                 <div className={`absolute top-[19px] right-[19px] w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-orange-500 border-orange-500' : 'border-stone-300 bg-stone-100'}`}>
-                  {isSelected && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                  {isSelected && <IconCheck />}
                 </div>
               )}
             </div>
@@ -450,8 +455,8 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
       </div>
 
       {selected.length > 0 && (
-        <div ref={ctaRef} className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
-          <button onClick={handleProceed}
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
+          <button ref={ctaRef} onClick={handleProceed}
             style={{ boxShadow: '0px -1px 2px rgba(0,0,0,0.16)' }}
             className="w-full flex items-center justify-between bg-stone-50 border border-stone-300 px-4 py-2.5 rounded-2xl transition-all active:scale-95">
             <div className="flex items-center gap-3">
@@ -497,19 +502,19 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
         </div>
       )}
 
-      {/* 首次登入教學：step1 篩選+選課程 / step2 前往報名 */}
+      {/* 首次登入教學：step1 選課程（只框課程卡片，不框上方篩選列，避免被 sticky 3步驟列擋住）/ step2 前往報名 */}
       {tutorialStep === '1' && (
         <>
-          <TutorialMask holes={[filterHole, firstCardHoleStep1]} />
-          <TutorialTooltip hole={filterHole} number={1} text="點選您有興趣的活動課程" placement="below" />
+          <TutorialMask holes={[firstCardHoleStep1]} />
+          <TutorialTooltip hole={firstCardHoleStep1} number={1} text="點選您有興趣的活動課程" placement="above" />
           <TutorialSkipButton onSkip={skipTutorial} />
         </>
       )}
       {tutorialStep === '2' && (
         <>
+          {/* CTA 按鈕只用動態脈動的框強調，不再額外放文字泡泡，避免跟按鈕本身文字重複、也不會被切到畫面外 */}
           <TutorialMask holes={[firstCardHoleStep2, ctaHole]} pulse={[false, true]} />
-          <TutorialTooltip hole={firstCardHoleStep2} number={2} text="已選好課程後，點選前往報名" placement="above" />
-          <TutorialTooltip hole={ctaHole} number={1} text="前往報名" placement="above" widthClass="whitespace-nowrap" />
+          <TutorialTooltip hole={firstCardHoleStep2} number={1} text="已選好課程後，點選前往報名" placement="above" />
           <TutorialSkipButton onSkip={skipTutorial} />
         </>
       )}
