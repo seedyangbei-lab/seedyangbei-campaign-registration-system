@@ -514,7 +514,7 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
         <>
           {/* CTA 按鈕只用動態脈動的框強調，不再額外放文字泡泡，避免跟按鈕本身文字重複、也不會被切到畫面外 */}
           <TutorialMask holes={[firstCardHoleStep2, ctaHole]} pulse={[false, true]} />
-          <TutorialTooltip hole={firstCardHoleStep2} number={1} text="已選好課程後，點選前往報名" placement="above" />
+          <TutorialTooltip hole={firstCardHoleStep2} number={2} text="已選好課程後，點選前往報名" placement="above" />
           <TutorialSkipButton onSkip={skipTutorial} />
         </>
       )}

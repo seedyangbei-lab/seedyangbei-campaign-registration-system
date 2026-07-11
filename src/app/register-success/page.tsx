@@ -50,7 +50,7 @@ function SuccessContent() {
   }
   const replayTutorial = () => {
     saveTutorialStep('1')
-    router.push('/')
+    router.push('/?tutorial=1')
   }
 
   return (

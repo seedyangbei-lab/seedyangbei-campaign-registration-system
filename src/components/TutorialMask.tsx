@@ -29,6 +29,19 @@ export default function TutorialMask({ holes, pulse }: { holes: (TutorialRect | 
       height={vh}
       aria-hidden="true"
     >
+      {/* 用標準 CSS keyframes 而非 SMIL <animate>，在 LINE 內建瀏覽器等 WebView 環境相容性更好 */}
+      <style>{`
+        @keyframes tutorial-pulse-stroke {
+          0%, 100% { stroke-width: 2.5px; stroke-opacity: 1; }
+          50% { stroke-width: 5.5px; stroke-opacity: 0.4; }
+        }
+        @keyframes tutorial-pulse-ring {
+          0% { stroke-width: 2.5px; stroke-opacity: 0.7; }
+          100% { stroke-width: 14px; stroke-opacity: 0; }
+        }
+        .tutorial-pulse-stroke { animation: tutorial-pulse-stroke 1.3s ease-in-out infinite; }
+        .tutorial-pulse-ring { animation: tutorial-pulse-ring 1.3s ease-out infinite; }
+      `}</style>
       <defs>
         <mask id="tutorial-cutout-mask" maskUnits="userSpaceOnUse" x={0} y={0} width={vw} height={vh}>
           <rect x={0} y={0} width={vw} height={vh} fill="white" />
@@ -40,6 +53,20 @@ export default function TutorialMask({ holes, pulse }: { holes: (TutorialRect | 
       <rect x={0} y={0} width={vw} height={vh} fill="rgba(12,12,12,0.6)" mask="url(#tutorial-cutout-mask)" />
       {validHoles.map((v, i) => (
         <rect
+          key={`ring-${i}`}
+          x={v.h.left}
+          y={v.h.top}
+          width={v.h.width}
+          height={v.h.height}
+          rx={v.h.radius ?? 16}
+          fill="none"
+          stroke="#f97316"
+          className={v.pulse ? 'tutorial-pulse-ring' : undefined}
+          style={v.pulse ? undefined : { display: 'none' }}
+        />
+      ))}
+      {validHoles.map((v, i) => (
+        <rect
           key={i}
           x={v.h.left}
           y={v.h.top}
@@ -49,14 +76,8 @@ export default function TutorialMask({ holes, pulse }: { holes: (TutorialRect | 
           fill="none"
           stroke="#f97316"
           strokeWidth={v.pulse ? undefined : 2.5}
-        >
-          {v.pulse && (
-            <>
-              <animate attributeName="stroke-width" values="2.5;5;2.5" dur="1.3s" repeatCount="indefinite" />
-              <animate attributeName="stroke-opacity" values="1;0.45;1" dur="1.3s" repeatCount="indefinite" />
-            </>
-          )}
-        </rect>
+          className={v.pulse ? 'tutorial-pulse-stroke' : undefined}
+        />
       ))}
     </svg>
   )
