@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import StampCard from '@/components/StampCard'
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock'
 
 function getParticipationTag(count: number) {
   if (count === 0) return { label: '尚未參與', color: '#9ca3af', bg: '#f3f4f6' }
@@ -52,6 +53,10 @@ function ProfileContent() {
   const [redeemSuccess, setRedeemSuccess] = useState(false)
   const [pointsEnabled, setPointsEnabled] = useState(true)
   const supabase = createClient()
+
+  // 任一彈窗開著時鎖住背景頁面捲動（取消報名確認／課程詳情／兌換確認）。
+  // 這行要放在 return null 的 early return 之前，維持 hooks 呼叫順序穩定。
+  useBodyScrollLock(!!cancelTarget || !!selectedReg || showRedeemModal)
 
   useEffect(() => {
     try {

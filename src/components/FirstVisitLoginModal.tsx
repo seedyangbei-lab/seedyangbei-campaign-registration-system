@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock'
 
 const SEEN_KEY = 'yangbei_seen_login_prompt'
 const LINE_CHANNEL_ID = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2010077816'
@@ -92,6 +93,8 @@ export default function FirstVisitLoginModal() {
     window.location.href = `https://access.line.me/oauth2/v2.1/authorize?${params}`
   }
 
+  useBodyScrollLock(mounted)
+
   if (!mounted) return null
 
   return (
@@ -100,10 +103,13 @@ export default function FirstVisitLoginModal() {
         className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
         onClick={close}
       />
+      {/* 手機版：貼底的 bottom sheet，滑入滑出。電腦版（md+）：置中彈窗，淡入淡出＋輕微縮放 */}
       <div
-        className={`absolute left-1/2 bottom-0 -translate-x-1/2 w-full max-w-[390px] bg-stone-50 rounded-t-3xl px-6 pt-3 pb-10 flex flex-col items-center gap-4 shadow-[0_-4px_10px_rgba(0,0,0,0.2)] transition-transform duration-300 ease-out ${visible ? 'translate-y-0' : 'translate-y-full'}`}
+        className={`absolute left-1/2 bottom-0 -translate-x-1/2 w-full max-w-[390px] bg-stone-50 rounded-t-3xl px-6 pt-3 pb-10 flex flex-col items-center gap-4 shadow-[0_-4px_10px_rgba(0,0,0,0.2)] transition-all duration-300 ease-out
+          md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:rounded-[24px] md:p-6 md:shadow-2xl
+          ${visible ? 'translate-y-0 md:opacity-100 md:scale-100' : 'translate-y-full md:opacity-0 md:scale-95'}`}
       >
-        <button onClick={close} className="w-full flex justify-center py-0.5" aria-label="關閉">
+        <button onClick={close} className="w-full flex justify-center py-0.5 md:hidden" aria-label="關閉">
           <span className="w-10 h-1 rounded-full bg-stone-300" />
         </button>
 
