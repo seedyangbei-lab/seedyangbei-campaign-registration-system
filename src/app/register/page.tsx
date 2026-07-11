@@ -242,7 +242,7 @@ function RegisterForm() {
     <main className="min-h-screen bg-stone-50">
       <SiteNavbar variant="inner" />
 
-      <div className="max-w-lg mx-auto px-4 py-6">
+      <div className="max-w-lg md:max-w-[800px] mx-auto px-4 md:px-6 py-6 md:py-10">
         <div className="mb-5 pb-4 border-b border-stone-200">
           <h1 className="text-xl font-bold text-stone-600">填寫報名資料</h1>
           <p className="text-stone-400 mt-1 text-sm">填寫一次即可同時報名以下課程</p>
@@ -286,17 +286,17 @@ function RegisterForm() {
           <div className="text-center py-4 text-stone-400 text-sm">讀取您的資料中...</div>
         )}
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-stone-200 p-6 space-y-5 shadow-sm">
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-stone-200 p-6 md:p-[25px] space-y-5 md:space-y-4 shadow-sm">
           <div>
-            <label className="block text-base font-medium text-stone-700 mb-2"><span className="text-orange-500">* </span>姓名</label>
+            <label className="block text-base md:text-lg font-medium text-stone-700 mb-2"><span className="text-orange-500">* </span>姓名</label>
             <input required type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})}
               placeholder="請輸入您的姓名"
-              className="w-full border border-stone-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-300" />
+              className="w-full border border-stone-300 rounded-xl px-4 py-3 text-base md:text-lg focus:outline-none focus:ring-2 focus:ring-orange-300" />
           </div>
 
           <div>
-            <label className="block text-base font-medium text-stone-700 mb-3"><span className="text-orange-500">* </span>居住身份</label>
-            <div className="flex gap-3">
+            <label className="block text-base md:text-lg font-medium text-stone-700 mb-3"><span className="text-orange-500">* </span>居住身份</label>
+            <div className="flex gap-3 md:gap-4">
               {[{v: true, l: '社宅居民'}, {v: false, l: '非社宅居民'}].map(opt => (
                 <button key={String(opt.v)} type="button" onClick={() => setIsSocialHousing(opt.v)}
                   className={`flex-1 h-[50px] rounded-[10px] border text-base font-medium transition-colors ${isSocialHousing === opt.v ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-stone-600 border-stone-300'}`}>
@@ -308,7 +308,7 @@ function RegisterForm() {
 
           {isSocialHousing && (
             <div>
-              <label className="block text-base font-medium text-stone-700 mb-3"><span className="text-orange-500">* </span>房號</label>
+              <label className="block text-base md:text-lg font-medium text-stone-700 mb-3"><span className="text-orange-500">* </span>房號</label>
 
               <div className="flex flex-col gap-1 mb-4">
                 <label className="text-sm text-stone-500">棟別</label>
@@ -373,26 +373,26 @@ function RegisterForm() {
 
           {!isSocialHousing && (
             <div>
-              <label className="block text-base font-medium text-stone-700 mb-2"><span className="text-orange-500">* </span>請說明來自哪個社區</label>
+              <label className="block text-base md:text-lg font-medium text-stone-700 mb-2"><span className="text-orange-500">* </span>請說明來自哪個社區</label>
               <input required type="text" value={form.other_community} onChange={e => setForm({...form, other_community: e.target.value})}
                 placeholder="例：附近里民、其他社宅"
-                className="w-full border border-stone-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                className="w-full border border-stone-300 rounded-xl px-4 py-3 text-base md:text-lg focus:outline-none focus:ring-2 focus:ring-orange-300" />
             </div>
           )}
 
           <div>
-            <label className="block text-base font-medium text-stone-700 mb-2"><span className="text-orange-500">* </span>手機號碼</label>
+            <label className="block text-base md:text-lg font-medium text-stone-700 mb-2"><span className="text-orange-500">* </span>手機號碼</label>
             <input required type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})}
               placeholder="09XXXXXXXX（共 10 碼）" maxLength={10}
-              className={`w-full border rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-300 ${form.phone && !validatePhone(form.phone) ? 'border-red-400 bg-red-50' : 'border-stone-300'}`} />
+              className={`w-full border rounded-xl px-4 py-3 text-base md:text-lg focus:outline-none focus:ring-2 focus:ring-orange-300 ${form.phone && !validatePhone(form.phone) ? 'border-red-400 bg-red-50' : 'border-stone-300'}`} />
             {form.phone && !validatePhone(form.phone) && (
               <p className="text-red-500 text-sm mt-1.5">請填寫 09 開頭共 10 碼的手機號碼</p>
             )}
           </div>
 
           <div>
-            <label className="block text-base font-medium text-stone-700 mb-3"><span className="text-orange-500">* </span>年齡區間</label>
-            <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+            <label className="block text-base md:text-lg font-medium text-stone-700 mb-3"><span className="text-orange-500">* </span>年齡區間</label>
+            <div className="grid grid-cols-3 md:grid-cols-7 gap-2">
               {AGE_GROUPS.map(age => (
                 <button key={age} type="button" onClick={() => setForm({...form, age_group: age})}
                   className={`h-[50px] rounded-[10px] border text-base transition-colors font-medium ${form.age_group === age ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-stone-600 border-stone-300 hover:border-orange-300'}`}>
@@ -403,10 +403,10 @@ function RegisterForm() {
           </div>
 
           <div>
-            <label className="block text-base font-medium text-stone-700 mb-2">課前想說的話 <span className="text-stone-400 text-sm font-normal">（選填）</span></label>
+            <label className="block text-base md:text-lg font-medium text-stone-700 mb-2">課前想說的話 <span className="text-stone-400 text-sm font-normal">（選填）</span></label>
             <textarea value={form.questions} onChange={e => setForm({...form, questions: e.target.value})}
               placeholder="有任何想法或問題都可以寫下來～" rows={3}
-              className="w-full border border-stone-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none" />
+              className="w-full border border-stone-300 rounded-xl px-4 py-3 text-base md:text-lg focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none md:h-[124px]" />
           </div>
 
           {error && <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 text-sm">{error}</div>}

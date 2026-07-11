@@ -57,28 +57,30 @@ function SuccessContent() {
   return (
     <main className="min-h-screen bg-stone-50 flex flex-col">
       <SiteNavbar variant="inner" />
-      <div className="flex-1 flex items-center justify-center px-4">
-      <div className="text-center max-w-md">
+      <div className="flex-1 flex items-center justify-center px-4 py-8">
+      {/* 電腦版：以彈窗卡片呈現（比照 Figma popup，離型底色+陰影+圓角24）；手機版維持原本無卡片置中版面 */}
+      <div className="text-center w-full max-w-md md:max-w-[390px] md:bg-[#fafaf9] md:rounded-[24px] md:shadow-[0px_-4px_5px_0px_rgba(0,0,0,0.2)] md:p-6">
         <div ref={spotlightRef} className="inline-block">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12" pathLength="1" strokeDasharray="1" className="animate-draw-check" />
-            </svg>
-          </div>
-          <h1 className="text-3xl font-bold text-stone-800 mb-4">報名成功！</h1>
-          <p className="text-stone-500 mb-8 leading-relaxed text-lg">
+          {/* 報名成功插畫圖：手機／電腦版都換成新插畫（原本綠色打勾圖示已移除） */}
+          <img
+            src="/illustrations/Property%201=success.png"
+            alt="報名成功"
+            className="w-[160px] h-[160px] md:w-[200px] md:h-[200px] object-contain mx-auto mb-6 md:mb-4"
+          />
+          <h1 className="text-3xl md:text-xl font-bold text-stone-800 md:text-stone-600 mb-4 md:mb-0 md:font-['GenSenRounded2TW']">報名成功！</h1>
+          <p className="text-stone-500 mb-8 md:mb-0 leading-relaxed text-lg md:text-sm md:font-['GenSenRounded2TW']">
             感謝您的報名！<br />我們將透過 LINE 與您聯繫課程相關資訊。
           </p>
         </div>
         {tutorialStep !== '4' && (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 md:mt-6">
             <a href={profileUrl}
-              className="inline-flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-medium px-8 py-3.5 rounded-xl transition-colors text-base">
+              className="inline-flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-medium px-8 py-3.5 rounded-xl transition-colors text-base md:w-full">
               <IconRegistrationList />
               查看我的報名記錄
             </a>
             <Link href="/"
-              className="inline-flex items-center justify-center gap-2 bg-white border border-stone-300 hover:bg-stone-50 text-stone-600 font-medium px-8 py-3.5 rounded-xl transition-colors text-base">
+              className="inline-flex items-center justify-center gap-2 bg-white border border-stone-300 hover:bg-stone-50 text-stone-600 font-medium px-8 py-3.5 rounded-xl transition-colors text-base md:w-full">
               <IconBack />
               返回課程列表
             </Link>
@@ -106,15 +108,6 @@ function SuccessContent() {
         </>
       )}
 
-      <style jsx>{`
-        .animate-draw-check {
-          stroke-dashoffset: 1;
-          animation: drawCheck 0.6s 0.15s ease-out forwards;
-        }
-        @keyframes drawCheck {
-          to { stroke-dashoffset: 0; }
-        }
-      `}</style>
     </main>
   )
 }
