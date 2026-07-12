@@ -88,7 +88,7 @@ export default function AdminDashboard() {
   const handleResidentSelect = (v: string) => { setFilterResident(v); setCurrentPage(1) }
   const handleStatusSelect = (v: string) => { setFilterStatus(v); setCurrentPage(1) }
   const handleFilterReset = () => {
-    setSortOrder('desc'); setFilterResident(''); setFilterStatus(''); setCurrentPage(1)
+    setFilterResident(''); setFilterStatus(''); setCurrentPage(1)
   }
 
   const handleCancelRegistration = async () => {
@@ -127,7 +127,7 @@ export default function AdminDashboard() {
       <div className="hidden md:grid grid-cols-3 gap-4 mb-8">
         {statCards.map(s => <StatCard key={s.label} {...s} />)}
       </div>
-      <div className="grid md:hidden grid-cols-3 gap-2 mb-6">
+      <div className="grid md:hidden grid-cols-3 gap-3 mb-6">
         {statCards.map(s => <StatCard key={s.label} {...s} compact />)}
       </div>
 
@@ -285,8 +285,6 @@ export default function AdminDashboard() {
       <FilterBottomSheet
         open={filterSheetOpen}
         onClose={() => setFilterSheetOpen(false)}
-        sortOrder={sortOrder}
-        onSortChange={handleSortChange}
         filterResident={filterResident}
         onResidentChange={handleResidentSelect}
         filterStatus={filterStatus}

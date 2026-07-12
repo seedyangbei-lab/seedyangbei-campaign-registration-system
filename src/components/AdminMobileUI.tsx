@@ -46,15 +46,12 @@ export function MobileSortIconButton({ sortOrder, onToggle }: { sortOrder: 'desc
 /* ---------- 篩選 BottomSheet：排序／身份別／狀態 ---------- */
 export function FilterBottomSheet({
   open, onClose,
-  sortOrder, onSortChange,
   filterResident, onResidentChange,
   filterStatus, onStatusChange,
   onReset,
 }: {
   open: boolean
   onClose: () => void
-  sortOrder: 'desc' | 'asc'
-  onSortChange: (v: 'desc' | 'asc') => void
   filterResident: string
   onResidentChange: (v: string) => void
   filterStatus: string
@@ -80,13 +77,6 @@ export function FilterBottomSheet({
           <button type="button" onClick={onReset} className="text-sm font-medium text-orange-600">重置</button>
         </div>
         <div className="flex flex-col gap-4 p-6">
-          <div className="flex flex-col gap-2">
-            <p className="text-sm text-stone-800">排序</p>
-            <div className="flex gap-2 w-full">
-              <button type="button" onClick={() => onSortChange('desc')} className={pill(sortOrder === 'desc')}>最新</button>
-              <button type="button" onClick={() => onSortChange('asc')} className={pill(sortOrder === 'asc')}>最舊</button>
-            </div>
-          </div>
           <div className="flex flex-col gap-2">
             <p className="text-sm text-stone-800">身份別</p>
             <div className="flex gap-2 w-full">
