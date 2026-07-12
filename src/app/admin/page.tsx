@@ -105,7 +105,7 @@ export default function AdminDashboard() {
     { label: '報名人數', value: stats.uniqueRegistrants, desc: '已報名的不重複人數' },
   ]
 
-  const columns = ['#', '姓名', '房號', '手機', '課程', '身份', '年齡', '報名時間', '出席狀況', '操作']
+  const columns = ['#', '姓名', '身份', '房號', '手機', '課程', '年齡', '報名時間', '出席狀況', '操作']
 
   return (
     <div className="p-6 md:p-8">
@@ -189,14 +189,14 @@ export default function AdminDashboard() {
                         <span className="font-medium text-[#292624] whitespace-nowrap">{reg.users?.name}</span>
                       </div>
                     </td>
+                    <td className="px-4 py-3 w-[120px]">
+                      <IdentityBadge resident={!!reg.is_social_housing_resident} />
+                    </td>
                     <td className="px-4 py-3 text-[#57544f] whitespace-nowrap w-[120px]">{reg.users?.room_number}</td>
                     <td className="px-4 py-3 text-[#78706b] whitespace-nowrap w-[120px]">{reg.users?.phone}</td>
                     <td className="px-4 py-3">
                       <p className="text-[#57544f] font-medium whitespace-nowrap">{reg.courses?.title}</p>
                       <p className="text-[#bab5b0] text-xs">{reg.courses?.date}</p>
-                    </td>
-                    <td className="px-4 py-3 w-[120px]">
-                      <IdentityBadge resident={!!reg.is_social_housing_resident} />
                     </td>
                     <td className="px-4 py-3 text-[#78706b] text-xs whitespace-nowrap w-[120px]">{reg.users?.age_group}</td>
                     <td className="px-4 py-3 text-[#78706b] text-xs whitespace-nowrap w-[120px]">{formatDT(reg.registered_at)}</td>
