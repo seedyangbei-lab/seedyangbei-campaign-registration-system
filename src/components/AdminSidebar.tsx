@@ -92,7 +92,7 @@ export default function AdminSidebar() {
   return (
     <>
       {/* 電腦版側邊欄 */}
-      <aside className="hidden md:flex w-60 bg-white border-r border-stone-200 flex-col fixed h-full z-40">
+      <aside className="hidden md:flex w-60 bg-white border-r border-stone-200 flex-col fixed top-14 h-[calc(100%-3.5rem)] z-40">
         <div className="px-6 py-5 border-b border-stone-200">
           <p className="text-xs text-stone-400 mb-1">央北種子計畫</p>
           <h1 className="text-stone-800 font-bold text-lg">活動管理後台</h1>

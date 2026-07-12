@@ -13,7 +13,7 @@ export function StatCard({ label, value, desc }: { label: string; value: number 
     <div className="stat-card-flow-border rounded-lg h-[120px]">
       <div className="relative z-10 bg-white border border-[#ffcead]/50 rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.05)] p-5 flex flex-col gap-1 h-full">
         <p className="text-stone-600 text-[13px]">{label}</p>
-        <p className="text-stone-800 text-[32px] font-semibold leading-none">{value}</p>
+        <p className="text-orange-600 text-[32px] font-semibold leading-none">{value}</p>
         <p className="text-stone-500 text-xs leading-4">{desc}</p>
       </div>
     </div>

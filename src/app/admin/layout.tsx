@@ -2,6 +2,7 @@
 import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import AdminSidebar from '@/components/AdminSidebar'
+import AdminNavbar from '@/components/AdminNavbar'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -27,8 +28,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-stone-50">
+      <AdminNavbar />
       <AdminSidebar />
-      <div className="md:ml-60 pt-16 md:pt-0">
+      <div className="md:ml-60 pt-16 md:pt-14">
         {children}
       </div>
     </div>
