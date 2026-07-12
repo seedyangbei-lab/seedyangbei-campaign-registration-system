@@ -44,7 +44,7 @@ export default function AdminLoginPage() {
           <img src="/illustrations/modal%20instructor.png" alt="" className="w-[200px] h-[200px] object-cover" />
           <div className="text-center -mt-2">
             <p className="font-['GenSenRounded2TW'] text-xs text-stone-400 tracking-[1.4px] uppercase">央北社宅</p>
-            <p className="font-['GenSenRounded2TW'] font-bold text-2xl text-stone-800">後台登入</p>
+            <p className="font-['GenSenRounded2TW'] font-bold text-2xl text-stone-800">活動管理後台</p>
           </div>
           <form onSubmit={handleLogin} className="bg-white rounded-2xl border border-stone-200 p-[25px] space-y-4 shadow-sm w-full">
             <div>
@@ -71,7 +71,7 @@ export default function AdminLoginPage() {
           <div className="w-[451px] flex flex-col gap-8">
             <div className="text-center">
               <p className="font-['GenSenRounded2TW'] text-sm text-stone-400 tracking-[1.4px] uppercase">央北社宅</p>
-              <p className="font-['GenSenRounded2TW'] font-bold text-2xl text-stone-800">後台登入</p>
+              <p className="font-['GenSenRounded2TW'] font-bold text-2xl text-stone-800">活動管理後台</p>
             </div>
             <form onSubmit={handleLogin} className="bg-white rounded-2xl border border-stone-200 p-[25px] space-y-4 shadow-sm w-full">
               <div>
