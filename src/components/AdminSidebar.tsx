@@ -97,7 +97,7 @@ export default function AdminSidebar() {
           <p className="text-xs text-stone-400 mb-1">央北種子計畫</p>
           <h1 className="text-stone-800 font-bold text-lg">活動管理後台</h1>
         </div>
-        <ul className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        <ul className="flex-1 px-3 py-4 space-y-2 overflow-y-auto">
           {navItems.map(item => (
             <li key={item.href}>
               <Link
@@ -105,7 +105,7 @@ export default function AdminSidebar() {
                 prefetch={true}
                 className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-base font-medium transition-colors ${isActive(item.href) ? 'bg-orange-50 text-orange-600' : 'text-stone-600 hover:bg-stone-100 hover:text-stone-800'}`}
               >
-                <span className={isActive(item.href) ? 'text-orange-500' : 'text-stone-400'}>{item.icon(24)}</span>
+                <span className={isActive(item.href) ? 'text-orange-500' : 'text-stone-400'}>{item.icon(20)}</span>
                 <span>{item.label}</span>
               </Link>
             </li>
@@ -113,7 +113,7 @@ export default function AdminSidebar() {
         </ul>
         <div className="px-3 py-4 border-t border-stone-200">
           <button onClick={handleLogout} className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-base font-medium text-stone-600 hover:bg-red-50 hover:text-red-600 transition-colors">
-            {logoutIcon(24)}
+            <span className="text-orange-500">{logoutIcon(20)}</span>
             <span>登出</span>
           </button>
         </div>
@@ -137,12 +137,12 @@ export default function AdminSidebar() {
         className={`md:hidden fixed inset-0 bg-black/40 z-40 transition-opacity duration-300 ${mobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
       />
 
-      {/* 手機版側邊抽屜：由左至右展開，寬度不滿版（300px，依 Figma） */}
+      {/* 手機版側邊抽屜：由右至左展開，寬度不滿版（300px，依 Figma） */}
       <div
-        className={`md:hidden fixed top-16 bottom-0 left-0 w-[300px] bg-white z-40 shadow-xl transition-transform duration-300 ease-out ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`md:hidden fixed top-16 bottom-0 right-0 w-[300px] bg-white z-40 shadow-xl transition-transform duration-300 ease-out ${mobileOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <nav className="flex flex-col h-full">
-          <ul className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+          <ul className="flex-1 px-3 py-4 space-y-2 overflow-y-auto">
             {navItems.map(item => (
               <li key={item.href}>
                 <Link
@@ -162,7 +162,7 @@ export default function AdminSidebar() {
               onClick={() => { setMobileOpen(false); handleLogout() }}
               className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-base font-medium text-stone-600 hover:bg-red-50 hover:text-red-600 transition-colors"
             >
-              {logoutIcon(24)}
+              <span className="text-orange-500">{logoutIcon(24)}</span>
               <span>登出</span>
             </button>
           </div>
