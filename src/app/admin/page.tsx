@@ -158,9 +158,6 @@ export default function AdminDashboard() {
               <SortToggle value={sortOrder} onChange={handleSortChange} />
             </div>
           </div>
-          <p className="text-xs text-stone-400 mt-3">
-            共 {filtered.length} 筆記錄，顯示第 {currentPage} 頁（共 {totalPages} 頁）
-          </p>
         </div>
 
         {/* 表格 */}
@@ -202,7 +199,7 @@ export default function AdminDashboard() {
                       <IdentityBadge resident={!!reg.is_social_housing_resident} />
                     </td>
                     <td className="px-4 py-3 text-[#78706b] text-xs whitespace-nowrap w-[120px]">{reg.users?.age_group}</td>
-                    <td className="px-4 py-3 text-[#bab5b0] text-xs whitespace-nowrap w-[120px]">{formatDT(reg.registered_at)}</td>
+                    <td className="px-4 py-3 text-[#78706b] text-xs whitespace-nowrap w-[120px]">{formatDT(reg.registered_at)}</td>
                     <td className="px-4 py-3 w-[120px]">
                       <StatusBadge status={reg.status as RegStatus} />
                     </td>
