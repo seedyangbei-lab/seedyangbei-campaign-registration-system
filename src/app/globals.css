@@ -114,3 +114,13 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .stat-card-flow-border::before { animation: none; }
 }
+
+/* 手機版總覽頁：篩選 BottomSheet 滑入動畫 */
+@keyframes sheetSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes sheetFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

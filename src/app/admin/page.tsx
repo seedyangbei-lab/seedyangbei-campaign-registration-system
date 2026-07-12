@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { StatCard, FilterDropdown, SortToggle, IdentityBadge, StatusBadge, PaginationControl, RowActionMenu } from '@/components/AdminUI'
+import { FilterBottomSheet, MobileFilterIconButton, MobileSortIconButton, MobileRegistrationCard, MobilePagination } from '@/components/AdminMobileUI'
 
 const PAGE_SIZE = 10
 
@@ -21,6 +22,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null)
   const [confirmPermanent, setConfirmPermanent] = useState<string | null>(null)
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const supabase = createClient()
 
@@ -83,6 +85,12 @@ export default function AdminDashboard() {
     setCurrentPage(1)
   }
 
+  const handleResidentSelect = (v: string) => { setFilterResident(v); setCurrentPage(1) }
+  const handleStatusSelect = (v: string) => { setFilterStatus(v); setCurrentPage(1) }
+  const handleFilterReset = () => {
+    setSortOrder('desc'); setFilterResident(''); setFilterStatus(''); setCurrentPage(1)
+  }
+
   const handleCancelRegistration = async () => {
     if (!confirmCancelId) return
     setDeleting(true)
@@ -116,14 +124,17 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="hidden md:grid grid-cols-3 gap-4 mb-8">
         {statCards.map(s => <StatCard key={s.label} {...s} />)}
+      </div>
+      <div className="grid md:hidden grid-cols-3 gap-2 mb-6">
+        {statCards.map(s => <StatCard key={s.label} {...s} compact />)}
       </div>
 
       {/* 報名看板 */}
       <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden p-[17px]">
-        {/* 篩選列 */}
-        <div className="pb-4">
+        {/* 篩選列：電腦版 */}
+        <div className="hidden md:block pb-4">
           <h3 className="text-stone-700 font-semibold mb-3">報名記錄</h3>
           <div className="flex flex-col xl:flex-row xl:items-center gap-3">
             <div className="flex flex-wrap gap-2">
@@ -160,13 +171,33 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* 表格 */}
+        {/* 篩選列：手機版 */}
+        <div className="md:hidden flex flex-col border-b border-stone-200 pb-[17px] mb-4">
+          <h3 className="text-xl font-bold text-stone-600 mb-3">報名記錄</h3>
+          <div className="flex items-center gap-2">
+            <FilterDropdown className="w-[108px]" value={filterCourse} onChange={handleFilterChange(setFilterCourse)}>
+              <option value="">全部課程</option>
+              {courses.map(c => <option key={c.id} value={c.id}>{c.date} · {c.title}</option>)}
+            </FilterDropdown>
+            <FilterDropdown className="w-[108px]" value={filterMonth} onChange={handleFilterChange(setFilterMonth)}>
+              <option value="">全部月份</option>
+              {availableMonths.map(m => {
+                const [y, mo] = m.split('-')
+                return <option key={m} value={m}>{y} 年 {parseInt(mo)} 月</option>
+              })}
+            </FilterDropdown>
+            <MobileFilterIconButton onClick={() => setFilterSheetOpen(true)} />
+            <MobileSortIconButton sortOrder={sortOrder} onToggle={() => handleSortChange(sortOrder === 'desc' ? 'asc' : 'desc')} />
+          </div>
+        </div>
+
+        {/* 表格：電腦版 */}
         {loading ? (
           <div className="py-12 text-center text-stone-400 text-sm">載入中...</div>
         ) : filtered.length === 0 ? (
           <div className="py-12 text-center text-stone-400 text-sm">尚無符合條件的報名記錄</div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-[#f0edeb]">
+          <div className="hidden md:block overflow-x-auto rounded-lg border border-[#f0edeb]">
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-[#fafaf9] border border-[#f0edeb]">
@@ -217,13 +248,51 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Page Control */}
+        {/* 卡片列表：手機版 */}
+        {loading ? (
+          <div className="md:hidden py-12 text-center text-stone-400 text-sm">載入中...</div>
+        ) : filtered.length === 0 ? (
+          <div className="md:hidden py-12 text-center text-stone-400 text-sm">尚無符合條件的報名記錄</div>
+        ) : (
+          <div className="md:hidden flex flex-col gap-3">
+            {paginated.map(reg => (
+              <MobileRegistrationCard
+                key={reg.id}
+                reg={reg}
+                getInitials={getInitials}
+                formatDT={formatDT}
+                onCancel={() => setConfirmCancelId(reg.id)}
+                onDelete={() => setConfirmPermanent(reg.id)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Page Control：電腦版 */}
         {totalPages > 1 && (
-          <div className="pt-4">
+          <div className="hidden md:block pt-4">
             <PaginationControl currentPage={currentPage} totalPages={totalPages} onChange={setCurrentPage} />
           </div>
         )}
+        {/* Page Control：手機版 */}
+        {totalPages > 1 && (
+          <div className="md:hidden pt-4">
+            <MobilePagination currentPage={currentPage} totalPages={totalPages} onChange={setCurrentPage} />
+          </div>
+        )}
       </div>
+
+      <FilterBottomSheet
+        open={filterSheetOpen}
+        onClose={() => setFilterSheetOpen(false)}
+        sortOrder={sortOrder}
+        onSortChange={handleSortChange}
+        filterResident={filterResident}
+        onResidentChange={handleResidentSelect}
+        filterStatus={filterStatus}
+        onStatusChange={handleStatusSelect}
+        onReset={handleFilterReset}
+      />
 
       {/* 單筆取消報名確認 */}
       {confirmCancelId && (

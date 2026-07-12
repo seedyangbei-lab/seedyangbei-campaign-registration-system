@@ -119,13 +119,13 @@ export default function AdminSidebar() {
         </div>
       </aside>
 
-      {/* 手機版頂部列 */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-stone-200 z-50 px-4 flex items-center justify-between">
-        <h1 className="text-stone-800 font-bold">活動管理後台</h1>
+      {/* 手機版頂部列（比照 Figma Navbar/Inner Page，backstage 尺寸） */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white shadow-[0px_4px_2px_0px_rgba(0,0,0,0.03)] z-50 px-4 flex items-center justify-between">
+        <h1 className="text-stone-600 font-bold text-sm tracking-[3px]">活動管理後台</h1>
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label={mobileOpen ? '關閉選單' : '開啟選單'}
-          className="text-stone-600 p-1.5 border border-stone-200 rounded-lg"
+          className="text-stone-500 p-1.5 border border-stone-200 rounded-md"
         >
           {mobileOpen ? closeIcon : menuIcon}
         </button>

@@ -8,7 +8,19 @@
 import { ReactNode, useState } from 'react'
 
 /* ---------- Stat Card：外層邊框緩慢流動的漸層動態（慢速，不刺眼） ---------- */
-export function StatCard({ label, value, desc }: { label: string; value: number | string; desc: string }) {
+export function StatCard({
+  label, value, desc, compact = false,
+}: { label: string; value: number | string; desc: string; compact?: boolean }) {
+  if (compact) {
+    return (
+      <div className="stat-card-flow-border rounded-lg h-16">
+        <div className="relative z-10 bg-white border border-[#ffcead]/50 rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.05)] p-2 flex flex-col items-center justify-center gap-1 h-full">
+          <p className="text-stone-600 text-xs whitespace-nowrap">{label}</p>
+          <p className="text-orange-600 text-[26px] font-bold leading-7">{value}</p>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="stat-card-flow-border rounded-lg h-[120px]">
       <div className="relative z-10 bg-white border border-[#ffcead]/50 rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.05)] p-5 flex flex-col gap-1 h-full">
@@ -30,7 +42,7 @@ export function FilterDropdown({
   className?: string
 }) {
   return (
-    <div className={`relative w-[200px] ${className}`}>
+    <div className={`relative ${className || 'w-[200px]'}`}>
       <select
         value={value}
         onChange={onChange}
