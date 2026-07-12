@@ -2,26 +2,24 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import { StatCard, FilterDropdown, SortToggle, IdentityBadge, StatusBadge, PaginationControl } from '@/components/AdminUI'
 
-const PAGE_SIZE_OPTIONS = [10, 20]
+const PAGE_SIZE = 10
+
+type RegStatus = 'cancelled' | 'confirmed' | 'attended'
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ activeCourses: 0, totalRegistrations: 0, uniqueRegistrants: 0 })
   const [registrations, setRegistrations] = useState<any[]>([])
-  const [cancelledRegs, setCancelledRegs] = useState<any[]>([])
   const [courses, setCourses] = useState<any[]>([])
   const [filterCourse, setFilterCourse] = useState('')
   const [filterMonth, setFilterMonth] = useState('')
   const [filterResident, setFilterResident] = useState('')
-  const [filterAttended, setFilterAttended] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
   const [sortOrder, setSortOrder] = useState<'desc'|'asc'>('desc')
-  const [pageSize, setPageSize] = useState(10)
   const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(true)
-  const [manageMode, setManageMode] = useState(false)
-  const [showCancelled, setShowCancelled] = useState(false)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null)
   const [confirmPermanent, setConfirmPermanent] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const supabase = createClient()
@@ -33,31 +31,26 @@ export default function AdminDashboard() {
     const [
       { count: activeCourses },
       { data: regs },
-      { data: cancelledData },
       { data: courseList },
     ] = await Promise.all([
       supabase.from('courses').select('*', { count: 'exact', head: true }).eq('is_active', true),
       supabase.from('registrations')
         .select('*, users(name, room_number, phone, age_group, line_id), courses(id, title, date)')
-        .in('status', ['confirmed', 'attended'])
-        .order('registered_at', { ascending: false }),
-      supabase.from('registrations')
-        .select('*, users(name, room_number, phone, age_group, line_id), courses(id, title, date)')
-        .eq('status', 'cancelled')
+        .in('status', ['confirmed', 'attended', 'cancelled'])
         .order('registered_at', { ascending: false }),
       supabase.from('courses').select('id, title, date').order('date', { ascending: false }),
     ])
 
     const allRegs = regs || []
-    const uniqueUserIds = new Set(allRegs.map((r: any) => r.user_id))
+    const activeRegs = allRegs.filter((r: any) => r.status !== 'cancelled')
+    const uniqueUserIds = new Set(activeRegs.map((r: any) => r.user_id))
 
     setStats({
       activeCourses: activeCourses ?? 0,
-      totalRegistrations: allRegs.length,
+      totalRegistrations: activeRegs.length,
       uniqueRegistrants: uniqueUserIds.size,
     })
     setRegistrations(allRegs)
-    setCancelledRegs(cancelledData || [])
     setCourses(courseList || [])
     setLoading(false)
   }
@@ -71,248 +64,168 @@ export default function AdminDashboard() {
     .filter(r => filterCourse ? r.course_id === filterCourse : true)
     .filter(r => filterMonth ? r.courses?.date?.startsWith(filterMonth) : true)
     .filter(r => filterResident === '' ? true : filterResident === 'social' ? r.is_social_housing_resident : !r.is_social_housing_resident)
-    .filter(r => filterAttended === '' ? true : filterAttended === 'attended' ? r.status === 'attended' : r.status === 'confirmed')
+    .filter(r => filterStatus === '' ? true : r.status === filterStatus)
     .sort((a, b) => sortOrder === 'desc'
       ? new Date(b.registered_at).getTime() - new Date(a.registered_at).getTime()
       : new Date(a.registered_at).getTime() - new Date(b.registered_at).getTime()
     )
 
-  const totalPages = Math.ceil(filtered.length / pageSize)
-  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-
-   const handleAttend = async (reg: any) => {
-    const lineId = reg.users?.line_id
-    if (!lineId) { alert('此報名者無 LINE ID，無法加點'); return }
-
-    const res = await fetch(`/api/member-points?line_user_id=${encodeURIComponent(lineId)}`)
-    const member = res.ok ? await res.json() : null
-    if (!member) { alert('找不到對應的 LINE 會員'); return }
-
-    await supabase.from('registrations').update({ status: 'attended' }).eq('id', reg.id)
-    await supabase.from('point_logs').insert({
-      line_member_id: member.id,
-      delta: 1,
-      reason: `出席課程：${reg.courses?.title}`,
-      related_registration_id: reg.id,
-    })
-    await fetchAll()
-  }
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   const handleFilterChange = (setter: (v: any) => void) => (e: React.ChangeEvent<HTMLSelectElement>) => {
     setter(e.target.value)
     setCurrentPage(1)
   }
 
-  const formatDT = (ts: string) => {
-    const d = new Date(ts)
-    return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+  const handleSortChange = (v: 'desc' | 'asc') => {
+    setSortOrder(v)
+    setCurrentPage(1)
   }
 
+  const handleCancelRegistration = async () => {
+    if (!confirmCancelId) return
+    setDeleting(true)
+    await supabase.from('registrations').update({ status: 'cancelled' }).eq('id', confirmCancelId)
+    setConfirmCancelId(null)
+    await fetchAll()
+    setDeleting(false)
+  }
+
+  const formatDT = (ts: string) => {
+    const d = new Date(ts)
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+  }
+
+  const getInitials = (name?: string) => (name || '?').slice(0, 2).toUpperCase()
+
   const statCards = [
-    {
-      label: '開放中課程',
-      value: stats.activeCourses,
-      desc: '目前可報名的課程數',
-      color: 'bg-orange-50 border-orange-100',
-    },
-    {
-      label: '已報名課程數',
-      value: stats.totalRegistrations,
-      desc: '所有課程的報名總筆數',
-      color: 'bg-cyan-50 border-cyan-100',
-    },
-    {
-      label: '報名人數',
-      value: stats.uniqueRegistrants,
-      desc: '已報名的不重複人數',
-      color: 'bg-violet-50 border-violet-100',
-    },
+    { label: '開放中課程', value: stats.activeCourses, desc: '目前可報名的課程數' },
+    { label: '已報名課程數', value: stats.totalRegistrations, desc: '所有課程的報名總筆數' },
+    { label: '報名人數', value: stats.uniqueRegistrants, desc: '已報名的不重複人數' },
   ]
+
+  const columns = ['#', '姓名', '房號', '手機', '課程', '身份', '年齡', '報名時間', '出席狀況']
 
   return (
     <div className="p-6 md:p-8">
-      <div className="mb-6">
-        <h2 className="text-stone-800 text-2xl font-bold">總覽</h2>
-        <p className="text-stone-400 mt-1 text-sm">歡迎回來，種子戶管理員</p>
+      {/* Title */}
+      <div className="flex flex-col items-start pb-[17px] border-b border-stone-200 mb-6">
+        <h2 className="text-xl font-bold text-stone-600">總覽</h2>
+        <p className="text-sm text-stone-500">歡迎回來，種子戶管理員</p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 md:gap-4 mb-8">
-        {statCards.map(s => (
-         <div key={s.label} className={`${s.color} border rounded-2xl p-3 md:p-5`}>
-            <p className="text-stone-600 text-xs md:text-sm font-medium leading-tight">{s.label}</p>
-            <p className="text-stone-800 text-2xl md:text-4xl font-bold mt-1 mb-1">{s.value}</p>
-            <p className="text-stone-400 text-xs hidden md:block">{s.desc}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        {statCards.map(s => <StatCard key={s.label} {...s} />)}
       </div>
 
       {/* 報名看板 */}
-      <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden p-[17px]">
         {/* 篩選列 */}
-        <div className="px-6 py-4 border-b border-stone-100">
-          <div className="flex flex-col md:flex-row md:items-center gap-3">
-          <div className="flex items-center gap-3 flex-shrink-0">
-          <h3 className="text-stone-700 font-semibold">報名記錄</h3>
-          <button
-            onClick={() => { setShowCancelled(v => !v); setManageMode(false); setSelectedIds(new Set()) }}
-            className={`text-xs px-2 py-1 rounded-lg transition-colors ${showCancelled ? 'bg-stone-200 text-stone-700' : 'text-stone-400 hover:text-stone-600'}`}
-          >
-            {showCancelled ? '隱藏已取消' : '顯示已取消'}
-          </button>
-        </div>
-            <div className="flex flex-wrap gap-2 md:ml-auto">
-              {/* 課程篩選 */}
-              <select value={filterCourse} onChange={handleFilterChange(setFilterCourse)}
-                className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
+        <div className="pb-4">
+          <h3 className="text-stone-700 font-semibold mb-3">報名記錄</h3>
+          <div className="flex flex-col xl:flex-row xl:items-center gap-3">
+            <div className="flex flex-wrap gap-2">
+              <FilterDropdown value={filterCourse} onChange={handleFilterChange(setFilterCourse)}>
                 <option value="">全部課程</option>
                 {courses.map(c => <option key={c.id} value={c.id}>{c.date} · {c.title}</option>)}
-              </select>
+              </FilterDropdown>
 
-              {/* 月份篩選 */}
-              <select value={filterMonth} onChange={handleFilterChange(setFilterMonth)}
-                className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
+              <FilterDropdown value={filterMonth} onChange={handleFilterChange(setFilterMonth)}>
                 <option value="">全部月份</option>
                 {availableMonths.map(m => {
                   const [y, mo] = m.split('-')
                   return <option key={m} value={m}>{y} 年 {parseInt(mo)} 月</option>
                 })}
-              </select>
+              </FilterDropdown>
 
-              {/* 身份篩選 */}
-              <select value={filterResident} onChange={handleFilterChange(setFilterResident)}
-                className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
+              <FilterDropdown value={filterResident} onChange={handleFilterChange(setFilterResident)}>
                 <option value="">全部身份</option>
                 <option value="social">社宅居民</option>
                 <option value="other">非社宅居民</option>
-              </select>
+              </FilterDropdown>
 
-              {/* 出席狀態篩選 */}
-              <select value={filterAttended} onChange={handleFilterChange(setFilterAttended)}
-                className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
+              <FilterDropdown value={filterStatus} onChange={handleFilterChange(setFilterStatus)}>
                 <option value="">全部狀態</option>
+                <option value="cancelled">已取消</option>
                 <option value="confirmed">待出席</option>
                 <option value="attended">已出席</option>
-              </select>
+              </FilterDropdown>
+            </div>
 
-              {/* 排序 */}
-              <select value={sortOrder}
-                onChange={e => { setSortOrder(e.target.value as 'desc'|'asc'); setCurrentPage(1) }}
-                className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-                <option value="desc">最新優先</option>
-                <option value="asc">最舊優先</option>
-              </select>
-
-              {/* 每頁筆數 */}
-              <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1) }}
-                className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-                {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>每頁 {n} 筆</option>)}
-              </select>
-
-              {!showCancelled && (
-                <button
-                  onClick={() => { setManageMode(v => !v); setSelectedIds(new Set()); setConfirmDelete(false) }}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${manageMode ? 'bg-stone-200 text-stone-700' : 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-200'}`}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-                  {manageMode ? '取消管理' : '刪除報名'}
-                </button>
-              )}
+            <div className="xl:ml-auto">
+              <SortToggle value={sortOrder} onChange={handleSortChange} />
             </div>
           </div>
-          <div className="flex items-center justify-between mt-2">
-            <p className="text-xs text-stone-400">
-              {showCancelled ? `共 ${cancelledRegs.length} 筆已取消記錄` : `共 ${filtered.length} 筆記錄，顯示第 ${currentPage} 頁（共 ${totalPages || 1} 頁）`}
-            </p>
-            {manageMode && selectedIds.size > 0 && (
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="flex items-center gap-1.5 text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg transition-colors font-medium"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-                取消 {selectedIds.size} 筆報名
-              </button>
-            )}
-          </div>        </div>
+          <p className="text-xs text-stone-400 mt-3">
+            共 {filtered.length} 筆記錄，顯示第 {currentPage} 頁（共 {totalPages} 頁）
+          </p>
+        </div>
 
         {/* 表格 */}
         {loading ? (
-          <div className="px-6 py-12 text-center text-stone-400 text-sm">載入中...</div>
+          <div className="py-12 text-center text-stone-400 text-sm">載入中...</div>
         ) : filtered.length === 0 ? (
-          <div className="px-6 py-12 text-center text-stone-400 text-sm">尚無符合條件的報名記錄</div>
+          <div className="py-12 text-center text-stone-400 text-sm">尚無符合條件的報名記錄</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-lg border border-[#f0edeb]">
+            <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="bg-stone-50 border-b border-stone-100">
-                  {['#','姓名','房號','手機','課程','身份','年齡','報名時間','出席狀況'].map(h => (
-                    <th key={h} className="text-left px-4 py-3 text-stone-500 font-medium text-xs uppercase tracking-wider whitespace-nowrap">{h}</th>
+                <tr className="bg-[#fafaf9] border border-[#f0edeb]">
+                  {columns.map(h => (
+                    <th key={h} className="text-left px-4 py-2 text-[#403b38] font-medium text-xs whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-stone-100">
-                {(showCancelled ? cancelledRegs : paginated).map((reg, i) => (
-                  <tr key={reg.id} className={`transition-colors ${manageMode ? 'cursor-pointer' : ''} ${selectedIds.has(reg.id) ? 'bg-red-50' : 'hover:bg-stone-50'}`}
-                    onClick={() => {
-                      if (!manageMode) return
-                      setSelectedIds(prev => {
-                        const next = new Set(prev)
-                        next.has(reg.id) ? next.delete(reg.id) : next.add(reg.id)
-                        return next
-                      })
-                    }}>
-                    <td className="px-4 py-3 text-stone-400 text-xs">
-                      {manageMode ? (
-                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${selectedIds.has(reg.id) ? 'bg-red-500 border-red-500' : 'border-stone-300'}`}>
-                          {selectedIds.has(reg.id) && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+              <tbody>
+                {paginated.map((reg, i) => (
+                  <tr key={reg.id} className={`border border-[#f0edeb] ${i % 2 === 0 ? 'bg-[#f5f5f4]' : 'bg-white'}`}>
+                    <td className="px-4 py-3 text-[#a8a39e] text-xs w-10">
+                      {(currentPage - 1) * PAGE_SIZE + i + 1}
+                    </td>
+                    <td className="px-4 py-3 w-[120px]">
+                      <div className="flex items-center gap-2">
+                        <div className="size-8 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-white font-normal text-xs tracking-wide">{getInitials(reg.users?.name)}</span>
                         </div>
-                      ) : showCancelled ? (
-                        <div className="flex items-center gap-2">
-                          <span>{i + 1}</span>
+                        <span className="font-medium text-[#292624] whitespace-nowrap">{reg.users?.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-[#57544f] whitespace-nowrap w-[120px]">{reg.users?.room_number}</td>
+                    <td className="px-4 py-3 text-[#78706b] whitespace-nowrap w-[120px]">{reg.users?.phone}</td>
+                    <td className="px-4 py-3">
+                      <p className="text-[#57544f] font-medium whitespace-nowrap">{reg.courses?.title}</p>
+                      <p className="text-[#bab5b0] text-xs">{reg.courses?.date}</p>
+                    </td>
+                    <td className="px-4 py-3 w-[120px]">
+                      <IdentityBadge resident={!!reg.is_social_housing_resident} />
+                    </td>
+                    <td className="px-4 py-3 text-[#78706b] text-xs whitespace-nowrap w-[120px]">{reg.users?.age_group}</td>
+                    <td className="px-4 py-3 text-[#bab5b0] text-xs whitespace-nowrap w-[120px]">{formatDT(reg.registered_at)}</td>
+                    <td className="px-4 py-3 w-[120px]">
+                      <div className="flex flex-col items-start gap-1">
+                        <StatusBadge status={reg.status as RegStatus} />
+                        {reg.status === 'confirmed' && (
                           <button
-                            onClick={e => { e.stopPropagation(); setConfirmPermanent(reg.id) }}
-                            className="text-xs text-red-400 hover:text-red-600 transition-colors"
+                            onClick={() => setConfirmCancelId(reg.id)}
+                            className="text-[11px] text-red-400 hover:text-red-600 transition-colors underline underline-offset-2"
+                          >
+                            取消報名
+                          </button>
+                        )}
+                        {reg.status === 'cancelled' && (
+                          <button
+                            onClick={() => setConfirmPermanent(reg.id)}
+                            className="flex items-center gap-1 text-[11px] text-stone-300 hover:text-red-500 transition-colors"
                             title="永久刪除"
                           >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                            永久刪除
                           </button>
-                        </div>
-                      ) : (currentPage - 1) * pageSize + i + 1}
-                    </td>
-              
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-orange-600 font-bold text-xs">{reg.users?.name?.[0] || '?'}</span>
-                        </div>
-                        <span className="font-medium text-stone-800 whitespace-nowrap">{reg.users?.name}</span>
+                        )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-stone-600 whitespace-nowrap">{reg.users?.room_number}</td>
-                    <td className="px-4 py-3 text-stone-500 whitespace-nowrap">{reg.users?.phone}</td>
-                    <td className="px-4 py-3">
-                      <div>
-                        <p className="text-stone-700 font-medium whitespace-nowrap">{reg.courses?.title}</p>
-                        <p className="text-stone-400 text-xs">{reg.courses?.date}</p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap ${reg.is_social_housing_resident ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-600'}`}>
-                        {reg.is_social_housing_resident ? '社宅居民' : '非社宅'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-stone-500 text-xs whitespace-nowrap">{reg.users?.age_group}</td>
-                    <td className="px-4 py-3 text-stone-400 text-xs whitespace-nowrap">{formatDT(reg.registered_at)}</td>
-                   <td className="px-4 py-3">
-                      {reg.status === 'attended'
-                        ? <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                            已出席
-                          </span>
-                        : <span className="text-xs text-stone-300">—</span>
-                      }
-                    </td>
-
                   </tr>
                 ))}
               </tbody>
@@ -322,37 +235,14 @@ export default function AdminDashboard() {
 
         {/* Page Control */}
         {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-stone-100 flex items-center justify-between">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm text-stone-600 bg-stone-100 hover:bg-stone-200 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl transition-colors">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-              上一頁
-            </button>
-
-            <div className="flex items-center gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                <button key={p} onClick={() => setCurrentPage(p)}
-                  className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${p === currentPage ? 'bg-orange-500 text-white' : 'text-stone-600 hover:bg-stone-100'}`}>
-                  {p}
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm text-stone-600 bg-stone-100 hover:bg-stone-200 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl transition-colors">
-              下一頁
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
+          <div className="pt-4">
+            <PaginationControl currentPage={currentPage} totalPages={totalPages} onChange={setCurrentPage} />
           </div>
-       )}
+        )}
       </div>
 
-      {/* 軟刪除確認 */}
-      {confirmDelete && (
+      {/* 單筆取消報名確認 */}
+      {confirmCancelId && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
             <div className="flex items-center gap-3">
@@ -361,94 +251,54 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <h3 className="font-bold text-stone-800">確認取消報名？</h3>
-                <p className="text-stone-400 text-xs mt-0.5">將取消 {selectedIds.size} 筆報名記錄，可在「已取消」中復原</p>
+                <p className="text-stone-400 text-xs mt-0.5">取消後可在「已取消」狀態中查看，此動作可再復原</p>
               </div>
             </div>
             <div className="flex gap-3">
               <button
-                onClick={async () => {
-                  setDeleting(true)
-                  await supabase.from('registrations').update({ status: 'cancelled' }).in('id', Array.from(selectedIds))
-                  setConfirmDelete(false); setManageMode(false); setSelectedIds(new Set())
-                  await fetchAll(); setDeleting(false)
-                }}
+                onClick={handleCancelRegistration}
                 disabled={deleting}
-                className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors"
+                className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-lg text-sm transition-colors"
               >
                 {deleting ? '處理中...' : '確認取消報名'}
               </button>
-              <button onClick={() => setConfirmDelete(false)} className="px-5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-xl text-sm transition-colors">返回</button>
+              <button onClick={() => setConfirmCancelId(null)} className="px-5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-lg text-sm transition-colors">返回</button>
             </div>
           </div>
         </div>
       )}
-
-     
 
       {/* 永久刪除確認 */}
-
       {confirmPermanent && (
-
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
-
             <div className="flex items-center gap-3">
-
               <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-
               </div>
-
               <div>
-
                 <h3 className="font-bold text-stone-800">永久刪除此筆紀錄？</h3>
-
                 <p className="text-stone-400 text-xs mt-0.5">此操作無法復原，資料將從資料庫中永久移除</p>
-
               </div>
-
             </div>
-
             <div className="flex gap-3">
-
               <button
-
                 onClick={async () => {
-
                   setDeleting(true)
-
                   await supabase.from('registrations').delete().eq('id', confirmPermanent)
-
                   setConfirmPermanent(null)
-
                   await fetchAll(); setDeleting(false)
-
                 }}
-
                 disabled={deleting}
-
-                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors"
-
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-stone-300 text-white font-medium py-3 rounded-lg text-sm transition-colors"
               >
-
                 {deleting ? '刪除中...' : '永久刪除'}
-
               </button>
-
-              <button onClick={() => setConfirmPermanent(null)} className="px-5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-xl text-sm transition-colors">取消</button>
-
+              <button onClick={() => setConfirmPermanent(null)} className="px-5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-lg text-sm transition-colors">取消</button>
             </div>
-
           </div>
-
         </div>
-
       )}
-
-      </div>
-
+    </div>
   )
-
 }
