@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
-import { StatCard, FilterDropdown, SortToggle, IdentityBadge, StatusBadge, PaginationControl } from '@/components/AdminUI'
+import { StatCard, FilterDropdown, SortToggle, IdentityBadge, StatusBadge, PaginationControl, RowActionMenu } from '@/components/AdminUI'
 
 const PAGE_SIZE = 10
 
@@ -105,7 +105,7 @@ export default function AdminDashboard() {
     { label: '報名人數', value: stats.uniqueRegistrants, desc: '已報名的不重複人數' },
   ]
 
-  const columns = ['#', '姓名', '房號', '手機', '課程', '身份', '年齡', '報名時間', '出席狀況']
+  const columns = ['#', '姓名', '房號', '手機', '課程', '身份', '年齡', '報名時間', '出席狀況', '操作']
 
   return (
     <div className="p-6 md:p-8">
@@ -204,27 +204,14 @@ export default function AdminDashboard() {
                     <td className="px-4 py-3 text-[#78706b] text-xs whitespace-nowrap w-[120px]">{reg.users?.age_group}</td>
                     <td className="px-4 py-3 text-[#bab5b0] text-xs whitespace-nowrap w-[120px]">{formatDT(reg.registered_at)}</td>
                     <td className="px-4 py-3 w-[120px]">
-                      <div className="flex flex-col items-start gap-1">
-                        <StatusBadge status={reg.status as RegStatus} />
-                        {reg.status === 'confirmed' && (
-                          <button
-                            onClick={() => setConfirmCancelId(reg.id)}
-                            className="text-[11px] text-red-400 hover:text-red-600 transition-colors underline underline-offset-2"
-                          >
-                            取消報名
-                          </button>
-                        )}
-                        {reg.status === 'cancelled' && (
-                          <button
-                            onClick={() => setConfirmPermanent(reg.id)}
-                            className="flex items-center gap-1 text-[11px] text-stone-300 hover:text-red-500 transition-colors"
-                            title="永久刪除"
-                          >
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-                            永久刪除
-                          </button>
-                        )}
-                      </div>
+                      <StatusBadge status={reg.status as RegStatus} />
+                    </td>
+                    <td className="px-4 py-3 w-14">
+                      <RowActionMenu
+                        status={reg.status as RegStatus}
+                        onCancel={() => setConfirmCancelId(reg.id)}
+                        onDelete={() => setConfirmPermanent(reg.id)}
+                      />
                     </td>
                   </tr>
                 ))}

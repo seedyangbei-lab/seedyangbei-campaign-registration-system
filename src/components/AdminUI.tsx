@@ -5,13 +5,13 @@
 // StatCard（含緩慢流動邊框動態）、FilterDropdown、SortToggle、
 // IdentityBadge、StatusBadge、PaginationControl
 
-import { ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
 
 /* ---------- Stat Card：外層邊框緩慢流動的漸層動態（慢速，不刺眼） ---------- */
 export function StatCard({ label, value, desc }: { label: string; value: number | string; desc: string }) {
   return (
     <div className="stat-card-flow-border rounded-lg h-[120px]">
-      <div className="relative z-10 bg-white rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.05)] p-5 flex flex-col gap-1 h-full">
+      <div className="relative z-10 bg-white border border-[#ffcead]/50 rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.05)] p-5 flex flex-col gap-1 h-full">
         <p className="text-stone-600 text-[13px]">{label}</p>
         <p className="text-stone-800 text-[32px] font-semibold leading-none">{value}</p>
         <p className="text-stone-500 text-xs leading-4">{desc}</p>
@@ -167,6 +167,57 @@ export function PaginationControl({
         下一頁
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
       </button>
+    </div>
+  )
+}
+
+/* ---------- 列操作選單：待出席 -> 取消報名／已取消 -> 永久刪除／已出席 -> 無按鈕 ---------- */
+export function RowActionMenu({
+  status, onCancel, onDelete,
+}: { status: 'cancelled' | 'confirmed' | 'attended'; onCancel: () => void; onDelete: () => void }) {
+  const [open, setOpen] = useState(false)
+
+  if (status === 'attended') return null
+
+  return (
+    <div className="relative flex justify-center">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        aria-label="操作"
+        className="flex items-center justify-center size-[26px] p-1 rounded-md border border-stone-200 bg-white hover:bg-stone-50 transition-colors"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-stone-500">
+          <circle cx="12" cy="5" r="1.6" />
+          <circle cx="12" cy="12" r="1.6" />
+          <circle cx="12" cy="19" r="1.6" />
+        </svg>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-stone-200 rounded-lg shadow-lg py-1 min-w-[104px]">
+            {status === 'confirmed' && (
+              <button
+                type="button"
+                onClick={() => { setOpen(false); onCancel() }}
+                className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50 transition-colors whitespace-nowrap"
+              >
+                取消報名
+              </button>
+            )}
+            {status === 'cancelled' && (
+              <button
+                type="button"
+                onClick={() => { setOpen(false); onDelete() }}
+                className="w-full text-left px-3 py-2 text-xs text-stone-500 hover:bg-red-50 hover:text-red-600 transition-colors whitespace-nowrap"
+              >
+                永久刪除
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }

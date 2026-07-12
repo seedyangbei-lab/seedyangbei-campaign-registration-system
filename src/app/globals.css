@@ -80,19 +80,29 @@ body {
 .stat-card-flow-border {
   position: relative;
   isolation: isolate;
+  /* 底層常駐的淡淡主色橘暈光，讓卡片隨時有一點品牌色存在感 */
+  box-shadow: 0 0 14px 0 rgba(249, 115, 22, 0.12);
 }
 
 .stat-card-flow-border::before {
   content: '';
   position: absolute;
-  inset: 0;
+  inset: -1.5px;
   border-radius: inherit;
-  padding: 1px;
-  background: conic-gradient(from var(--flow-angle), #ffcead, #fff7ed, #f97316, #fff7ed, #ffcead);
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--flow-angle),
+    rgba(249, 115, 22, 0) 0deg,
+    rgba(249, 115, 22, 0) 270deg,
+    rgba(255, 183, 120, 0.85) 305deg,
+    rgba(249, 115, 22, 1) 330deg,
+    rgba(255, 183, 120, 0.85) 355deg,
+    rgba(249, 115, 22, 0) 360deg
+  );
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
           mask-composite: exclude;
-  animation: flow-border-rotate 16s linear infinite;
+  animation: flow-border-rotate 12s linear infinite;
   pointer-events: none;
   z-index: 0;
 }
