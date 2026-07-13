@@ -20,7 +20,7 @@ export default function SuitableAgeSelector({ value, customValue, onChange, onCu
               key={opt}
               type="button"
               onClick={() => onChange(opt)}
-              className={`flex-1 min-w-[64px] px-2 py-2 rounded-md text-xs font-medium transition-colors ${
+              className={`flex-1 px-1.5 py-2 rounded-md text-[11px] leading-none font-medium whitespace-nowrap transition-colors ${
                 isSelected ? 'bg-orange-500 text-white' : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-50'
               }`}
             >

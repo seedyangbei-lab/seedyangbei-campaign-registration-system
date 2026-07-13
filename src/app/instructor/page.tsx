@@ -7,7 +7,7 @@ import CoursePosterEditor from '@/components/CoursePosterEditor'
 import {
   InstructorNavbar, InstructorProfileCard, InstructorTitle, InstructorTabBar,
   InstructorCourseCard, InstructorMonthFilter, InstructorProfileEditModal,
-  CloseIcon, PosterIcon,
+  CloseIcon,
 } from '@/components/InstructorMobileUI'
 import { MobileRegistrationCard, MobilePagination } from '@/components/AdminMobileUI'
 import CoursePhotoGrid from '@/components/CoursePhotoGrid'
@@ -66,7 +66,6 @@ function InstructorPortal() {
 
   const [posterEditorCourse, setPosterEditorCourse] = useState<any>(null)
   const [posterInitialImage, setPosterInitialImage] = useState<string | null>(null)
-  const [posterReturnToEdit, setPosterReturnToEdit] = useState(false)
 
   const [attendanceModal, setAttendanceModal] = useState<any>(null)
   const [attendanceList, setAttendanceList] = useState<any[]>([])
@@ -270,24 +269,12 @@ function InstructorPortal() {
   }
 
   const openPosterFromCard = (course: any) => {
-    setPosterReturnToEdit(false)
     setPosterEditorCourse({
       title: course.title, instructor: instructor?.name, date: course.date,
       timeStart: (course.time_start || '').slice(0, 5), timeEnd: (course.time_end || '').slice(0, 5),
       location: course.location, suitableAge: course.suitable_age, notes: course.notes,
     })
     setPosterInitialImage((course.photo_urls && course.photo_urls[0]) || course.poster_url || null)
-  }
-
-  const openPosterFromForm = () => {
-    setPosterReturnToEdit(true)
-    setPosterEditorCourse({
-      title: form.title, instructor: instructor?.name, date: form.date,
-      timeStart: form.time_start, timeEnd: form.time_end,
-      location: form.location === '其他' ? form.custom_location : form.location,
-      suitableAge: form.suitable_age === '其他' ? form.custom_age : form.suitable_age, notes: form.notes,
-    })
-    setPosterInitialImage(form.photos[0] || null)
   }
 
   /* ---------- 出席紀錄 ---------- */
@@ -493,37 +480,40 @@ function InstructorPortal() {
                 <label className="flex items-center gap-1 text-stone-600 text-sm font-medium mb-1.5">
                   <span className="text-red-500 text-xs leading-none">*</span>上課時間
                 </label>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="flex flex-col gap-2">
                   <input required type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
                     className="w-full border border-stone-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-                  <input type="time" value={form.time_start} onChange={e => setForm({ ...form, time_start: e.target.value })}
-                    className="w-full border border-stone-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-                  <input type="time" value={form.time_end} onChange={e => setForm({ ...form, time_end: e.target.value })}
-                    className="w-full border border-stone-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                  <div className="flex items-center gap-2">
+                    <input type="time" value={form.time_start} onChange={e => setForm({ ...form, time_start: e.target.value })}
+                      className="flex-1 min-w-0 border border-stone-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                    <span className="text-stone-500 text-sm shrink-0">~</span>
+                    <input type="time" value={form.time_end} onChange={e => setForm({ ...form, time_end: e.target.value })}
+                      className="flex-1 min-w-0 border border-stone-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="flex items-center gap-1 text-stone-600 text-sm font-medium mb-1.5">
-                    <span className="text-red-500 text-xs leading-none">*</span>上課地點
-                  </label>
-                  <select value={form.location} onChange={e => setForm({ ...form, location: e.target.value })}
-                    className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
-                    <option value="">請選擇</option>
-                    {LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-stone-600 text-sm font-medium mb-1.5">名額上限</label>
-                  <input type="number" min={1} value={form.max_seats}
-                    onChange={e => setForm({ ...form, max_seats: Math.max(1, parseInt(e.target.value) || 1) })}
-                    className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-                </div>
+              <div>
+                <label className="flex items-center gap-1 text-stone-600 text-sm font-medium mb-1.5">
+                  <span className="text-red-500 text-xs leading-none">*</span>上課地點
+                </label>
+                <select value={form.location} onChange={e => setForm({ ...form, location: e.target.value })}
+                  className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+                  <option value="">請選擇</option>
+                  {LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                </select>
+                {form.location === '其他' && (
+                  <input value={form.custom_location} onChange={e => setForm({ ...form, custom_location: e.target.value })}
+                    placeholder="輸入地點" className="w-full mt-2 border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                )}
               </div>
-              {form.location === '其他' && (
-                <input value={form.custom_location} onChange={e => setForm({ ...form, custom_location: e.target.value })}
-                  placeholder="輸入地點" className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-              )}
+              <div>
+                <label className="flex items-center gap-1 text-stone-600 text-sm font-medium mb-1.5">
+                  <span className="text-red-500 text-xs leading-none">*</span>名額上限
+                </label>
+                <input type="number" min={1} value={form.max_seats}
+                  onChange={e => setForm({ ...form, max_seats: Math.max(1, parseInt(e.target.value) || 1) })}
+                  className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
+              </div>
               <div>
                 <label className="flex items-center gap-1 text-stone-600 text-sm font-medium mb-1.5">
                   <span className="text-red-500 text-xs leading-none">*</span>適合年齡
@@ -535,11 +525,6 @@ function InstructorPortal() {
                   onCustomChange={v => setForm({ ...form, custom_age: v })}
                 />
               </div>
-              <div>
-                <label className="block text-stone-600 text-sm font-medium mb-1.5">注意事項</label>
-                <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
-                  rows={2} className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none" />
-              </div>
 
               <CoursePhotoGrid
                 photos={form.photos}
@@ -547,22 +532,13 @@ function InstructorPortal() {
                 uploadImage={uploadCoursePhoto}
               />
 
-              <div>
-                <button type="button" onClick={openPosterFromForm}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-stone-300 hover:border-orange-400 text-stone-500 hover:text-orange-500 text-sm transition-colors">
-                  <PosterIcon />
-                  製作課程海報
-                </button>
-                <p className="text-stone-400 text-xs mt-1.5">設計完成後會下載成圖片，再用上方「課程照片」上傳放進課程。</p>
-              </div>
-
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-col gap-3 pt-2">
                 <button type="submit" disabled={saving}
-                  className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
+                  className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
                   {saving ? '儲存中...' : editTarget ? '儲存變更' : '建立課程'}
                 </button>
                 <button type="button" onClick={() => setShowModal(false)}
-                  className="px-6 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-xl text-sm transition-colors">
+                  className="w-full bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-xl text-sm transition-colors">
                   取消
                 </button>
               </div>
@@ -716,7 +692,6 @@ function InstructorPortal() {
           onClose={() => {
             setPosterEditorCourse(null)
             setPosterInitialImage(null)
-            if (posterReturnToEdit) setShowModal(true)
           }}
         />
       )}
