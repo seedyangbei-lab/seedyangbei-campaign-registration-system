@@ -344,19 +344,22 @@ export default function MembersPage() {
           {chartTab === 'personal' && (
             <div className="px-6 py-4">
               <p className="text-xs text-stone-400 mb-3">選擇會員查看個人每月參與次數</p>
-              <select
-                onChange={e => {
-                  const m = members.find(m => m.id === e.target.value)
-                  if (m) fetchPersonalChart(m)
-                }}
-                className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300 mb-4"
-                defaultValue=""
-              >
-                <option value="" disabled>選擇會員</option>
-                {members.map(m => (
-                  <option key={m.id} value={m.id}>{m.display_name}</option>
-                ))}
-              </select>
+              <div className="relative mb-4">
+                <select
+                  onChange={e => {
+                    const m = members.find(m => m.id === e.target.value)
+                    if (m) fetchPersonalChart(m)
+                  }}
+                  className="w-full appearance-none border border-stone-200 rounded-xl pl-3 pr-9 py-2 text-sm text-stone-600 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300"
+                  defaultValue=""
+                >
+                  <option value="" disabled>選擇會員</option>
+                  {members.map(m => (
+                    <option key={m.id} value={m.id}>{m.display_name}</option>
+                  ))}
+                </select>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
               {selectedMemberForChart && (
                 personalChartData.length === 0 ? (
                   <div className="text-center py-8 text-stone-400 text-sm">此會員尚無參與記錄</div>
@@ -587,11 +590,14 @@ export default function MembersPage() {
                 <div className="grid grid-cols-3 gap-2">
                   <div>
                     <label className="block text-xs text-stone-400 mb-1">棟別</label>
-                    <select value={editForm.building} onChange={e => setEditForm({...editForm, building: e.target.value})}
-                      className="w-full border border-stone-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-                      <option value="">未填</option>
-                      {BUILDINGS.map(b => <option key={b} value={b}>{b}</option>)}
-                    </select>
+                    <div className="relative">
+                      <select value={editForm.building} onChange={e => setEditForm({...editForm, building: e.target.value})}
+                        className="w-full appearance-none border border-stone-300 rounded-xl pl-3 pr-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
+                        <option value="">未填</option>
+                        {BUILDINGS.map(b => <option key={b} value={b}>{b}</option>)}
+                      </select>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
                   </div>
                   <div>
                     <label className="block text-xs text-stone-400 mb-1">戶號</label>

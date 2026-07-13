@@ -291,7 +291,7 @@ export function InstructorMonthFilter({
           <option value="">全部月份</option>
           {months.map(m => <option key={m} value={m}>{m}</option>)}
         </select>
-        <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" />
+        <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
       </div>
       <button
         onClick={onToggleSort}

@@ -375,7 +375,7 @@ function RegisterForm() {
                       <option value="">請選擇樓層</option>
                       {FLOORS.map(f => <option key={f} value={f}>{f}</option>)}
                     </select>
-                    <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                   </div>
                 </div>
                 <div className="flex-1 flex flex-col gap-1 min-w-0">
@@ -387,7 +387,7 @@ function RegisterForm() {
                       <option value="none">無</option>
                       {SUB_UNITS.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
-                    <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                   </div>
                 </div>
               </div>

@@ -509,7 +509,7 @@ function InstructorPortal() {
                     <option value="">請選擇</option>
                     {LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
                   </select>
-                  <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
                 </div>
                 {form.location === '其他' && (
                   <input value={form.custom_location} onChange={e => setForm({ ...form, custom_location: e.target.value })}

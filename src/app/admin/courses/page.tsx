@@ -89,16 +89,25 @@ function TimePicker({
 }) {
   return (
     <div className="grid grid-cols-[72px_1fr_1fr] gap-1.5 w-full">
-      <select value={period} onChange={e => { const f = {...form, [`period_${prefix}`]: e.target.value}; setForm(f); validateTimes(f) }} className="w-full border border-stone-300 rounded-xl px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-        <option value="AM">上午</option>
-        <option value="PM">下午</option>
-      </select>
-      <select value={hour} onChange={e => { const f = {...form, [`hour_${prefix}`]: e.target.value}; setForm(f); validateTimes(f) }} className="w-full border border-stone-300 rounded-xl px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-        {HOURS.map(h => <option key={h} value={h}>{h} 時</option>)}
-      </select>
-      <select value={min} onChange={e => { const f = {...form, [`min_${prefix}`]: e.target.value}; setForm(f); validateTimes(f) }} className="w-full border border-stone-300 rounded-xl px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-        {MINUTES.map(m => <option key={m} value={m}>{m} 分</option>)}
-      </select>
+      <div className="relative">
+        <select value={period} onChange={e => { const f = {...form, [`period_${prefix}`]: e.target.value}; setForm(f); validateTimes(f) }} className="w-full appearance-none border border-stone-300 rounded-xl pl-2 pr-6 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
+          <option value="AM">上午</option>
+          <option value="PM">下午</option>
+        </select>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div className="relative">
+        <select value={hour} onChange={e => { const f = {...form, [`hour_${prefix}`]: e.target.value}; setForm(f); validateTimes(f) }} className="w-full appearance-none border border-stone-300 rounded-xl pl-2 pr-6 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
+          {HOURS.map(h => <option key={h} value={h}>{h} 時</option>)}
+        </select>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div className="relative">
+        <select value={min} onChange={e => { const f = {...form, [`min_${prefix}`]: e.target.value}; setForm(f); validateTimes(f) }} className="w-full appearance-none border border-stone-300 rounded-xl pl-2 pr-6 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
+          {MINUTES.map(m => <option key={m} value={m}>{m} 分</option>)}
+        </select>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
     </div>
   )
 }
@@ -418,7 +427,7 @@ export default function CoursesPage() {
                     return <option key={m} value={m}>{y}/{parseInt(mo)}月</option>
                   })}
                 </select>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
             </>
           )}
@@ -745,7 +754,7 @@ export default function CoursesPage() {
                     <option value="">不分類</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
               </div>
                     
@@ -783,10 +792,13 @@ export default function CoursesPage() {
               </div>
               <div>
                 <label className="block text-stone-600 text-sm font-medium mb-1.5">地點 *</label>
-                <select required value={form.location} onChange={e => setForm({...form, location: e.target.value})} className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-                  <option value="">選擇地點</option>
-                  {LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
-                </select>
+                <div className="relative">
+                  <select required value={form.location} onChange={e => setForm({...form, location: e.target.value})} className="w-full appearance-none border border-stone-300 rounded-xl pl-4 pr-9 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
+                    <option value="">選擇地點</option>
+                    {LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
               </div>
               {form.location === '其他' && <input required value={form.custom_location} onChange={e => setForm({...form, custom_location: e.target.value})} placeholder="請填寫實際地點" className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />}
               <div>

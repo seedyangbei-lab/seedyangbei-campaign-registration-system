@@ -51,12 +51,13 @@ export default function RegistrationsPage() {
         )}
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 relative w-full md:w-96">
         <select value={selectedCourse} onChange={e => setSelectedCourse(e.target.value)}
-          className="w-full md:w-96 bg-white border border-stone-300 rounded-xl px-4 py-3 text-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300">
+          className="w-full appearance-none bg-white border border-stone-300 rounded-xl pl-4 pr-9 py-3 text-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300">
           <option value="">選擇課程查看報名名單</option>
           {courses.map(c => <option key={c.id} value={c.id}>{c.date} · {c.title}</option>)}
         </select>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
 
       {selectedCourse && (

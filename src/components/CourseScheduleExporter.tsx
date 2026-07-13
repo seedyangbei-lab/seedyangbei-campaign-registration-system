@@ -807,11 +807,14 @@ const e = editor
       {/* Pattern */}
       <div>
         <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">左欄 Pattern</p>
-        <select value={e.patternType} onChange={ev => set('patternType', ev.target.value as PatternType)}
-          className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300 mb-3">
-          <option value="none">無</option><option value="dots">圓點</option><option value="lines">斜線</option>
-          <option value="grid">網格</option><option value="waves">波浪</option><option value="diamonds">菱形</option>
-        </select>
+        <div className="relative mb-3">
+          <select value={e.patternType} onChange={ev => set('patternType', ev.target.value as PatternType)}
+            className="w-full appearance-none border border-stone-200 rounded-lg pl-3 pr-9 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300">
+            <option value="none">無</option><option value="dots">圓點</option><option value="lines">斜線</option>
+            <option value="grid">網格</option><option value="waves">波浪</option><option value="diamonds">菱形</option>
+          </select>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
         {e.patternType !== 'none' && (
           <div>
             <label className="text-xs text-stone-400">濃度 {Math.round(e.patternOpacity*100)}%</label>
