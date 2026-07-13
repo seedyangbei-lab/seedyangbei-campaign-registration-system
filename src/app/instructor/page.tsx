@@ -9,6 +9,9 @@ import {
   InstructorCourseCard, InstructorMonthFilter, InstructorProfileEditModal,
   CloseIcon, PosterIcon,
 } from '@/components/InstructorMobileUI'
+import { MobileRegistrationCard, MobilePagination } from '@/components/AdminMobileUI'
+
+const ROSTER_PAGE_SIZE = 10
 
 const LINE_CHANNEL_ID = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2010077816'
 const LINE_CALLBACK_URL = process.env.NEXT_PUBLIC_LINE_CALLBACK_URL || 'https://yangbei-campaign.vercel.app/api/auth/line/callback'
@@ -68,6 +71,14 @@ function InstructorPortal() {
   const [attendanceLoading, setAttendanceLoading] = useState(false)
   const [attendanceSaving, setAttendanceSaving] = useState(false)
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
+
+  const [rosterModal, setRosterModal] = useState<any>(null)
+  const [rosterList, setRosterList] = useState<any[]>([])
+  const [rosterLoading, setRosterLoading] = useState(false)
+  const [rosterPage, setRosterPage] = useState(1)
+  const [rosterConfirmCancelId, setRosterConfirmCancelId] = useState<string | null>(null)
+  const [rosterConfirmPermanent, setRosterConfirmPermanent] = useState<string | null>(null)
+  const [rosterDeleting, setRosterDeleting] = useState(false)
 
   useEffect(() => {
     const lineUserParam = searchParams.get('line_user')
@@ -306,6 +317,50 @@ function InstructorPortal() {
     if (instructor) await fetchCourses(instructor.id)
   }
 
+  /* ---------- 報名紀錄（單一課程的名單，複用大後台 AdminMobileUI 元件） ---------- */
+
+  const getInitials = (name?: string) => (name || '?').slice(0, 2).toUpperCase()
+
+  const formatDT = (ts: string) => {
+    const d = new Date(ts)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  }
+
+  const openRoster = async (course: any) => {
+    setRosterModal(course)
+    setRosterPage(1)
+    setRosterLoading(true)
+    const { data } = await supabase
+      .from('registrations')
+      .select('*, users(name, room_number, phone, age_group, line_id), courses(id, title, date)')
+      .eq('course_id', course.id)
+      .in('status', ['confirmed', 'attended', 'cancelled'])
+      .order('registered_at', { ascending: false })
+    setRosterList(data || [])
+    setRosterLoading(false)
+  }
+
+  const rosterTotalPages = Math.ceil(rosterList.length / ROSTER_PAGE_SIZE) || 1
+  const rosterPaginated = rosterList.slice((rosterPage - 1) * ROSTER_PAGE_SIZE, rosterPage * ROSTER_PAGE_SIZE)
+
+  const handleRosterCancel = async () => {
+    if (!rosterConfirmCancelId) return
+    setRosterDeleting(true)
+    await supabase.from('registrations').update({ status: 'cancelled' }).eq('id', rosterConfirmCancelId)
+    setRosterConfirmCancelId(null)
+    if (rosterModal) await openRoster(rosterModal)
+    setRosterDeleting(false)
+  }
+
+  const handleRosterPermanentDelete = async () => {
+    if (!rosterConfirmPermanent) return
+    setRosterDeleting(true)
+    await supabase.from('registrations').delete().eq('id', rosterConfirmPermanent)
+    setRosterConfirmPermanent(null)
+    if (rosterModal) await openRoster(rosterModal)
+    setRosterDeleting(false)
+  }
+
   if (status === 'checking') {
     return <div className="min-h-screen flex items-center justify-center text-stone-400 text-sm">確認講師身份中…</div>
   }
@@ -376,7 +431,7 @@ function InstructorPortal() {
                 registered={regCounts[c.id] || 0}
                 maxSeats={c.max_seats}
                 onEdit={() => openEdit(c)}
-                onRoster={() => setToast('報名名單功能即將推出')}
+                onRoster={() => openRoster(c)}
                 onPoster={() => openPosterFromCard(c)}
                 onAttendance={() => openAttendance(c)}
                 onCopy={() => openCopy(c)}
@@ -559,6 +614,91 @@ function InstructorPortal() {
                   {attendanceSaving ? '儲存中...' : '儲存出席紀錄'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {rosterModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setRosterModal(null) }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-stone-200">
+              <div>
+                <h3 className="font-bold text-stone-800">{rosterModal.title}</h3>
+                <p className="text-stone-400 text-xs mt-0.5">{rosterModal.date} · 報名紀錄</p>
+              </div>
+              <button onClick={() => setRosterModal(null)} className="p-2 hover:bg-stone-100 rounded-xl">
+                <CloseIcon className="text-stone-600" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {rosterLoading ? (
+                <div className="text-center py-8 text-stone-400 text-sm">載入中...</div>
+              ) : rosterList.length === 0 ? (
+                <div className="text-center py-8 text-stone-400 text-sm">此課程尚無報名者</div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {rosterPaginated.map(reg => (
+                    <MobileRegistrationCard
+                      key={reg.id}
+                      reg={reg}
+                      getInitials={getInitials}
+                      formatDT={formatDT}
+                      onCancel={() => setRosterConfirmCancelId(reg.id)}
+                      onDelete={() => setRosterConfirmPermanent(reg.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            {rosterTotalPages > 1 && (
+              <div className="px-4 pb-4 pt-2 border-t border-stone-100">
+                <MobilePagination currentPage={rosterPage} totalPages={rosterTotalPages} onChange={setRosterPage} />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {rosterConfirmCancelId && (
+        <div className="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div>
+                <h3 className="font-bold text-stone-800">確認取消報名？</h3>
+                <p className="text-stone-400 text-xs mt-0.5">取消後可在「已取消」狀態中查看，此動作可再復原</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={handleRosterCancel} disabled={rosterDeleting} className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-lg text-sm transition-colors">
+                {rosterDeleting ? '處理中...' : '確認取消報名'}
+              </button>
+              <button onClick={() => setRosterConfirmCancelId(null)} className="px-5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-lg text-sm transition-colors">返回</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {rosterConfirmPermanent && (
+        <div className="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+              </div>
+              <div>
+                <h3 className="font-bold text-stone-800">永久刪除此筆紀錄？</h3>
+                <p className="text-stone-400 text-xs mt-0.5">此操作無法復原，資料將從資料庫中永久移除</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={handleRosterPermanentDelete} disabled={rosterDeleting} className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-stone-300 text-white font-medium py-3 rounded-lg text-sm transition-colors">
+                {rosterDeleting ? '刪除中...' : '永久刪除'}
+              </button>
+              <button onClick={() => setRosterConfirmPermanent(null)} className="px-5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-lg text-sm transition-colors">取消</button>
             </div>
           </div>
         </div>
