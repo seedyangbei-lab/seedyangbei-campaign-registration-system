@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react'
   import { createClient } from '@/lib/supabase'
 import CourseScheduleExporter from '@/components/CourseScheduleExporter'
-import CoursePosterEditor from '@/components/CoursePosterEditor'
+import CoursePhotoGrid from '@/components/CoursePhotoGrid'
+import SuitableAgeSelector, { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 
 interface Instructor { id: string; name: string }
 interface Category { id: string; name: string; color: string }
@@ -18,8 +19,8 @@ const emptyForm = {
   period_start: 'AM', hour_start: '09', min_start: '00',
   period_end: 'AM', hour_end: '10', min_end: '00',
   location: '', custom_location: '', max_seats: 20,
-  poster_url: '', instructor_id: '', instructor_ids: [] as string[], category_id: '',
-  notes: '', suitable_age: '全年齡',
+  photo_urls: [] as string[], instructor_id: '', instructor_ids: [] as string[], category_id: '',
+  notes: '', suitable_age: '全年齡', custom_age: '',
 }
 
 function toTime(period: string, hour: string, min: string) {
@@ -174,15 +175,12 @@ export default function CoursesPage() {
   const [mainTab, setMainTab] = useState<'courses' | 'categories'>('courses')
   const [courseTab, setCourseTab] = useState<'active' | 'ended'>('active')
   const [filterMonth, setFilterMonth] = useState('')
-  const [uploading, setUploading] = useState(false)
   const [timeError, setTimeError] = useState('')
   const [pageLoading, setPageLoading] = useState(true)
   const [attendanceModal, setAttendanceModal] = useState<any>(null)
   const [attendanceList, setAttendanceList] = useState<any[]>([])
   const [attendanceLoading, setAttendanceLoading] = useState(false)   
   const [attendanceSaving, setAttendanceSaving] = useState(false)
-  const [posterEditorCourse, setPosterEditorCourse] = useState<any>(null)
-  const [posterInitialImage, setPosterInitialImage] = useState<string | null>(null)
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const supabase = createClient()
 
@@ -224,17 +222,20 @@ export default function CoursesPage() {
   const openEdit = (course: any) => {
     setEditTarget(course)
     const s = fromTime(course.time_start); const e = fromTime(course.time_end)
+    const agePreset = AGE_OPTIONS.slice(0, 4).includes(course.suitable_age) ? course.suitable_age : (course.suitable_age ? '其他' : '全年齡')
     setForm({
       title: course.title, description: course.description || '', date: course.date,
       period_start: s.period, hour_start: s.hour, min_start: s.min,
       period_end: e.period, hour_end: e.hour, min_end: e.min,
       location: LOCATIONS.includes(course.location) ? course.location : '其他',
       custom_location: LOCATIONS.includes(course.location) ? '' : course.location,
-      max_seats: course.max_seats, poster_url: course.poster_url || '',
+      max_seats: course.max_seats,
+      photo_urls: (course.photo_urls && course.photo_urls.length > 0) ? course.photo_urls : (course.poster_url ? [course.poster_url] : []),
       instructor_id: course.instructor_id || '',
       instructor_ids: course.instructor_ids || (course.instructor_id ? [course.instructor_id] : []),
       category_id: course.category_id || '',
-      notes: course.notes || '', suitable_age: course.suitable_age || '全年齡',
+      notes: course.notes || '', suitable_age: agePreset,
+      custom_age: agePreset === '其他' ? (course.suitable_age || '') : '',
     })
     setTimeError(''); setShowModal(true)
   }
@@ -242,42 +243,49 @@ export default function CoursesPage() {
   const openCopy = (course: any) => {
     const tS = fromTime(course.time_start); const tE = fromTime(course.time_end)
     setEditTarget(null)
+    const agePreset = AGE_OPTIONS.slice(0, 4).includes(course.suitable_age) ? course.suitable_age : (course.suitable_age ? '其他' : '全年齡')
     setForm({
       title: course.title, description: course.description || '', date: '',
       period_start: tS.period, hour_start: tS.hour, min_start: tS.min,
       period_end: tE.period, hour_end: tE.hour, min_end: tE.min,
       location: LOCATIONS.includes(course.location) ? course.location : '其他',
       custom_location: LOCATIONS.includes(course.location) ? '' : course.location,
-      max_seats: course.max_seats, poster_url: course.poster_url || '',
+      max_seats: course.max_seats,
+      photo_urls: (course.photo_urls && course.photo_urls.length > 0) ? course.photo_urls : (course.poster_url ? [course.poster_url] : []),
       instructor_id: course.instructor_id || '',
       instructor_ids: course.instructor_ids || (course.instructor_id ? [course.instructor_id] : []),
       category_id: course.category_id || '',
-      notes: course.notes || '', suitable_age: course.suitable_age || '全年齡',
+      notes: course.notes || '', suitable_age: agePreset,
+      custom_age: agePreset === '其他' ? (course.suitable_age || '') : '',
     })
     setTimeError(''); setShowModal(true)
   }
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return; setUploading(true)
-    const filename = `posters/${Date.now()}.${file.name.split('.').pop()}`
-    const { data, error } = await supabase.storage.from('images').upload(filename, file, { upsert: true })
-    if (!error && data) { const { data: urlData } = supabase.storage.from('images').getPublicUrl(filename); setForm(f => ({ ...f, poster_url: urlData.publicUrl })) }
-    setUploading(false)
+  const uploadCoursePhoto = async (blob: Blob): Promise<string | null> => {
+    const filename = `course-photos/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`
+    const { data, error } = await supabase.storage.from('images').upload(filename, blob, { upsert: true, contentType: 'image/jpeg' })
+    if (error || !data) return null
+    const { data: urlData } = supabase.storage.from('images').getPublicUrl(filename)
+    return urlData.publicUrl
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); if (!validateTimes(form)) return; setLoading(true)
+    e.preventDefault(); if (!validateTimes(form)) return
+    if (form.photo_urls.length === 0) { alert('請至少上傳 1 張課程照片'); return }
+    if (form.suitable_age === '其他' && !form.custom_age.trim()) { alert('請填寫適合年齡的說明'); return }
+    setLoading(true)
     const location = form.location === '其他' ? form.custom_location : form.location
+    const suitableAge = form.suitable_age === '其他' ? form.custom_age : form.suitable_age
     const resolvedInstructorIds = form.instructor_ids.length > 0 ? form.instructor_ids : (form.instructor_id ? [form.instructor_id] : [])
     const payload = {
       title: form.title, description: form.description, date: form.date,
       time_start: toTime(form.period_start, form.hour_start, form.min_start),
       time_end: toTime(form.period_end, form.hour_end, form.min_end),
-      location, max_seats: form.max_seats, poster_url: form.poster_url || null,
+      location, max_seats: form.max_seats, photo_urls: form.photo_urls, poster_url: form.photo_urls[0] || null,
       instructor_id: resolvedInstructorIds[0] || null,
       instructor_ids: resolvedInstructorIds,
       category_id: form.category_id || null,
-      notes: form.notes || null, suitable_age: form.suitable_age || '全年齡',
+      notes: form.notes || null, suitable_age: suitableAge || '全年齡',
     }
     if (editTarget) {
       const { error } = await supabase.from('courses').update(payload).eq('id', editTarget.id)
@@ -444,7 +452,7 @@ export default function CoursesPage() {
 
                     <div className="flex gap-4 items-center mb-3">
                       <div className="w-[72px] h-[72px] rounded-xl overflow-hidden flex-shrink-0 bg-stone-100">
-                        {course.poster_url && <img src={course.poster_url} alt={course.title} className="w-full h-full object-cover" />}
+                        {(course.photo_urls?.[0] || course.poster_url) && <img src={course.photo_urls?.[0] || course.poster_url} alt={course.title} className="w-full h-full object-cover" />}
                       </div>
                       <div className="flex-1 min-w-0 flex flex-col gap-1">
                         <p className="text-stone-800 font-bold text-base leading-6 break-words">{course.title}</p>
@@ -511,7 +519,7 @@ export default function CoursesPage() {
                     <div className="flex items-center gap-4 min-w-0">
                       <div className="flex flex-col items-center shrink-0">
                         <div className="w-[60px] h-[60px] rounded-xl overflow-hidden bg-stone-100 -mb-2">
-                          {course.poster_url && <img src={course.poster_url} alt={course.title} className="w-full h-full object-cover" />}
+                          {(course.photo_urls?.[0] || course.poster_url) && <img src={course.photo_urls?.[0] || course.poster_url} alt={course.title} className="w-full h-full object-cover" />}
                         </div>
                         {course.course_categories && (
                           <span className="relative text-sm px-2 py-0.5 rounded-md text-white font-medium whitespace-nowrap" style={{ backgroundColor: course.course_categories.color }}>
@@ -744,9 +752,12 @@ export default function CoursesPage() {
               </div>
               <div>
                 <label className="block text-stone-600 text-sm font-medium mb-1.5">適合年齡</label>
-                <input value={form.suitable_age} onChange={e => setForm({...form, suitable_age: e.target.value})}
-                  placeholder="例：全年齡、18歲以上、親子（6歲以上）"
-                  className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                <SuitableAgeSelector
+                  value={form.suitable_age}
+                  customValue={form.custom_age}
+                  onChange={v => setForm({ ...form, suitable_age: v })}
+                  onCustomChange={v => setForm({ ...form, custom_age: v })}
+                />
               </div>
               <div className="relative">
                 <label className="block text-stone-600 text-sm font-medium mb-1.5">活動日期 *</label>
@@ -797,38 +808,17 @@ export default function CoursesPage() {
                   className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 resize-none transition-colors ${notesOver ? 'border-red-400 focus:ring-red-300 bg-red-50' : 'border-stone-300 focus:ring-orange-300'}`} />
                 {notesOver && <p className="text-red-500 text-xs mt-1">已達字數上限（{NOTES_MAX} 字），請刪減內容</p>}
               </div>
-              <div>
-                <label className="block text-stone-600 text-sm font-medium mb-1.5">課程海報</label>
-                <p className="text-stone-400 text-xs mb-2">建議尺寸：A4 比例（595 × 842px），小於 2MB，JPG / PNG</p>
-                <label className="flex items-center justify-center gap-2 w-full border-2 border-dashed border-stone-300 hover:border-orange-300 rounded-xl py-4 cursor-pointer transition-colors">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-stone-400"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  <span className="text-sm text-stone-500">{uploading ? '上傳中...' : '點擊上傳海報圖片'}</span>
-                  <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading} />
-                </label>
-                {form.poster_url && (
-                  <div className="mt-2 relative">
-                    <img src={form.poster_url} alt="海報預覽" className="w-full rounded-xl object-contain" style={{ maxHeight: '480px' }} />
-                    <button type="button" onClick={() => setForm({...form, poster_url: ''})} className="absolute top-2 right-2 bg-white rounded-full p-1 shadow">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    </button>
-                  </div>
-                )}
-              </div>
+              <CoursePhotoGrid
+                photos={form.photo_urls}
+                onChange={photo_urls => setForm({ ...form, photo_urls })}
+                uploadImage={uploadCoursePhoto}
+              />
               <div className="flex gap-3 pt-2">
                 <button type="submit" disabled={loading || !form.date || !!timeError || notesOver} className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
                   {loading ? '儲存中...' : editTarget ? '更新課程' : '新增課程'}
                 </button>
                 <button type="button" onClick={() => { setShowModal(false); setShowCalendar(false) }} className="px-6 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-xl text-sm transition-colors">取消</button>
               </div>
-              <button type="button" onClick={() => {
-                setShowModal(false)
-                setPosterEditorCourse(editTarget || { title: form.title, time_start: toTime(form.period_start, form.hour_start, form.min_start), time_end: toTime(form.period_end, form.hour_end, form.min_end), location: form.location === '其他' ? form.custom_location : form.location, suitable_age: form.suitable_age, notes: form.notes, instructor_names: form.instructor_ids.map((id: string) => instructors.find((i: any) => i.id === id)?.name).filter(Boolean) })
-                setPosterInitialImage(form.poster_url || null)
-              }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-stone-300 hover:border-orange-400 text-stone-500 hover:text-orange-500 text-sm transition-colors">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                製作課程海報
-              </button>
               {editTarget && (
                 <button type="button" onClick={async () => {
                   if (!confirm('確定要刪除這個課程嗎？')) return
@@ -842,28 +832,6 @@ export default function CoursesPage() {
           </div>
         </div>
       )}
-   {posterEditorCourse && (
-        <CoursePosterEditor
-          course={{
-            title: posterEditorCourse.title,
-            instructor: posterEditorCourse.instructor_names?.join('、') || posterEditorCourse.instructors?.name || '',
-            date: posterEditorCourse.date,
-            timeStart: posterEditorCourse.time_start?.slice(0, 5),
-            timeEnd: posterEditorCourse.time_end?.slice(0, 5),
-            location: posterEditorCourse.location,
-            suitableAge: posterEditorCourse.suitable_age,
-            notes: posterEditorCourse.notes,
-          }}
-          initialImage={posterInitialImage}
-          onClose={() => {
-            setPosterEditorCourse(null)
-            setPosterInitialImage(null)
-            if (editTarget) openEdit(editTarget)
-          }}
-        />
-      )}
-
-
     </div>
   )
 }
