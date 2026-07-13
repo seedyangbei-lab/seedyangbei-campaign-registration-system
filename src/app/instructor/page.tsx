@@ -67,6 +67,7 @@ function InstructorPortal() {
 
   const [posterEditorCourse, setPosterEditorCourse] = useState<any>(null)
   const [posterInitialImage, setPosterInitialImage] = useState<string | null>(null)
+  const [posterPhotos, setPosterPhotos] = useState<string[]>([])
 
   const [attendanceModal, setAttendanceModal] = useState<any>(null)
   const [attendanceList, setAttendanceList] = useState<any[]>([])
@@ -274,11 +275,13 @@ function InstructorPortal() {
 
   const openPosterFromCard = (course: any) => {
     setPosterEditorCourse({
-      title: course.title, instructor: instructor?.name, date: course.date,
+      id: course.id, title: course.title, instructor: instructor?.name, date: course.date,
       timeStart: (course.time_start || '').slice(0, 5), timeEnd: (course.time_end || '').slice(0, 5),
       location: course.location, suitableAge: course.suitable_age, notes: course.notes,
     })
-    setPosterInitialImage((course.photo_urls && course.photo_urls[0]) || course.poster_url || null)
+    const photoList = (course.photo_urls && course.photo_urls.length) ? course.photo_urls : (course.poster_url ? [course.poster_url] : [])
+    setPosterPhotos(photoList)
+    setPosterInitialImage(photoList[0] || null)
   }
 
   /* ---------- 出席紀錄 ---------- */
@@ -703,9 +706,11 @@ function InstructorPortal() {
         <CoursePosterEditor
           course={posterEditorCourse}
           initialImage={posterInitialImage}
+          photos={posterPhotos}
           onClose={() => {
             setPosterEditorCourse(null)
             setPosterInitialImage(null)
+            setPosterPhotos([])
           }}
         />
       )}
