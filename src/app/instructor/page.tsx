@@ -7,7 +7,7 @@ import CoursePosterEditor from '@/components/CoursePosterEditor'
 import {
   InstructorNavbar, InstructorProfileCard, InstructorTitle, InstructorTabBar,
   InstructorCourseCard, InstructorMonthFilter, InstructorProfileEditModal,
-  CloseIcon,
+  CloseIcon, ChevronDownIcon,
 } from '@/components/InstructorMobileUI'
 import { MobileRegistrationCard, MobilePagination } from '@/components/AdminMobileUI'
 import CoursePhotoGrid from '@/components/CoursePhotoGrid'
@@ -53,6 +53,7 @@ function InstructorPortal() {
 
   const [courseTab, setCourseTab] = useState<'active' | 'ended'>('active')
   const [filterMonth, setFilterMonth] = useState('')
+  const [endedSortOrder, setEndedSortOrder] = useState<'asc' | 'desc'>('desc')
 
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [profileForm, setProfileForm] = useState(emptyProfileForm)
@@ -158,7 +159,10 @@ function InstructorPortal() {
   )
   const displayCourses = courseTab === 'active'
     ? activeCourses
-    : endedCourses.filter(c => filterMonth ? c.date?.startsWith(filterMonth) : true)
+    : endedCourses
+        .filter(c => filterMonth ? c.date?.startsWith(filterMonth) : true)
+        .slice()
+        .sort((a, b) => endedSortOrder === 'desc' ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date))
 
   /* ---------- 個人資料 ---------- */
 
@@ -395,7 +399,10 @@ function InstructorPortal() {
           />
 
           {courseTab === 'ended' && availableMonths.length > 0 && (
-            <InstructorMonthFilter months={availableMonths} value={filterMonth} onChange={setFilterMonth} />
+            <InstructorMonthFilter
+              months={availableMonths} value={filterMonth} onChange={setFilterMonth}
+              sortOrder={endedSortOrder} onToggleSort={() => setEndedSortOrder(o => o === 'desc' ? 'asc' : 'desc')}
+            />
           )}
 
           {coursesLoading && (
@@ -496,11 +503,14 @@ function InstructorPortal() {
                 <label className="flex items-center gap-1 text-stone-600 text-sm font-medium mb-1.5">
                   <span className="text-red-500 text-xs leading-none">*</span>上課地點
                 </label>
-                <select value={form.location} onChange={e => setForm({ ...form, location: e.target.value })}
-                  className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
-                  <option value="">請選擇</option>
-                  {LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-                </select>
+                <div className="relative">
+                  <select value={form.location} onChange={e => setForm({ ...form, location: e.target.value })}
+                    className="w-full appearance-none border border-stone-300 rounded-xl pl-4 pr-9 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+                    <option value="">請選擇</option>
+                    {LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                  </select>
+                  <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                </div>
                 {form.location === '其他' && (
                   <input value={form.custom_location} onChange={e => setForm({ ...form, custom_location: e.target.value })}
                     placeholder="輸入地點" className="w-full mt-2 border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />

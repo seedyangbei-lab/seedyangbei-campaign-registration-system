@@ -76,12 +76,19 @@ export function CloseIcon({ className }: { className?: string }) {
   )
 }
 
-export function FilterIcon({ className }: { className?: string }) {
+export function SortIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" /><line x1="12" y1="21" x2="12" y2="12" />
-      <line x1="12" y1="8" x2="12" y2="3" /><line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" />
-      <line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" />
+    <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m21 16-4 4-4-4" /><path d="M17 20V4" /><path d="m3 8 4-4 4 4" /><path d="M7 4v16" />
+    </svg>
+  )
+}
+
+// 統一下拉選單樣式：appearance-none + 固定位置的自訂 chevron，避免不同瀏覽器原生箭頭位置不一致
+export function ChevronDownIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="6 9 12 15 18 9" />
     </svg>
   )
 }
@@ -268,24 +275,31 @@ export function InstructorCourseCard({
 /* ---------- 已結束課程的月份篩選列 ---------- */
 
 export function InstructorMonthFilter({
-  months, value, onChange,
-}: { months: string[]; value: string; onChange: (v: string) => void }) {
+  months, value, onChange, sortOrder, onToggleSort,
+}: {
+  months: string[]; value: string; onChange: (v: string) => void
+  sortOrder: 'asc' | 'desc'; onToggleSort: () => void
+}) {
   return (
     <div className="flex items-center gap-2 w-full">
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="flex-1 min-w-0 bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200"
-      >
-        <option value="">全部月份</option>
-        {months.map(m => <option key={m} value={m}>{m}</option>)}
-      </select>
+      <div className="relative flex-1 min-w-0">
+        <select
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          className="w-full appearance-none bg-white border border-stone-200 rounded-lg pl-3 pr-9 h-9 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200"
+        >
+          <option value="">全部月份</option>
+          {months.map(m => <option key={m} value={m}>{m}</option>)}
+        </select>
+        <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" />
+      </div>
       <button
-        onClick={() => onChange('')}
-        className="shrink-0 w-8 h-8 flex items-center justify-center bg-white border border-stone-200 rounded-lg text-stone-500 hover:bg-stone-50 transition-colors"
-        aria-label="重置篩選"
+        onClick={onToggleSort}
+        className="shrink-0 w-9 h-9 flex items-center justify-center bg-white border border-stone-200 rounded-lg text-stone-500 hover:bg-stone-50 transition-colors"
+        aria-label={sortOrder === 'desc' ? '目前新到舊，點擊切換為舊到新' : '目前舊到新，點擊切換為新到舊'}
+        title={sortOrder === 'desc' ? '新到舊' : '舊到新'}
       >
-        <FilterIcon />
+        <SortIcon />
       </button>
     </div>
   )
