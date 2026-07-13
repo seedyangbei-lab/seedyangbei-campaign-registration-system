@@ -328,21 +328,23 @@ export function InstructorProfileEditModal({
         </div>
 
         <div className="flex flex-col gap-2 items-start w-full">
-          <label className="text-base font-medium text-stone-600">姓名</label>
-          <input disabled value={name || ''} className="w-full bg-stone-50 border border-stone-200 rounded-md px-2 py-2 text-sm text-stone-500 cursor-not-allowed" />
+          <label className="flex items-center gap-1 text-sm font-medium text-stone-600">
+            <span className="text-red-500 text-xs leading-none">*</span>姓名
+          </label>
+          <input readOnly value={name || ''} className="w-full bg-white border border-stone-200 rounded-md px-2 py-2 text-sm text-stone-600 cursor-default focus:outline-none" />
         </div>
 
         <div className="flex flex-col gap-4 items-start w-full">
           <div className="flex flex-col gap-2 items-start w-full">
-            <label className="text-base font-medium text-stone-600">簡介</label>
+            <label className="text-sm font-medium text-stone-600">簡介</label>
             <textarea
               value={form.bio} onChange={e => onChange({ ...form, bio: e.target.value })}
-              rows={3} placeholder="簡短介紹自己"
-              className="w-full bg-white border border-stone-200 rounded-md px-2 py-2 text-sm text-stone-600 resize-none focus:outline-none focus:ring-2 focus:ring-orange-200"
+              placeholder="簡短介紹自己"
+              className="w-full h-20 bg-white border border-stone-200 rounded-md px-2 py-2 text-sm text-stone-600 resize-none focus:outline-none focus:ring-2 focus:ring-orange-200"
             />
           </div>
           <div className="flex flex-col gap-2 items-start w-full">
-            <label className="text-base font-medium text-stone-600">聯絡電話</label>
+            <label className="text-sm font-medium text-stone-600">聯絡電話</label>
             <input
               value={form.phone} onChange={e => onChange({ ...form, phone: e.target.value })}
               placeholder="0912-345-678"
@@ -350,7 +352,7 @@ export function InstructorProfileEditModal({
             />
           </div>
           <div className="flex flex-col gap-2 items-start w-full">
-            <label className="text-base font-medium text-stone-600">LINE ID 或課程群組連結</label>
+            <label className="text-sm font-medium text-stone-600">LINE ID 或課程群組連結</label>
             <input
               value={form.line_id} onChange={e => onChange({ ...form, line_id: e.target.value })}
               placeholder="https://line.me/..."
