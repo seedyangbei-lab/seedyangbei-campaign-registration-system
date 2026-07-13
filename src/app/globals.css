@@ -124,3 +124,44 @@ body {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* 課程海報編輯器：滑桿（Figma node 320-10040）— 軌道底色改由 inline gradient 控制，
+   這裡只需讓瀏覽器原生軌道透明並統一把手樣式 */
+.poster-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+}
+.poster-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: transparent;
+}
+.poster-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 3px solid #f97316;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  margin-top: -6px;
+  cursor: pointer;
+}
+.poster-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: transparent;
+}
+.poster-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 3px solid #f97316;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  cursor: pointer;
+}

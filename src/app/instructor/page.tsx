@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import CoursePosterEditor from '@/components/CoursePosterEditor'
 import {
@@ -42,6 +42,7 @@ const emptyForm = {
 const emptyProfileForm = { bio: '', avatar_url: '', phone: '', line_id: '' }
 
 function InstructorPortal() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
 
@@ -274,6 +275,11 @@ function InstructorPortal() {
   }
 
   const openPosterFromCard = (course: any) => {
+    // 手機版改為獨立頁面（非彈窗），桌機版維持彈窗
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches) {
+      router.push(`/instructor/poster-editor?courseId=${course.id}`)
+      return
+    }
     setPosterEditorCourse({
       id: course.id, title: course.title, instructor: instructor?.name, date: course.date,
       timeStart: (course.time_start || '').slice(0, 5), timeEnd: (course.time_end || '').slice(0, 5),
