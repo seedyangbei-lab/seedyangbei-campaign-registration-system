@@ -462,12 +462,16 @@ function InstructorPortal() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-stone-200">
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setShowModal(false)}
+              className="absolute top-[10px] right-[13px] z-10 bg-white border border-stone-200 rounded-full p-1.5 hover:bg-stone-50 transition-colors"
+              aria-label="關閉"
+            >
+              <CloseIcon className="text-stone-600" />
+            </button>
+            <div className="p-6 border-b border-stone-200">
               <h3 className="text-stone-800 font-bold text-lg">{editTarget ? '編輯課程' : '複製課程'}</h3>
-              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-stone-100 rounded-xl transition-colors">
-                <CloseIcon className="text-stone-600" />
-              </button>
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-4">
               <div>
