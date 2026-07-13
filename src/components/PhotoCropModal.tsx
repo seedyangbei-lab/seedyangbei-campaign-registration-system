@@ -5,10 +5,11 @@ import { useEffect, useRef, useState } from 'react'
 const STAGE = 300 // 裁切舞台尺寸（顯示完整圖片的容器，單位 px）
 const OUTPUT = 1080 // 輸出圖片解析度（正方形）
 const MIN_CROP = 60 // 裁切框最小尺寸
+const HANDLE = 18 // 縮放把手尺寸
 
 type ImgBox = { left: number; top: number; width: number; height: number }
 type CropBox = { x: number; y: number; size: number }
-type DragMode = 'move' | 'resize' | null
+type DragMode = 'move' | 'resize'
 
 type Props = {
   src: string
@@ -24,7 +25,10 @@ export default function PhotoCropModal({ src, onCancel, onConfirm }: Props) {
   const [crop, setCrop] = useState<CropBox>({ x: 0, y: 0, size: STAGE })
   const [exporting, setExporting] = useState(false)
 
+  // 用 window 監聽拖曳，避免游標移動太快離開元件範圍時中斷拖曳（比 onPointerLeave/pointer capture 更穩定）
   const dragRef = useRef<{ mode: DragMode; startX: number; startY: number; crop: CropBox } | null>(null)
+  const imgBoxRef = useRef(imgBox)
+  useEffect(() => { imgBoxRef.current = imgBox }, [imgBox])
 
   useEffect(() => {
     const img = new Image()
@@ -44,37 +48,45 @@ export default function PhotoCropModal({ src, onCancel, onConfirm }: Props) {
     img.src = src
   }, [src])
 
-  const clampCrop = (next: CropBox): CropBox => {
-    const maxSize = Math.min(imgBox.width, imgBox.height)
+  useEffect(() => {
+    const handleMove = (e: PointerEvent) => {
+      const drag = dragRef.current
+      if (!drag) return
+      e.preventDefault()
+      const dx = e.clientX - drag.startX
+      const dy = e.clientY - drag.startY
+      const box = imgBoxRef.current
+      if (drag.mode === 'move') {
+        setCrop(clamp({ x: drag.crop.x + dx, y: drag.crop.y + dy, size: drag.crop.size }, box))
+      } else {
+        const delta = Math.max(dx, dy)
+        setCrop(clamp({ x: drag.crop.x, y: drag.crop.y, size: drag.crop.size + delta }, box))
+      }
+    }
+    const handleUp = () => { dragRef.current = null }
+    window.addEventListener('pointermove', handleMove, { passive: false })
+    window.addEventListener('pointerup', handleUp)
+    window.addEventListener('pointercancel', handleUp)
+    return () => {
+      window.removeEventListener('pointermove', handleMove)
+      window.removeEventListener('pointerup', handleUp)
+      window.removeEventListener('pointercancel', handleUp)
+    }
+  }, [])
+
+  const clamp = (next: CropBox, box: ImgBox): CropBox => {
+    const maxSize = Math.min(box.width, box.height)
     const size = Math.min(Math.max(MIN_CROP, next.size), maxSize)
-    const x = Math.min(imgBox.left + imgBox.width - size, Math.max(imgBox.left, next.x))
-    const y = Math.min(imgBox.top + imgBox.height - size, Math.max(imgBox.top, next.y))
+    const x = Math.min(box.left + box.width - size, Math.max(box.left, next.x))
+    const y = Math.min(box.top + box.height - size, Math.max(box.top, next.y))
     return { x, y, size }
   }
 
-  const startMove = (e: React.PointerEvent) => {
+  const startDrag = (mode: DragMode) => (e: React.PointerEvent) => {
+    e.preventDefault()
     e.stopPropagation()
-    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
-    dragRef.current = { mode: 'move', startX: e.clientX, startY: e.clientY, crop }
+    dragRef.current = { mode, startX: e.clientX, startY: e.clientY, crop }
   }
-  const startResize = (e: React.PointerEvent) => {
-    e.stopPropagation()
-    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
-    dragRef.current = { mode: 'resize', startX: e.clientX, startY: e.clientY, crop }
-  }
-  const onPointerMove = (e: React.PointerEvent) => {
-    const drag = dragRef.current
-    if (!drag) return
-    const dx = e.clientX - drag.startX
-    const dy = e.clientY - drag.startY
-    if (drag.mode === 'move') {
-      setCrop(clampCrop({ x: drag.crop.x + dx, y: drag.crop.y + dy, size: drag.crop.size }))
-    } else if (drag.mode === 'resize') {
-      const delta = Math.max(dx, dy)
-      setCrop(clampCrop({ x: drag.crop.x, y: drag.crop.y, size: drag.crop.size + delta }))
-    }
-  }
-  const onPointerUp = () => { dragRef.current = null }
 
   const handleConfirm = () => {
     if (!imgRef.current) return
@@ -104,13 +116,7 @@ export default function PhotoCropModal({ src, onCancel, onConfirm }: Props) {
           </button>
         </div>
 
-        <div
-          className="relative bg-stone-900 rounded-xl overflow-hidden touch-none select-none"
-          style={{ width: STAGE, height: STAGE }}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerLeave={onPointerUp}
-        >
+        <div className="relative bg-stone-900 rounded-xl overflow-hidden touch-none select-none" style={{ width: STAGE, height: STAGE }}>
           {ready && (
             <>
               <img
@@ -122,7 +128,7 @@ export default function PhotoCropModal({ src, onCancel, onConfirm }: Props) {
               />
               {/* 裁切框：用超大 box-shadow 讓框外變暗，框內清楚顯示會保留的範圍 */}
               <div
-                onPointerDown={startMove}
+                onPointerDown={startDrag('move')}
                 className="absolute border-2 border-white cursor-move"
                 style={{
                   left: crop.x, top: crop.y, width: crop.size, height: crop.size,
@@ -136,10 +142,11 @@ export default function PhotoCropModal({ src, onCancel, onConfirm }: Props) {
                   <div className="absolute top-1/3 left-0 right-0 h-px bg-white/60" />
                   <div className="absolute top-2/3 left-0 right-0 h-px bg-white/60" />
                 </div>
-                {/* 縮放把手（右下角） */}
+                {/* 縮放把手（右下角，完全內縮在框內，不超出舞台範圍） */}
                 <div
-                  onPointerDown={startResize}
-                  className="absolute -right-1.5 -bottom-1.5 w-5 h-5 bg-white border-2 border-orange-500 rounded-full cursor-nwse-resize"
+                  onPointerDown={startDrag('resize')}
+                  className="absolute bg-white border-2 border-orange-500 rounded-full cursor-nwse-resize"
+                  style={{ right: 2, bottom: 2, width: HANDLE, height: HANDLE }}
                 />
               </div>
             </>
