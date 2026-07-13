@@ -2,9 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-const VIEW = 280 // 裁切預覽框尺寸（正方形，單位 px）
+const STAGE = 300 // 裁切舞台尺寸（顯示完整圖片的容器，單位 px）
 const OUTPUT = 1080 // 輸出圖片解析度（正方形）
-const MAX_ZOOM = 3
+const MIN_CROP = 60 // 裁切框最小尺寸
+
+type ImgBox = { left: number; top: number; width: number; height: number }
+type CropBox = { x: number; y: number; size: number }
+type DragMode = 'move' | 'resize' | null
 
 type Props = {
   src: string
@@ -15,54 +19,60 @@ type Props = {
 export default function PhotoCropModal({ src, onCancel, onConfirm }: Props) {
   const imgRef = useRef<HTMLImageElement | null>(null)
   const [ready, setReady] = useState(false)
-  const [natural, setNatural] = useState({ w: 0, h: 0 })
-  const [baseScale, setBaseScale] = useState(1)
-  const [zoom, setZoom] = useState(1)
-  const [offset, setOffset] = useState({ x: 0, y: 0 })
+  const [displayScale, setDisplayScale] = useState(1)
+  const [imgBox, setImgBox] = useState<ImgBox>({ left: 0, top: 0, width: STAGE, height: STAGE })
+  const [crop, setCrop] = useState<CropBox>({ x: 0, y: 0, size: STAGE })
   const [exporting, setExporting] = useState(false)
-  const dragRef = useRef<{ startX: number; startY: number; offX: number; offY: number } | null>(null)
+
+  const dragRef = useRef<{ mode: DragMode; startX: number; startY: number; crop: CropBox } | null>(null)
 
   useEffect(() => {
     const img = new Image()
     img.crossOrigin = 'anonymous'
     img.onload = () => {
       const w = img.naturalWidth, h = img.naturalHeight
-      const cover = Math.max(VIEW / w, VIEW / h)
-      setNatural({ w, h })
-      setBaseScale(cover)
-      setZoom(1)
-      setOffset({ x: (VIEW - w * cover) / 2, y: (VIEW - h * cover) / 2 })
+      const scale = Math.min(STAGE / w, STAGE / h)
+      const dispW = w * scale, dispH = h * scale
+      const left = (STAGE - dispW) / 2, top = (STAGE - dispH) / 2
+      const size = Math.min(dispW, dispH)
+      setImgBox({ left, top, width: dispW, height: dispH })
+      setDisplayScale(scale)
+      setCrop({ x: left + (dispW - size) / 2, y: top + (dispH - size) / 2, size })
       imgRef.current = img
       setReady(true)
     }
     img.src = src
   }, [src])
 
-  const clampOffset = (x: number, y: number, z: number) => {
-    const dw = natural.w * baseScale * z
-    const dh = natural.h * baseScale * z
-    const minX = VIEW - dw, maxX = 0
-    const minY = VIEW - dh, maxY = 0
-    return {
-      x: Math.min(maxX, Math.max(minX, x)),
-      y: Math.min(maxY, Math.max(minY, y)),
-    }
+  const clampCrop = (next: CropBox): CropBox => {
+    const maxSize = Math.min(imgBox.width, imgBox.height)
+    const size = Math.min(Math.max(MIN_CROP, next.size), maxSize)
+    const x = Math.min(imgBox.left + imgBox.width - size, Math.max(imgBox.left, next.x))
+    const y = Math.min(imgBox.top + imgBox.height - size, Math.max(imgBox.top, next.y))
+    return { x, y, size }
   }
 
-  const handleZoomChange = (z: number) => {
-    setZoom(z)
-    setOffset(prev => clampOffset(prev.x, prev.y, z))
+  const startMove = (e: React.PointerEvent) => {
+    e.stopPropagation()
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+    dragRef.current = { mode: 'move', startX: e.clientX, startY: e.clientY, crop }
   }
-
-  const onPointerDown = (e: React.PointerEvent) => {
-    (e.target as HTMLElement).setPointerCapture(e.pointerId)
-    dragRef.current = { startX: e.clientX, startY: e.clientY, offX: offset.x, offY: offset.y }
+  const startResize = (e: React.PointerEvent) => {
+    e.stopPropagation()
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+    dragRef.current = { mode: 'resize', startX: e.clientX, startY: e.clientY, crop }
   }
   const onPointerMove = (e: React.PointerEvent) => {
-    if (!dragRef.current) return
-    const dx = e.clientX - dragRef.current.startX
-    const dy = e.clientY - dragRef.current.startY
-    setOffset(clampOffset(dragRef.current.offX + dx, dragRef.current.offY + dy, zoom))
+    const drag = dragRef.current
+    if (!drag) return
+    const dx = e.clientX - drag.startX
+    const dy = e.clientY - drag.startY
+    if (drag.mode === 'move') {
+      setCrop(clampCrop({ x: drag.crop.x + dx, y: drag.crop.y + dy, size: drag.crop.size }))
+    } else if (drag.mode === 'resize') {
+      const delta = Math.max(dx, dy)
+      setCrop(clampCrop({ x: drag.crop.x, y: drag.crop.y, size: drag.crop.size + delta }))
+    }
   }
   const onPointerUp = () => { dragRef.current = null }
 
@@ -74,10 +84,9 @@ export default function PhotoCropModal({ src, onCancel, onConfirm }: Props) {
     canvas.height = OUTPUT
     const ctx = canvas.getContext('2d')
     if (!ctx) { setExporting(false); return }
-    const effScale = baseScale * zoom
-    const srcX = -offset.x / effScale
-    const srcY = -offset.y / effScale
-    const srcSize = VIEW / effScale
+    const srcX = (crop.x - imgBox.left) / displayScale
+    const srcY = (crop.y - imgBox.top) / displayScale
+    const srcSize = crop.size / displayScale
     ctx.drawImage(imgRef.current, srcX, srcY, srcSize, srcSize, 0, 0, OUTPUT, OUTPUT)
     canvas.toBlob(blob => {
       setExporting(false)
@@ -96,40 +105,47 @@ export default function PhotoCropModal({ src, onCancel, onConfirm }: Props) {
         </div>
 
         <div
-          className="relative bg-stone-100 rounded-xl overflow-hidden touch-none select-none"
-          style={{ width: VIEW, height: VIEW }}
-          onPointerDown={onPointerDown}
+          className="relative bg-stone-900 rounded-xl overflow-hidden touch-none select-none"
+          style={{ width: STAGE, height: STAGE }}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerLeave={onPointerUp}
         >
           {ready && (
-            <img
-              src={src}
-              alt=""
-              draggable={false}
-              className="absolute pointer-events-none"
-              style={{
-                width: natural.w * baseScale * zoom,
-                height: natural.h * baseScale * zoom,
-                left: offset.x,
-                top: offset.y,
-              }}
-            />
+            <>
+              <img
+                src={src}
+                alt=""
+                draggable={false}
+                className="absolute pointer-events-none"
+                style={{ left: imgBox.left, top: imgBox.top, width: imgBox.width, height: imgBox.height }}
+              />
+              {/* 裁切框：用超大 box-shadow 讓框外變暗，框內清楚顯示會保留的範圍 */}
+              <div
+                onPointerDown={startMove}
+                className="absolute border-2 border-white cursor-move"
+                style={{
+                  left: crop.x, top: crop.y, width: crop.size, height: crop.size,
+                  boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)',
+                }}
+              >
+                {/* 三分格輔助線，方便對齊構圖 */}
+                <div className="absolute inset-0 pointer-events-none opacity-60">
+                  <div className="absolute left-1/3 top-0 bottom-0 w-px bg-white/60" />
+                  <div className="absolute left-2/3 top-0 bottom-0 w-px bg-white/60" />
+                  <div className="absolute top-1/3 left-0 right-0 h-px bg-white/60" />
+                  <div className="absolute top-2/3 left-0 right-0 h-px bg-white/60" />
+                </div>
+                {/* 縮放把手（右下角） */}
+                <div
+                  onPointerDown={startResize}
+                  className="absolute -right-1.5 -bottom-1.5 w-5 h-5 bg-white border-2 border-orange-500 rounded-full cursor-nwse-resize"
+                />
+              </div>
+            </>
           )}
-          <div className="absolute inset-0 border-2 border-white/70 rounded-xl pointer-events-none" />
         </div>
-
-        <div className="flex items-center gap-3 w-full">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-stone-400 shrink-0"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-          <input
-            type="range" min={1} max={MAX_ZOOM} step={0.01} value={zoom}
-            onChange={e => handleZoomChange(parseFloat(e.target.value))}
-            className="flex-1 accent-orange-500"
-          />
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-stone-400 shrink-0"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-        </div>
-        <p className="text-xs text-stone-400 -mt-2">拖曳調整位置，拉桿縮放，裁出想呈現的 1:1 範圍</p>
+        <p className="text-xs text-stone-400 -mt-2">拖曳框內移動位置，拖曳右下角圓點調整裁切範圍大小</p>
 
         <div className="flex gap-3 w-full">
           <button onClick={onCancel} className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-2.5 rounded-xl text-sm transition-colors">
