@@ -378,7 +378,7 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
 
   const [isExporting, setIsExporting] = useState(false)
   const fileRef    = useRef<HTMLInputElement>(null)
-  const panelRef   = useRef<HTMLDivElement>(null)   // preview column（用來量測可用高度）
+  const stageRef   = useRef<HTMLDivElement>(null)   // 預覽舞台（虛線框內側，用來量測可用尺寸）
   const [previewScale, setPreviewScale] = useState(1)
 
   // Load all Google Fonts once on mount — no hooks in loops
@@ -428,16 +428,12 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
     } catch (_e) { /* localStorage 不可用時靜默略過 */ }
   }
 
-  // ResizeObserver: 量測預覽欄可用高度，扣掉固定的底部按鈕區
+  // ResizeObserver: 直接量測虛線框內側舞台的實際可用尺寸（無需再手動扣除周邊元素高度）
   useEffect(() => {
-    const el = panelRef.current
+    const el = stageRef.current
     if (!el) return
-    const BOTTOM_H = 140  // zoom row + 儲存/變更圖片 buttons + 匯出按鈕 + 分隔線
-    const PADDING  = 32
     const update = () => {
-      const availH = el.clientHeight - BOTTOM_H - PADDING
-      const availW = el.clientWidth  - 32
-      setPreviewScale(Math.min(availH/POSTER_H, availW/POSTER_W, 1))
+      setPreviewScale(Math.min(el.clientHeight/POSTER_H, el.clientWidth/POSTER_W, 1))
     }
     update()
     const ro = new ResizeObserver(update)
@@ -623,7 +619,7 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
             {/* 主視覺色彩 */}
             <section>
               <p className="text-sm font-medium text-stone-500 mb-2">主視覺色彩</p>
-              <div className="flex flex-wrap gap-1.5 items-center">
+              <div className="bg-stone-100 rounded-[10px] px-4 py-2 flex items-center justify-between gap-1">
                 {SCHEMES.map(s=>(
                   <button key={s.id} title={s.label} aria-label={s.label}
                     onClick={()=>{ setScheme(s); setCustomBg('') }}
@@ -631,7 +627,7 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                     style={{ width:'28px', height:'28px', background:s.bg, outline:(!customBg&&scheme.id===s.id)?'2px solid #f97316':'2px solid transparent', outlineOffset:'2px',
                       boxShadow:s.id==='white'?'inset 0 0 0 1px rgba(0,0,0,0.15)':'0px 0px 0px 0.5px rgba(0,0,0,0.09)' }} />
                 ))}
-                <label className="rounded-full cursor-pointer transition-transform hover:scale-105 flex items-center justify-center shrink-0 relative border border-dashed border-stone-300 bg-white"
+                <label className="rounded-full cursor-pointer transition-transform hover:scale-105 flex items-center justify-center shrink-0 relative border border-dashed border-stone-400 bg-white"
                   style={{ width:'28px', height:'28px', outline:customBg?'2px solid #f97316':'none', outlineOffset:'2px' }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
                   <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
@@ -658,8 +654,8 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                     <p className="text-sm font-medium text-stone-600">中文字體設定</p>
                     <p className="text-xs text-stone-400">標題 / 地點</p>
                   </div>
-                  <div className="bg-stone-100 rounded-lg p-3 flex gap-3">
-                    <div className="flex-1 min-w-0">
+                  <div className="bg-stone-100 rounded-lg p-3 grid grid-cols-3 gap-3">
+                    <div className="min-w-0">
                       <p className="text-[11px] text-stone-500 mb-1">中文字體</p>
                       <div className="relative">
                         <select value={zhFontIdx} onChange={e=>setZhFontIdx(parseInt(e.target.value))}
@@ -669,14 +665,14 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                         <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
                       </div>
                     </div>
-                    <div className="w-20 shrink-0">
+                    <div className="min-w-0">
                       <p className="text-[11px] text-stone-500 mb-1">文字顏色</p>
                       <label className="relative w-full h-[30px] rounded-md border border-stone-200 overflow-hidden cursor-pointer block">
                         <div className="w-full h-full" style={{background:tc}} />
                         <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" value={tc} onChange={e=>setTextColorOverride(e.target.value)} />
                       </label>
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0">
                       <SliderRow label="中文字體大小" min={12} max={28} step={1} value={zhFontSize} onChange={setZhFontSize} unit="px" />
                     </div>
                   </div>
@@ -689,8 +685,8 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                     <p className="text-sm font-medium text-stone-600">英文字體設定</p>
                     <p className="text-xs text-stone-400">時間 / 邊框裝飾</p>
                   </div>
-                  <div className="bg-stone-100 rounded-lg p-3 flex gap-3">
-                    <div className="flex-1 min-w-0">
+                  <div className="bg-stone-100 rounded-lg p-3 grid grid-cols-3 gap-3">
+                    <div className="min-w-0">
                       <p className="text-[11px] text-stone-500 mb-1">英文字體</p>
                       <div className="relative">
                         <select value={enFontIdx} onChange={e=>setEnFontIdx(parseInt(e.target.value))}
@@ -700,14 +696,14 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                         <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
                       </div>
                     </div>
-                    <div className="w-20 shrink-0">
+                    <div className="min-w-0">
                       <p className="text-[11px] text-stone-500 mb-1">文字顏色</p>
                       <label className="relative w-full h-[30px] rounded-md border border-stone-200 overflow-hidden cursor-pointer block">
                         <div className="w-full h-full" style={{background:enTc}} />
                         <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" value={enTc} onChange={e=>setEnTextColorOverride(e.target.value)} />
                       </label>
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0">
                       <SliderRow label="英文字體大小" min={7} max={14} step={0.5} value={enFontSize} onChange={setEnFontSize} unit="px" />
                     </div>
                   </div>
@@ -729,7 +725,6 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                       <SliderRow label="行距" min={0.5} max={3} step={0.1} value={lineSpacingMult} onChange={setLineSpacingMult} unit="" decimals={1} />
                     </div>
                   </div>
-                  <p className="text-[10px] text-stone-400 mt-2">課程地點與年齡彼此間距固定，行距僅調整它們與標題的距離。</p>
                 </section>
               </div>
             ) : (
@@ -833,16 +828,18 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
         </div>
 
         {/* ── RIGHT：預覽畫面 ── */}
-        <div ref={panelRef} className="order-1 md:order-2 md:w-[360px] w-full shrink-0 flex flex-col bg-gradient-to-b from-orange-50 to-white md:border-l border-stone-100 overflow-hidden">
+        <div className="order-1 md:order-2 md:w-[360px] w-full shrink-0 flex flex-col bg-gradient-to-b from-orange-50 to-white md:border-l border-stone-100 overflow-hidden">
 
           <div className="shrink-0 border-b border-stone-100 px-4 pt-5 pb-4 text-center">
             <h3 className="text-stone-600 text-xl">預覽畫面</h3>
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center min-h-0 px-4 py-3 gap-2">
-            <div style={{ width:scaledW, height:scaledH, position:'relative', flexShrink:0, overflow:'hidden', borderRadius:'2px' }}>
-              <div className="absolute top-0 left-0 origin-top-left"
-                style={{ transform:`scale(${previewScale})`, width:POSTER_W, height:POSTER_H }}>
+          <div className="flex-1 flex flex-col items-center min-h-0 px-4 py-3 gap-2">
+            <div className="w-full flex-1 min-h-0 border border-dashed border-orange-400 bg-stone-50 rounded-xl overflow-hidden flex items-center justify-center">
+              <div ref={stageRef} className="w-full h-full flex items-center justify-center">
+                <div style={{ width:scaledW, height:scaledH, position:'relative', flexShrink:0, overflow:'hidden', borderRadius:'12px', boxShadow:'0px 0px 18px 0px rgba(0,0,0,0.11)' }}>
+                  <div className="absolute top-0 left-0 origin-top-left"
+                    style={{ transform:`scale(${previewScale})`, width:POSTER_W, height:POSTER_H }}>
 
                 <div className="relative select-none"
                   style={{ width:POSTER_W, height:POSTER_H, backgroundColor:activeBg, overflow:'visible' }}>
@@ -966,6 +963,8 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                       </div>
                     )}
                   </div>
+                </div>
+              </div>
                 </div>
               </div>
             </div>
