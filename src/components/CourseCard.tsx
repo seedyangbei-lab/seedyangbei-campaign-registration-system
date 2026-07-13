@@ -23,10 +23,12 @@ function getCoursePhotos(course: Course): string[] {
   return course.poster_url ? [course.poster_url] : []
 }
 
-// 課程照片輪播（多張時比照 IG 概念，可滑動切換＋底部圓點指示器）
+// 課程照片輪播（多張時比照 IG 概念，可滑動切換＋底部圓點指示器；
+// 手機用原生 touch 滑動，桌機額外支援滑鼠拖曳與左右箭頭，圓點也可直接點擊切換）
 function CoursePhotoCarousel({ photos, alt }: { photos: string[]; alt: string }) {
   const [index, setIndex] = useState(0)
   const scrollerRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef<{ startX: number; startScrollLeft: number; moved: boolean } | null>(null)
 
   const handleScroll = () => {
     const el = scrollerRef.current
@@ -34,24 +36,80 @@ function CoursePhotoCarousel({ photos, alt }: { photos: string[]; alt: string })
     setIndex(Math.round(el.scrollLeft / el.clientWidth))
   }
 
+  const scrollToIndex = (i: number) => {
+    const el = scrollerRef.current
+    if (!el) return
+    el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' })
+  }
+
+  // 桌機滑鼠拖曳捲動（觸控裝置交給瀏覽器原生 overflow-scroll + snap 處理）
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === 'touch') return
+    const el = scrollerRef.current
+    if (!el) return
+    dragRef.current = { startX: e.clientX, startScrollLeft: el.scrollLeft, moved: false }
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+  }
+  const onPointerMove = (e: React.PointerEvent) => {
+    const drag = dragRef.current
+    const el = scrollerRef.current
+    if (!drag || !el) return
+    const dx = e.clientX - drag.startX
+    if (Math.abs(dx) > 3) drag.moved = true
+    el.scrollLeft = drag.startScrollLeft - dx
+  }
+  const onPointerUp = () => { dragRef.current = null }
+
   return (
-    <div className="absolute inset-0" onClick={e => e.stopPropagation()}>
+    <div className="absolute inset-0" onClick={e => { if (dragRef.current?.moved) { e.stopPropagation(); return } e.stopPropagation() }}>
       <div
         ref={scrollerRef}
         onScroll={handleScroll}
-        className="absolute inset-0 flex overflow-x-auto snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
-        style={{ scrollbarWidth: 'none' }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerUp}
+        className="absolute inset-0 flex overflow-x-auto snap-x snap-mandatory cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
+        style={{ scrollbarWidth: 'none', touchAction: 'pan-y' }}
       >
         {photos.map((url, i) => (
-          <img key={i} src={url} alt={alt} className="w-full h-full object-cover flex-shrink-0 snap-center" />
+          <img key={i} src={url} alt={alt} draggable={false} className="w-full h-full object-cover flex-shrink-0 snap-center pointer-events-none" />
         ))}
       </div>
       {photos.length > 1 && (
-        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1 z-10 pointer-events-none">
-          {photos.map((_, i) => (
-            <span key={i} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === index ? 'bg-white' : 'bg-white/50'}`} />
-          ))}
-        </div>
+        <>
+          {index > 0 && (
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); scrollToIndex(index - 1) }}
+              className="absolute left-1 top-1/2 -translate-y-1/2 z-10 w-5 h-5 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors"
+              aria-label="上一張"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="15 18 9 12 15 6" /></svg>
+            </button>
+          )}
+          {index < photos.length - 1 && (
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); scrollToIndex(index + 1) }}
+              className="absolute right-1 top-1/2 -translate-y-1/2 z-10 w-5 h-5 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors"
+              aria-label="下一張"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="9 18 15 12 9 6" /></svg>
+            </button>
+          )}
+          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+            {photos.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={e => { e.stopPropagation(); scrollToIndex(i) }}
+                aria-label={`第 ${i + 1} 張照片`}
+                className={`w-1.5 h-1.5 rounded-full transition-colors ${i === index ? 'bg-white' : 'bg-white/50'}`}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   )
