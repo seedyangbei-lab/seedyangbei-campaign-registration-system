@@ -29,7 +29,6 @@ const [settings, setSettings] = useState({
     schedule_logo_1_name: '新北市政府城鄉發展局',
     schedule_logo_2_name: '跨世代共居種子計畫',
     schedule_logo_3_name: '街道案子團隊',
-    points_enabled: 'true',
   })
   const [savedSettings, setSavedSettings] = useState({ ...settings })
   const [saving, setSaving] = useState(false)
@@ -114,13 +113,6 @@ const [settings, setSettings] = useState({
     hero_title_color: settings.hero_title_color,hero_title_stroke: settings.hero_title_stroke }))
     setKvSaved(true); setKvSaving(false); setIsKvEditing(false)
     setTimeout(() => setKvSaved(false), 3000)
-  }
-
-  const togglePoints = async () => {
-    const next = settings.points_enabled === 'true' ? 'false' : 'true'
-    setSettings(s => ({ ...s, points_enabled: next }))
-    setSavedSettings(s => ({ ...s, points_enabled: next }))
-    await supabase.from('site_settings').upsert({ key: 'points_enabled', value: next, updated_at: new Date().toISOString() }, { onConflict: 'key' })
   }
 
   const handleCancelKv = () => {
@@ -222,22 +214,6 @@ const [settings, setSettings] = useState({
       </div>
 
       {/* 網站文字內容 Tab */}
-      {tab === 'content' && (
-        <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden mb-4">
-          <div className="flex items-center justify-between px-6 py-4">
-            <div>
-              <h3 className="font-semibold text-stone-700">集點功能</h3>
-              <p className="text-stone-400 text-xs mt-0.5">關閉後，前台個人中心不會顯示集點卡與兌換項目</p>
-            </div>
-            <button onClick={togglePoints}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${settings.points_enabled === 'true' ? 'bg-orange-500' : 'bg-stone-200'}`}
-              title={settings.points_enabled === 'true' ? '關閉集點功能' : '開啟集點功能'}>
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${settings.points_enabled === 'true' ? 'translate-x-6' : 'translate-x-1'}`} />
-            </button>
-          </div>
-        </div>
-      )}
-
       {tab === 'content' && (
         <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100">

@@ -39,6 +39,7 @@ export default function RewardsPage() {
   const [memberModal, setMemberModal] = useState<Redemption | null>(null)
   const [memberLogs, setMemberLogs] = useState<any[]>([])
   const [memberLogsLoading, setMemberLogsLoading] = useState(false)
+  const [pointsEnabled, setPointsEnabled] = useState(true)
   const supabase = createClient()
 
   const fetchItems = async () => {
@@ -54,7 +55,18 @@ export default function RewardsPage() {
     setRedemptions(data || [])
   }
 
-  useEffect(() => { fetchItems(); fetchRedemptions() }, [])
+  const fetchPointsSetting = async () => {
+    const { data } = await supabase.from('site_settings').select('value').eq('key', 'points_enabled').maybeSingle()
+    setPointsEnabled((data?.value ?? 'true') === 'true')
+  }
+
+  const togglePoints = async () => {
+    const next = !pointsEnabled
+    setPointsEnabled(next)
+    await supabase.from('site_settings').upsert({ key: 'points_enabled', value: String(next), updated_at: new Date().toISOString() }, { onConflict: 'key' })
+  }
+
+  useEffect(() => { fetchItems(); fetchRedemptions(); fetchPointsSetting() }, [])
 
   const openAdd = () => { setEditTarget(null); setForm(emptyForm); setShowModal(true) }
   const openEdit = (item: RewardItem) => {
@@ -153,6 +165,20 @@ export default function RewardsPage() {
             新增獎勵
           </button>
         )}
+      </div>
+
+      <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden mb-6">
+        <div className="flex items-center justify-between px-6 py-4">
+          <div>
+            <h3 className="font-semibold text-stone-700">集點功能</h3>
+            <p className="text-stone-400 text-xs mt-0.5">關閉後，前台個人中心不會顯示集點卡與兌換項目</p>
+          </div>
+          <button onClick={togglePoints}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${pointsEnabled ? 'bg-orange-500' : 'bg-stone-200'}`}
+            title={pointsEnabled ? '關閉集點功能' : '開啟集點功能'}>
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${pointsEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-1 p-1 bg-stone-100 rounded-xl mb-6 w-fit">
