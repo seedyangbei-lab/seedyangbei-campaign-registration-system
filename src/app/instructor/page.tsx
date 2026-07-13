@@ -10,8 +10,11 @@ import {
   CloseIcon, PosterIcon,
 } from '@/components/InstructorMobileUI'
 import { MobileRegistrationCard, MobilePagination } from '@/components/AdminMobileUI'
+import CoursePhotoGrid from '@/components/CoursePhotoGrid'
+import SuitableAgeSelector, { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 
 const ROSTER_PAGE_SIZE = 10
+const DESCRIPTION_MAX = 100
 
 const LINE_CHANNEL_ID = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2010077816'
 const LINE_CALLBACK_URL = process.env.NEXT_PUBLIC_LINE_CALLBACK_URL || 'https://yangbei-campaign.vercel.app/api/auth/line/callback'
@@ -32,8 +35,8 @@ function getLineLoginUrl() {
 
 const emptyForm = {
   title: '', description: '', date: '', time_start: '', time_end: '',
-  location: '', custom_location: '', notes: '', suitable_age: '全年齡', poster_url: '',
-  max_seats: 20,
+  location: '', custom_location: '', notes: '', suitable_age: '全年齡', custom_age: '',
+  photos: [] as string[], max_seats: 20,
 }
 
 const emptyProfileForm = { bio: '', avatar_url: '', phone: '', line_id: '' }
@@ -60,7 +63,6 @@ function InstructorPortal() {
   const [editTarget, setEditTarget] = useState<any>(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
-  const [uploading, setUploading] = useState(false)
 
   const [posterEditorCourse, setPosterEditorCourse] = useState<any>(null)
   const [posterInitialImage, setPosterInitialImage] = useState<string | null>(null)
@@ -191,53 +193,58 @@ function InstructorPortal() {
 
   const openEdit = (course: any) => {
     setEditTarget(course)
+    const agePreset = AGE_OPTIONS.slice(0, 4).includes(course.suitable_age) ? course.suitable_age : (course.suitable_age ? '其他' : '全年齡')
     setForm({
       title: course.title || '', description: course.description || '', date: course.date || '',
       time_start: (course.time_start || '').slice(0, 5), time_end: (course.time_end || '').slice(0, 5),
       location: LOCATIONS.includes(course.location) ? course.location : '其他',
       custom_location: LOCATIONS.includes(course.location) ? '' : (course.location || ''),
-      notes: course.notes || '', suitable_age: course.suitable_age || '全年齡',
-      poster_url: course.poster_url || '', max_seats: course.max_seats || 20,
+      notes: course.notes || '', suitable_age: agePreset,
+      custom_age: agePreset === '其他' ? (course.suitable_age || '') : '',
+      photos: (course.photo_urls && course.photo_urls.length > 0) ? course.photo_urls : (course.poster_url ? [course.poster_url] : []),
+      max_seats: course.max_seats || 20,
     })
     setShowModal(true)
   }
 
   const openCopy = (course: any) => {
     setEditTarget(null)
+    const agePreset = AGE_OPTIONS.slice(0, 4).includes(course.suitable_age) ? course.suitable_age : (course.suitable_age ? '其他' : '全年齡')
     setForm({
       title: course.title || '', description: course.description || '', date: '',
       time_start: (course.time_start || '').slice(0, 5), time_end: (course.time_end || '').slice(0, 5),
       location: LOCATIONS.includes(course.location) ? course.location : '其他',
       custom_location: LOCATIONS.includes(course.location) ? '' : (course.location || ''),
-      notes: course.notes || '', suitable_age: course.suitable_age || '全年齡',
-      poster_url: course.poster_url || '', max_seats: course.max_seats || 20,
+      notes: course.notes || '', suitable_age: agePreset,
+      custom_age: agePreset === '其他' ? (course.suitable_age || '') : '',
+      photos: (course.photo_urls && course.photo_urls.length > 0) ? course.photo_urls : (course.poster_url ? [course.poster_url] : []),
+      max_seats: course.max_seats || 20,
     })
     setShowModal(true)
   }
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return
-    setUploading(true)
-    const filename = `posters/${Date.now()}.${file.name.split('.').pop()}`
-    const { data, error } = await supabase.storage.from('images').upload(filename, file, { upsert: true })
-    if (!error && data) {
-      const { data: urlData } = supabase.storage.from('images').getPublicUrl(filename)
-      setForm(f => ({ ...f, poster_url: urlData.publicUrl }))
-    }
-    setUploading(false)
+  const uploadCoursePhoto = async (blob: Blob): Promise<string | null> => {
+    const filename = `course-photos/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`
+    const { data, error } = await supabase.storage.from('images').upload(filename, blob, { upsert: true, contentType: 'image/jpeg' })
+    if (error || !data) return null
+    const { data: urlData } = supabase.storage.from('images').getPublicUrl(filename)
+    return urlData.publicUrl
   }
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!instructor) return
+    if (form.photos.length === 0) { alert('請至少上傳 1 張課程照片'); return }
+    if (form.suitable_age === '其他' && !form.custom_age.trim()) { alert('請填寫適合年齡的說明'); return }
     setSaving(true)
 
     const location = form.location === '其他' ? form.custom_location : form.location
+    const suitableAge = form.suitable_age === '其他' ? form.custom_age : form.suitable_age
     const payload = {
       title: form.title, description: form.description, date: form.date,
       time_start: form.time_start, time_end: form.time_end,
-      location, notes: form.notes, suitable_age: form.suitable_age,
-      poster_url: form.poster_url || null, max_seats: form.max_seats,
+      location, notes: form.notes, suitable_age: suitableAge,
+      photo_urls: form.photos, poster_url: form.photos[0] || null, max_seats: form.max_seats,
     }
 
     if (editTarget) {
@@ -269,7 +276,7 @@ function InstructorPortal() {
       timeStart: (course.time_start || '').slice(0, 5), timeEnd: (course.time_end || '').slice(0, 5),
       location: course.location, suitableAge: course.suitable_age, notes: course.notes,
     })
-    setPosterInitialImage(course.poster_url || null)
+    setPosterInitialImage((course.photo_urls && course.photo_urls[0]) || course.poster_url || null)
   }
 
   const openPosterFromForm = () => {
@@ -278,9 +285,9 @@ function InstructorPortal() {
       title: form.title, instructor: instructor?.name, date: form.date,
       timeStart: form.time_start, timeEnd: form.time_end,
       location: form.location === '其他' ? form.custom_location : form.location,
-      suitableAge: form.suitable_age, notes: form.notes,
+      suitableAge: form.suitable_age === '其他' ? form.custom_age : form.suitable_age, notes: form.notes,
     })
-    setPosterInitialImage(form.poster_url || null)
+    setPosterInitialImage(form.photos[0] || null)
   }
 
   /* ---------- 出席紀錄 ---------- */
@@ -470,35 +477,36 @@ function InstructorPortal() {
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-4">
               <div>
-                <label className="block text-stone-600 text-sm font-medium mb-1.5">課程標題 *</label>
+                <label className="flex items-center gap-1 text-stone-600 text-sm font-medium mb-1.5">
+                  <span className="text-red-500 text-xs leading-none">*</span>課程標題
+                </label>
                 <input required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
                   className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
               </div>
               <div>
                 <label className="block text-stone-600 text-sm font-medium mb-1.5">課程簡介</label>
-                <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
+                <textarea value={form.description} maxLength={DESCRIPTION_MAX} onChange={e => setForm({ ...form, description: e.target.value })}
                   rows={3} className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none" />
+                <p className="text-right text-stone-400 text-xs mt-1">{form.description.length}/{DESCRIPTION_MAX}</p>
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-stone-600 text-sm font-medium mb-1.5">日期 *</label>
+              <div>
+                <label className="flex items-center gap-1 text-stone-600 text-sm font-medium mb-1.5">
+                  <span className="text-red-500 text-xs leading-none">*</span>上課時間
+                </label>
+                <div className="grid grid-cols-3 gap-3">
                   <input required type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
                     className="w-full border border-stone-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-                </div>
-                <div>
-                  <label className="block text-stone-600 text-sm font-medium mb-1.5">開始</label>
                   <input type="time" value={form.time_start} onChange={e => setForm({ ...form, time_start: e.target.value })}
                     className="w-full border border-stone-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-                </div>
-                <div>
-                  <label className="block text-stone-600 text-sm font-medium mb-1.5">結束</label>
                   <input type="time" value={form.time_end} onChange={e => setForm({ ...form, time_end: e.target.value })}
                     className="w-full border border-stone-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-stone-600 text-sm font-medium mb-1.5">上課地點</label>
+                  <label className="flex items-center gap-1 text-stone-600 text-sm font-medium mb-1.5">
+                    <span className="text-red-500 text-xs leading-none">*</span>上課地點
+                  </label>
                   <select value={form.location} onChange={e => setForm({ ...form, location: e.target.value })}
                     className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
                     <option value="">請選擇</option>
@@ -517,9 +525,15 @@ function InstructorPortal() {
                   placeholder="輸入地點" className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
               )}
               <div>
-                <label className="block text-stone-600 text-sm font-medium mb-1.5">適合年齡</label>
-                <input value={form.suitable_age} onChange={e => setForm({ ...form, suitable_age: e.target.value })}
-                  className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                <label className="flex items-center gap-1 text-stone-600 text-sm font-medium mb-1.5">
+                  <span className="text-red-500 text-xs leading-none">*</span>適合年齡
+                </label>
+                <SuitableAgeSelector
+                  value={form.suitable_age}
+                  customValue={form.custom_age}
+                  onChange={v => setForm({ ...form, suitable_age: v })}
+                  onCustomChange={v => setForm({ ...form, custom_age: v })}
+                />
               </div>
               <div>
                 <label className="block text-stone-600 text-sm font-medium mb-1.5">注意事項</label>
@@ -527,28 +541,19 @@ function InstructorPortal() {
                   rows={2} className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none" />
               </div>
 
+              <CoursePhotoGrid
+                photos={form.photos}
+                onChange={photos => setForm({ ...form, photos })}
+                uploadImage={uploadCoursePhoto}
+              />
+
               <div>
-                <label className="block text-stone-600 text-sm font-medium mb-1.5">課程海報</label>
-                {form.poster_url && (
-                  <div className="relative mb-2">
-                    <img src={form.poster_url} alt="海報預覽" className="w-full rounded-xl object-contain" style={{ maxHeight: 320 }} />
-                    <button type="button" onClick={() => setForm({ ...form, poster_url: '' })}
-                      className="absolute top-2 right-2 bg-white rounded-full p-1 shadow">
-                      <CloseIcon className="text-stone-600" />
-                    </button>
-                  </div>
-                )}
-                <label className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-stone-300 hover:border-orange-400 text-stone-500 hover:text-orange-500 text-sm transition-colors cursor-pointer">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-                  {uploading ? '上傳中...' : '上傳海報圖片'}
-                  <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-                </label>
                 <button type="button" onClick={openPosterFromForm}
-                  className="w-full mt-2 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-stone-300 hover:border-orange-400 text-stone-500 hover:text-orange-500 text-sm transition-colors">
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-stone-300 hover:border-orange-400 text-stone-500 hover:text-orange-500 text-sm transition-colors">
                   <PosterIcon />
                   製作課程海報
                 </button>
-                <p className="text-stone-400 text-xs mt-1.5">設計完成後會下載成圖片，再用上方「上傳海報圖片」放進課程。</p>
+                <p className="text-stone-400 text-xs mt-1.5">設計完成後會下載成圖片，再用上方「課程照片」上傳放進課程。</p>
               </div>
 
               <div className="flex gap-3 pt-2">

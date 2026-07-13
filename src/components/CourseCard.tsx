@@ -12,10 +12,49 @@ interface Category { id: string; name: string; color: string }
 interface Course {
   id: string; title: string; description: string; date: string
   time_start: string; time_end: string; location: string; max_seats: number
-  poster_url?: string; notes?: string; suitable_age?: string
+  poster_url?: string; photo_urls?: string[]; notes?: string; suitable_age?: string
   line_group_url?: string
   instructors?: { id: string; name: string; phone?: string; line_id?: string } | null
   course_categories?: { id: string; name: string; color: string } | null
+}
+
+function getCoursePhotos(course: Course): string[] {
+  if (course.photo_urls && course.photo_urls.length > 0) return course.photo_urls
+  return course.poster_url ? [course.poster_url] : []
+}
+
+// 課程照片輪播（多張時比照 IG 概念，可滑動切換＋底部圓點指示器）
+function CoursePhotoCarousel({ photos, alt }: { photos: string[]; alt: string }) {
+  const [index, setIndex] = useState(0)
+  const scrollerRef = useRef<HTMLDivElement>(null)
+
+  const handleScroll = () => {
+    const el = scrollerRef.current
+    if (!el || el.clientWidth === 0) return
+    setIndex(Math.round(el.scrollLeft / el.clientWidth))
+  }
+
+  return (
+    <div className="absolute inset-0" onClick={e => e.stopPropagation()}>
+      <div
+        ref={scrollerRef}
+        onScroll={handleScroll}
+        className="absolute inset-0 flex overflow-x-auto snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
+        style={{ scrollbarWidth: 'none' }}
+      >
+        {photos.map((url, i) => (
+          <img key={i} src={url} alt={alt} className="w-full h-full object-cover flex-shrink-0 snap-center" />
+        ))}
+      </div>
+      {photos.length > 1 && (
+        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1 z-10 pointer-events-none">
+          {photos.map((_, i) => (
+            <span key={i} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === index ? 'bg-white' : 'bg-white/50'}`} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 // 教學導覽用的示範課程：固定不過期、不會被標記已報名，確保教學時一定有東西可以聚光燈引導點選
@@ -339,6 +378,7 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
           // 教學導覽 step1/2 時，只有示範課程可以點選，其餘卡片鎖住不能互動
           const tutorialLocked = (tutorialStep === '1' || tutorialStep === '2') && course.id !== DEMO_COURSE_ID
           const isDisabled = expired || alreadyRegistered || tutorialLocked
+          const photos = getCoursePhotos(course)
           const lineUrl = course.line_group_url || getLineUrl(course.instructors?.line_id)
 
           return (
@@ -358,8 +398,8 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
                 <div className="px-4">
                   <div className="flex h-[156px] md:h-[172px] border border-stone-200 rounded-xl overflow-hidden">
                     <div className="relative w-[156px] md:w-[172px] flex-shrink-0">
-                      {course.poster_url ? (
-                        <img src={course.poster_url} alt={course.title} className="absolute inset-0 w-full h-full object-cover" />
+                      {photos.length > 0 ? (
+                        <CoursePhotoCarousel photos={photos} alt={course.title} />
                       ) : (
                         <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-stone-100 flex items-center justify-center">
                           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d1c0a8" strokeWidth="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
