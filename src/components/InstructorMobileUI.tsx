@@ -97,7 +97,7 @@ export function ChevronDownIcon({ className }: { className?: string }) {
 
 export function InstructorNavbar({ name, avatarUrl }: { name?: string; avatarUrl?: string | null }) {
   return (
-    <div className="sticky top-0 z-30 bg-white flex items-center justify-between px-4 py-4 shadow-[0px_4px_2px_rgba(0,0,0,0.03)]">
+    <div className="sticky top-0 z-30 bg-white h-[65px] flex items-center justify-between px-4 shadow-[0px_4px_2px_rgba(0,0,0,0.03)]">
       <p className="text-sm font-bold tracking-[3px] text-stone-600">課程管理系統</p>
       <div className="flex items-center gap-2 bg-white rounded-xl drop-shadow-[0px_1px_1.5px_rgba(0,0,0,0.1)] px-2.5 py-2">
         {avatarUrl ? (
@@ -120,17 +120,20 @@ export function InstructorProfileCard({
 }: { name?: string; avatarUrl?: string | null; courseCount: number; onEdit: () => void }) {
   return (
     <div
-      className="relative border border-[#f2d8c4] px-[17px] pt-[17px] pb-5 flex flex-col items-center gap-4"
-      style={{ backgroundImage: 'linear-gradient(180deg, #ffead7 0%, #fff4e9 20%, #fffbf6 50%, #ffffff 100%)' }}
+      className="relative border border-[#f2d8c4] px-[17px] pt-[17px] pb-5 md:p-6 md:rounded-2xl flex flex-col items-center gap-4 w-full"
+      style={{
+        backgroundImage:
+          'radial-gradient(120% 60% at 0% 0%, rgba(255,128,45,0.28) 0%, rgba(255,163,82,0.14) 40%, rgba(255,199,139,0.04) 80%, rgba(255,224,178,0) 100%), linear-gradient(180deg, #ffead7 0%, #fff4e9 20%, #fffbf6 50%, #ffffff 100%)',
+      }}
     >
       <button
         onClick={onEdit}
-        className="absolute top-2 right-[17px] bg-white border border-stone-200 rounded-md p-1.5 hover:bg-stone-50 transition-colors"
+        className="absolute top-2 right-[17px] md:top-[15px] bg-white border border-stone-200 rounded-md p-1.5 hover:bg-stone-50 transition-colors"
         aria-label="編輯個人資料"
       >
         <EditIcon className="text-stone-600" />
       </button>
-      <div className="w-[50px] h-[50px] rounded-full overflow-hidden bg-orange-100 flex items-center justify-center shrink-0">
+      <div className="w-[50px] h-[50px] md:w-[60px] md:h-[60px] rounded-full overflow-hidden bg-orange-100 flex items-center justify-center shrink-0">
         {avatarUrl ? (
           <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
         ) : (
@@ -148,7 +151,11 @@ export function InstructorProfileCard({
 /* ---------- 標題 ---------- */
 
 export function InstructorTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-xl font-bold text-stone-600 pb-4">{children}</h2>
+  return (
+    <div className="border-b border-stone-200 pb-4 md:pb-[17px] w-full">
+      <h2 className="text-xl font-bold text-stone-600">{children}</h2>
+    </div>
+  )
 }
 
 /* ---------- Tab Bar：開課中／已結束 ---------- */
@@ -165,7 +172,7 @@ export function InstructorTabBar({
       selected ? 'bg-stone-100 text-stone-600' : 'bg-stone-200 text-stone-400'
     }`
   return (
-    <div className="flex gap-1 p-1 bg-stone-100 rounded-xl">
+    <div className="flex gap-1 p-1 bg-stone-100 rounded-xl h-11">
       <button onClick={() => onChange('active')} className={pill(tab === 'active')}>
         開課中<span className={badge(tab === 'active')}>{activeCount}</span>
       </button>

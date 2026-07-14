@@ -387,10 +387,10 @@ function InstructorPortal() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 pb-10">
+    <div className="min-h-screen bg-stone-50 md:bg-[#fff8f3] pb-10 md:pb-[60px]">
       <InstructorNavbar name={instructor?.name} avatarUrl={instructor?.avatar_url} />
 
-      <div className="max-w-md mx-auto">
+      <div className="max-w-md mx-auto md:max-w-[800px] md:pt-10">
         <InstructorProfileCard
           name={instructor?.name}
           avatarUrl={instructor?.avatar_url}
@@ -398,7 +398,7 @@ function InstructorPortal() {
           onEdit={() => setShowProfileModal(true)}
         />
 
-        <div className="px-4 pt-6 flex flex-col gap-4">
+        <div className="px-4 pt-6 md:px-0 md:pt-6 flex flex-col gap-4 md:gap-6">
           <InstructorTitle>我的課程</InstructorTitle>
           <InstructorTabBar
             tab={courseTab}
