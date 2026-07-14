@@ -7,19 +7,18 @@ import CoursePosterEditor from '@/components/CoursePosterEditor'
 import {
   InstructorNavbar, InstructorProfileCard, InstructorTitle, InstructorTabBar,
   InstructorCourseCard, InstructorMonthFilter, InstructorProfileEditModal,
-  CloseIcon, ChevronDownIcon, IssueReportFab,
+  CloseIcon, IssueReportFab,
 } from '@/components/InstructorMobileUI'
 import IssueReportModal from '@/components/IssueReportModal'
 import { MobileRegistrationCard, MobilePagination } from '@/components/AdminMobileUI'
-import CoursePhotoGrid from '@/components/CoursePhotoGrid'
-import SuitableAgeSelector, { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
+import CourseEditFormFields, { LOCATIONS, DESCRIPTION_MAX } from '@/components/CourseEditFormFields'
+import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 
 const ROSTER_PAGE_SIZE = 10
-const DESCRIPTION_MAX = 100
 
 const LINE_CHANNEL_ID = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2010077816'
 const LINE_CALLBACK_URL = process.env.NEXT_PUBLIC_LINE_CALLBACK_URL || 'https://yangbei-campaign.vercel.app/api/auth/line/callback'
-const LOCATIONS = ['C 小客廳', 'D 小客廳', '閱覽室 1', '閱覽室 2', '其他']
+const isMobileViewport = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
 
 function getLineLoginUrl() {
   const nonce = Math.random().toString(36).slice(2)
@@ -199,6 +198,7 @@ function InstructorPortal() {
   /* ---------- 課程編輯／複製 ---------- */
 
   const openEdit = (course: any) => {
+    if (isMobileViewport()) { router.push(`/instructor/edit-course?courseId=${course.id}&mode=edit`); return }
     setEditTarget(course)
     const agePreset = AGE_OPTIONS.slice(0, 4).includes(course.suitable_age) ? course.suitable_age : (course.suitable_age ? '其他' : '全年齡')
     setForm({
@@ -215,6 +215,7 @@ function InstructorPortal() {
   }
 
   const openCopy = (course: any) => {
+    if (isMobileViewport()) { router.push(`/instructor/edit-course?courseId=${course.id}&mode=copy`); return }
     setEditTarget(null)
     const agePreset = AGE_OPTIONS.slice(0, 4).includes(course.suitable_age) ? course.suitable_age : (course.suitable_age ? '其他' : '全年齡')
     setForm({
@@ -496,77 +497,7 @@ function InstructorPortal() {
               <h3 className="text-stone-800 font-bold text-lg">{editTarget ? '編輯課程' : '複製課程'}</h3>
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-4">
-              <div>
-                <label className="flex items-center gap-1 text-stone-600 text-sm font-medium mb-1.5">
-                  <span className="text-red-500 text-xs leading-none">*</span>課程標題
-                </label>
-                <input required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
-                  className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-              </div>
-              <div>
-                <label className="block text-stone-600 text-sm font-medium mb-1.5">課程簡介</label>
-                <textarea value={form.description} maxLength={DESCRIPTION_MAX} onChange={e => setForm({ ...form, description: e.target.value })}
-                  rows={3} className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none" />
-                <p className="text-right text-stone-400 text-xs mt-1">{form.description.length}/{DESCRIPTION_MAX}</p>
-              </div>
-              <div>
-                <label className="flex items-center gap-1 text-stone-600 text-sm font-medium mb-1.5">
-                  <span className="text-red-500 text-xs leading-none">*</span>上課時間
-                </label>
-                <div className="flex flex-col gap-2">
-                  <input required type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
-                    className="w-full border border-stone-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-                  <div className="flex items-center gap-2">
-                    <input type="time" value={form.time_start} onChange={e => setForm({ ...form, time_start: e.target.value })}
-                      className="flex-1 min-w-0 border border-stone-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-                    <span className="text-stone-500 text-sm shrink-0">~</span>
-                    <input type="time" value={form.time_end} onChange={e => setForm({ ...form, time_end: e.target.value })}
-                      className="flex-1 min-w-0 border border-stone-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-                  </div>
-                </div>
-              </div>
-              <div>
-                <label className="flex items-center gap-1 text-stone-600 text-sm font-medium mb-1.5">
-                  <span className="text-red-500 text-xs leading-none">*</span>上課地點
-                </label>
-                <div className="relative">
-                  <select value={form.location} onChange={e => setForm({ ...form, location: e.target.value })}
-                    className="w-full appearance-none border border-stone-300 rounded-xl pl-4 pr-9 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
-                    <option value="">請選擇</option>
-                    {LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-                  </select>
-                  <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
-                </div>
-                {form.location === '其他' && (
-                  <input value={form.custom_location} onChange={e => setForm({ ...form, custom_location: e.target.value })}
-                    placeholder="輸入地點" className="w-full mt-2 border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-                )}
-              </div>
-              <div>
-                <label className="flex items-center gap-1 text-stone-600 text-sm font-medium mb-1.5">
-                  <span className="text-red-500 text-xs leading-none">*</span>名額上限
-                </label>
-                <input type="number" min={1} value={form.max_seats}
-                  onChange={e => setForm({ ...form, max_seats: Math.max(1, parseInt(e.target.value) || 1) })}
-                  className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-              </div>
-              <div>
-                <label className="flex items-center gap-1 text-stone-600 text-sm font-medium mb-1.5">
-                  <span className="text-red-500 text-xs leading-none">*</span>適合年齡
-                </label>
-                <SuitableAgeSelector
-                  value={form.suitable_age}
-                  customValue={form.custom_age}
-                  onChange={v => setForm({ ...form, suitable_age: v })}
-                  onCustomChange={v => setForm({ ...form, custom_age: v })}
-                />
-              </div>
-
-              <CoursePhotoGrid
-                photos={form.photos}
-                onChange={photos => setForm({ ...form, photos })}
-                uploadImage={uploadCoursePhoto}
-              />
+              <CourseEditFormFields form={form} setForm={setForm} uploadCoursePhoto={uploadCoursePhoto} />
 
               <div className="flex flex-col gap-3 pt-2">
                 <button type="submit" disabled={saving}
