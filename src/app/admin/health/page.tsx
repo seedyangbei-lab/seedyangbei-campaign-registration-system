@@ -234,7 +234,7 @@ export default function SystemHealthPage() {
             <StatCard label={STEP_LABELS[c.step]} value={loading ? '···' : (stepCounts[c.step] || 0)} desc={c.desc} />
             {i < FUNNEL_CARDS.length - 1 && (
               <div className="flex items-center justify-center">
-                <ArrowRightIcon className="text-stone-300" />
+                <ArrowRightIcon className="funnel-arrow-flow" style={{ animationDelay: `${i * 0.18}s` }} />
               </div>
             )}
           </Fragment>

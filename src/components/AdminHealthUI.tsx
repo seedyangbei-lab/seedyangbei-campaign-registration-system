@@ -1,10 +1,12 @@
 'use client'
 
+import type { CSSProperties } from 'react'
+
 /* ---------- Icons ---------- */
 
-export function ArrowRightIcon({ className }: { className?: string }) {
+export function ArrowRightIcon({ className, style }: { className?: string; style?: CSSProperties }) {
   return (
-    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className={className} style={style} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M9 5l7 7-7 7" />
     </svg>
   )
