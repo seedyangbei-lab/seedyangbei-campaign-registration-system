@@ -316,7 +316,7 @@ export default function SystemHealthPage() {
                           onClick={() => handleCopyDetail(row.data)}
                           className="flex items-center gap-1 text-xs bg-orange-50 border border-orange-200 text-orange-600 hover:bg-orange-100 px-2 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap"
                         >
-                          <CopyIcon />複製連結
+                          <CopyIcon />複製資訊
                         </button>
                       )}
                     </td>
