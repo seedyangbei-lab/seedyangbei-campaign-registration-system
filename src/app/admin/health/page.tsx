@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import {
   ArrowRightIcon, CopyIcon, CloseIcon, StatCard,
@@ -224,13 +224,20 @@ export default function SystemHealthPage() {
         </div>
       )}
 
-      {/* 報名流程統計卡片 + 步驟箭頭 */}
-      <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-1">
+      {/* 報名流程統計卡片 + 步驟箭頭：5 張卡片等分寬度，箭頭獨立佔一欄，卡片不會被撐出區域 */}
+      <div
+        className="grid gap-2 mb-8"
+        style={{ gridTemplateColumns: Array(FUNNEL_CARDS.length).fill('minmax(0, 1fr)').join(' 20px ') }}
+      >
         {FUNNEL_CARDS.map((c, i) => (
-          <div key={c.step} className="flex items-center gap-2">
+          <Fragment key={c.step}>
             <StatCard label={STEP_LABELS[c.step]} value={loading ? '···' : (stepCounts[c.step] || 0)} desc={c.desc} />
-            {i < FUNNEL_CARDS.length - 1 && <ArrowRightIcon className="text-stone-300 shrink-0" />}
-          </div>
+            {i < FUNNEL_CARDS.length - 1 && (
+              <div className="flex items-center justify-center">
+                <ArrowRightIcon className="text-stone-300" />
+              </div>
+            )}
+          </Fragment>
         ))}
       </div>
 
@@ -262,52 +269,52 @@ export default function SystemHealthPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
               <colgroup>
-                <col style={{ width: '40px' }} /><col style={{ width: '90px' }} /><col style={{ width: '130px' }} />
-                <col style={{ width: '110px' }} /><col style={{ width: '160px' }} /><col />
-                <col style={{ width: '90px' }} /><col style={{ width: '86px' }} />
+                <col style={{ width: '40px' }} /><col style={{ width: '90px' }} /><col style={{ width: '120px' }} />
+                <col style={{ width: '100px' }} /><col style={{ width: '150px' }} /><col />
+                <col style={{ width: '80px' }} /><col style={{ width: '112px' }} />
               </colgroup>
               <thead>
                 <tr className="bg-stone-50 text-stone-500 text-xs">
-                  <th className="text-left font-medium px-3 py-3">#</th>
-                  <th className="text-left font-medium px-3 py-3">來源</th>
-                  <th className="text-left font-medium px-3 py-3">時間</th>
-                  <th className="text-left font-medium px-3 py-3">類型</th>
-                  <th className="text-left font-medium px-3 py-3">課程名稱</th>
-                  <th className="text-left font-medium px-3 py-3">詳細資訊</th>
-                  <th className="text-left font-medium px-3 py-3">狀態</th>
-                  <th className="text-left font-medium px-3 py-3">操作</th>
+                  <th className="text-left font-medium px-2 py-3 overflow-hidden">#</th>
+                  <th className="text-left font-medium px-2 py-3 overflow-hidden">來源</th>
+                  <th className="text-left font-medium px-2 py-3 overflow-hidden">時間</th>
+                  <th className="text-left font-medium px-2 py-3 overflow-hidden">類型</th>
+                  <th className="text-left font-medium px-2 py-3 overflow-hidden">課程名稱</th>
+                  <th className="text-left font-medium px-2 py-3 overflow-hidden">詳細資訊</th>
+                  <th className="text-left font-medium px-2 py-3 overflow-hidden">狀態</th>
+                  <th className="text-left font-medium px-2 py-3 overflow-hidden">操作</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F0EDEB]">
                 {paginatedRows.map((row, i) => (
                   <tr key={`${row.source}-${row.id}`} className="h-[63px]">
-                    <td className="px-3 py-4 text-stone-400 text-xs">{(page - 1) * pageSize + i + 1}</td>
-                    <td className="px-3 py-4"><SourceBadge source={row.source} /></td>
-                    <td className="px-3 py-4 text-stone-400 text-xs whitespace-nowrap">{formatDT(row.createdAt)}</td>
-                    <td className="px-3 py-4">
+                    <td className="px-2 py-4 text-stone-400 text-xs overflow-hidden">{(page - 1) * pageSize + i + 1}</td>
+                    <td className="px-2 py-4 overflow-hidden"><SourceBadge source={row.source} /></td>
+                    <td className="px-2 py-4 text-stone-400 text-xs whitespace-nowrap overflow-hidden">{formatDT(row.createdAt)}</td>
+                    <td className="px-2 py-4 overflow-hidden">
                       {row.source === 'instructor' ? <IssueTypeBadge issueType={row.data.issue_type} /> : <AnomalyTypeBadge step={row.data.step} />}
                     </td>
-                    <td className="px-3 py-4 text-stone-600 text-xs truncate">
+                    <td className="px-2 py-4 text-stone-600 text-xs truncate overflow-hidden">
                       {row.source === 'instructor' ? (row.data.instructors?.name ? `講師：${row.data.instructors.name}` : '—') : (row.data.course_ids || '—')}
                     </td>
-                    <td className="px-3 py-4 text-stone-500 text-xs truncate" title={row.source === 'instructor' ? row.data.description : (row.data.detail ? JSON.stringify(row.data.detail) : '')}>
+                    <td className="px-2 py-4 text-stone-500 text-xs truncate overflow-hidden" title={row.source === 'instructor' ? row.data.description : (row.data.detail ? JSON.stringify(row.data.detail) : '')}>
                       {row.source === 'instructor' ? row.data.description : (row.data.detail ? JSON.stringify(row.data.detail) : '—')}
                     </td>
-                    <td className="px-3 py-4">
+                    <td className="px-2 py-4 overflow-hidden">
                       {row.source === 'instructor' ? <InstructorStatusBadge status={row.data.status} /> : <SystemStatusBadge createdAt={row.createdAt} />}
                     </td>
-                    <td className="px-3 py-4">
+                    <td className="px-2 py-4 overflow-hidden">
                       {row.source === 'instructor' ? (
                         <button
                           onClick={() => setDetailTarget(row.data)}
-                          className="text-xs border border-stone-300 text-stone-600 hover:bg-stone-50 px-2.5 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap"
+                          className="text-xs border border-stone-300 text-stone-600 hover:bg-stone-50 px-2 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap"
                         >
                           查看詳情
                         </button>
                       ) : (
                         <button
                           onClick={() => handleCopyDetail(row.data)}
-                          className="flex items-center gap-1 text-xs bg-orange-50 border border-orange-200 text-orange-600 hover:bg-orange-100 px-2.5 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap"
+                          className="flex items-center gap-1 text-xs bg-orange-50 border border-orange-200 text-orange-600 hover:bg-orange-100 px-2 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap"
                         >
                           <CopyIcon />複製連結
                         </button>

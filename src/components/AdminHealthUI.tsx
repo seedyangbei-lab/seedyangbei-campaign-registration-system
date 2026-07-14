@@ -4,8 +4,8 @@
 
 export function ArrowRightIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M5 12h14M13 6l6 6-6 6" />
+    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9 5l7 7-7 7" />
     </svg>
   )
 }
@@ -38,11 +38,11 @@ export function CloseIcon({ className }: { className?: string }) {
 
 export function StatCard({ label, value, desc }: { label: string; value: string | number; desc: string }) {
   return (
-    <div className="stat-card-flow-border rounded-lg shrink-0 w-[222px] h-[120px]">
-      <div className="relative z-10 bg-white border border-[#ffcead]/50 rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.05)] w-full h-full p-4 flex flex-col justify-center gap-1">
-        <p className="text-[#575350] text-xs font-medium leading-tight">{label}</p>
+    <div className="stat-card-flow-border rounded-lg w-full min-w-0 h-[120px]">
+      <div className="relative z-10 bg-white border border-[#ffcead]/50 rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.05)] w-full h-full p-4 flex flex-col justify-center gap-1 min-w-0">
+        <p className="text-[#575350] text-xs font-medium leading-tight truncate">{label}</p>
         <p className="text-[#EA5808] text-[32px] font-semibold leading-none" style={{ fontFamily: 'Inter, sans-serif' }}>{value}</p>
-        <p className="text-[#787168] text-xs">{desc}</p>
+        <p className="text-[#787168] text-xs truncate">{desc}</p>
       </div>
     </div>
   )
