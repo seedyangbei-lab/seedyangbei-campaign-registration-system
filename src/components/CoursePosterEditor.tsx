@@ -5,7 +5,7 @@ import {
   PosterCourseData, lum, textCol, SCHEMES, ZH_FONTS, EN_FONTS, loadAllGoogleFonts,
   DotShape, DotCoverage, DotArrangement, DOT_SHAPES, DotPatternSvg,
   POSTER_W, POSTER_H, PHOTO_H, INFO_PAD, TITLE_WEIGHT, EN_WEIGHT,
-  exportPosterPNG, ChevronDownIcon, MinusIcon, PlusIcon, SliderRow, sliderTrackStyle, ColorPickerDropdown, SizeSelect, ZH_SIZE_OPTIONS, EN_SIZE_OPTIONS,
+  exportPosterPNG, MinusIcon, PlusIcon, SliderRow, sliderTrackStyle, ColorPickerDropdown, SizeSelect, ZH_SIZE_OPTIONS, EN_SIZE_OPTIONS, FontSelectDropdown,
 } from './posterEditor/shared'
 
 type CourseData = PosterCourseData
@@ -256,13 +256,7 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                   <div className="bg-stone-100 rounded-lg p-3 grid grid-cols-3 gap-3">
                     <div className="min-w-0">
                       <p className="text-[11px] text-stone-500 mb-1">中文字體</p>
-                      <div className="relative">
-                        <select value={zhFontIdx} onChange={e=>setZhFontIdx(parseInt(e.target.value))}
-                          className="w-full h-9 appearance-none bg-white border border-stone-200 rounded-md pl-2 pr-7 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300">
-                          {ZH_FONTS.map((f,i)=><option key={f.label} value={i} style={{fontFamily:f.value}}>{f.label}</option>)}
-                        </select>
-                        <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
-                      </div>
+                      <FontSelectDropdown fonts={ZH_FONTS} value={zhFontIdx} onChange={setZhFontIdx} />
                     </div>
                     <div className="min-w-0">
                       <p className="text-[11px] text-stone-500 mb-1">文字顏色</p>
@@ -285,13 +279,7 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                   <div className="bg-stone-100 rounded-lg p-3 grid grid-cols-3 gap-3">
                     <div className="min-w-0">
                       <p className="text-[11px] text-stone-500 mb-1">英文字體</p>
-                      <div className="relative">
-                        <select value={enFontIdx} onChange={e=>setEnFontIdx(parseInt(e.target.value))}
-                          className="w-full h-9 appearance-none bg-white border border-stone-200 rounded-md pl-2 pr-7 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300">
-                          {EN_FONTS.map((f,i)=><option key={f.label} value={i} style={{fontFamily:f.value}}>{f.label}</option>)}
-                        </select>
-                        <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
-                      </div>
+                      <FontSelectDropdown fonts={EN_FONTS} value={enFontIdx} onChange={setEnFontIdx} />
                     </div>
                     <div className="min-w-0">
                       <p className="text-[11px] text-stone-500 mb-1">文字顏色</p>

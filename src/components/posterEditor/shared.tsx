@@ -477,18 +477,80 @@ export function SliderRow({ label, min, max, step, value, onChange, unit, decima
   )
 }
 
+function CheckIcon({ className }: { className?: string }) {
+  return <svg className={className} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+}
+
+// ── 通用文字選單 Dropdown（取代 native <select>，避免在 sticky 容器內原生選單跑位）────
+export function SelectDropdown<T extends string | number>({ value, options, renderLabel, optionStyle, onChange }: {
+  value: T; options: T[]; renderLabel?: (v: T) => string; optionStyle?: (v: T) => React.CSSProperties; onChange: (v: T) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [align, setAlign] = useState<'left'|'right'>('left')
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const POPOVER_W = 168
+
+  useEffect(() => {
+    if (!open) return
+    const onDocPointer = (e: PointerEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', onDocPointer)
+    return () => document.removeEventListener('pointerdown', onDocPointer)
+  }, [open])
+
+  const toggleOpen = () => {
+    if (!open && wrapRef.current) {
+      const rect = wrapRef.current.getBoundingClientRect()
+      setAlign(rect.left + POPOVER_W > window.innerWidth - 8 ? 'right' : 'left')
+    }
+    setOpen(v => !v)
+  }
+
+  const label = renderLabel ? renderLabel(value) : String(value)
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <button type="button" onClick={toggleOpen}
+        className="w-full h-9 flex items-center gap-1.5 px-2 border border-stone-200 rounded-md bg-white text-xs text-left">
+        <span className="flex-1 truncate" style={optionStyle ? optionStyle(value) : undefined}>{label}</span>
+        <ChevronDownIcon className={`text-stone-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className={`absolute z-50 top-[calc(100%+4px)] ${align==='right' ? 'right-0' : 'left-0'} bg-white border border-stone-200 rounded-xl shadow-lg py-1.5 w-[168px] max-h-[240px] overflow-y-auto`}>
+          {options.map((o, i) => {
+            const selected = o === value
+            return (
+              <button key={i} type="button" onClick={() => { onChange(o); setOpen(false) }}
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-xs text-left transition-colors ${selected ? 'bg-orange-50 text-orange-600 font-medium' : 'text-stone-600 hover:bg-stone-50'}`}
+                style={optionStyle ? optionStyle(o) : undefined}>
+                <span className="truncate">{renderLabel ? renderLabel(o) : String(o)}</span>
+                {selected && <CheckIcon className="shrink-0" />}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── 中英文字體選擇（共用 SelectDropdown，避免破版）──────────────────────────────────
+export function FontSelectDropdown({ fonts, value, onChange }: {
+  fonts: { label: string; value: string }[]; value: number; onChange: (v: number) => void
+}) {
+  return (
+    <SelectDropdown value={value} options={fonts.map((_, i) => i)}
+      renderLabel={i => fonts[i].label}
+      optionStyle={i => ({ fontFamily: fonts[i].value })}
+      onChange={onChange} />
+  )
+}
+
 // ── 統一的大小選擇 Dropdown（字級大小共用同一元件，高度與其他 dropdown 一致）──────────
 export function SizeSelect({ value, options, unit, onChange }: { value: number; options: number[]; unit: string; onChange: (v:number)=>void }) {
   const opts = options.includes(value) ? options : [...options, value].sort((a,b)=>a-b)
-  return (
-    <div className="relative">
-      <select value={value} onChange={e=>onChange(parseFloat(e.target.value))}
-        className="w-full h-9 appearance-none bg-white border border-stone-200 rounded-md pl-2 pr-7 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300">
-        {opts.map(o=><option key={o} value={o}>{o}{unit}</option>)}
-      </select>
-      <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
-    </div>
-  )
+  return <SelectDropdown value={value} options={opts} renderLabel={o=>`${o}${unit}`} onChange={onChange} />
 }
 
 // ── 統一的顏色選擇 Dropdown（字體顏色／裝飾點顏色共用同一元件，裝飾點多顯示 hex）───────

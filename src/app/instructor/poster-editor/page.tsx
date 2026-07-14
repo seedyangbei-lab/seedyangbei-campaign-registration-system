@@ -7,7 +7,7 @@ import {
   PosterCourseData, lum, textCol, SCHEMES_MOBILE, ZH_FONTS, EN_FONTS, ZH_SIZE_OPTIONS, EN_SIZE_OPTIONS, loadAllGoogleFonts,
   DotShape, DotCoverage, DotArrangement, DOT_SHAPES, DotPatternSvg,
   POSTER_W, POSTER_H, PHOTO_H, INFO_PAD, TITLE_WEIGHT, EN_WEIGHT,
-  exportPosterPNG, ChevronDownIcon, MinusIcon, PlusIcon, sliderTrackStyle, SliderRow, ColorPickerDropdown, SizeSelect,
+  exportPosterPNG, MinusIcon, PlusIcon, sliderTrackStyle, SliderRow, ColorPickerDropdown, SizeSelect, FontSelectDropdown,
 } from '@/components/posterEditor/shared'
 
 // ── 小型共用 UI（手機版專用） ──────────────────────────────────────────────────
@@ -405,7 +405,7 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
                 <input type="range" min="0.5" max="3" step="0.05" value={imgScale} onChange={e=>setImgScale(parseFloat(e.target.value))}
                   className="poster-slider"
                   style={{
-                    position:'absolute', left:'50%', top:'50%', width:sliderAreaHeight, height:20,
+                    position:'absolute', left:'50%', top:'50%', width:sliderAreaHeight,
                     transform:'translate(-50%, -50%) rotate(-90deg)',
                     ...sliderTrackStyle(imgScale, 0.5, 3),
                   }} />
@@ -443,13 +443,7 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
               <div className="bg-stone-100 rounded-lg p-3 grid grid-cols-3 gap-2">
                 <div className="min-w-0">
                   <p className="text-[11px] text-stone-500 mb-1">中文字體</p>
-                  <div className="relative">
-                    <select value={zhFontIdx} onChange={e=>setZhFontIdx(parseInt(e.target.value))}
-                      className="w-full h-9 appearance-none bg-white border border-stone-200 rounded-md pl-2 pr-7 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300">
-                      {ZH_FONTS.map((f,i)=><option key={f.label} value={i} style={{fontFamily:f.value}}>{f.label}</option>)}
-                    </select>
-                    <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
-                  </div>
+                  <FontSelectDropdown fonts={ZH_FONTS} value={zhFontIdx} onChange={setZhFontIdx} />
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] text-stone-500 mb-1">顏色</p>
@@ -472,13 +466,7 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
               <div className="bg-stone-100 rounded-lg p-3 grid grid-cols-3 gap-2">
                 <div className="min-w-0">
                   <p className="text-[11px] text-stone-500 mb-1">英文字體</p>
-                  <div className="relative">
-                    <select value={enFontIdx} onChange={e=>setEnFontIdx(parseInt(e.target.value))}
-                      className="w-full h-9 appearance-none bg-white border border-stone-200 rounded-md pl-2 pr-7 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300">
-                      {EN_FONTS.map((f,i)=><option key={f.label} value={i} style={{fontFamily:f.value}}>{f.label}</option>)}
-                    </select>
-                    <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
-                  </div>
+                  <FontSelectDropdown fonts={EN_FONTS} value={enFontIdx} onChange={setEnFontIdx} />
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] text-stone-500 mb-1">顏色</p>
