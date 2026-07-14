@@ -83,7 +83,8 @@ export default function SystemHealthPage() {
   const [issueReports, setIssueReports] = useState<IssueReport[]>([])
   const [rangeDays, setRangeDays] = useState(7)
   const [loading, setLoading] = useState(true)
-  const [errored, setErrored] = useState(false)
+  const [funnelError, setFunnelError] = useState<string | null>(null)
+  const [issueError, setIssueError] = useState<string | null>(null)
 
   const [sourceFilter, setSourceFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -105,15 +106,28 @@ export default function SystemHealthPage() {
 
   const fetchData = async () => {
     setLoading(true)
-    setErrored(false)
+    setFunnelError(null)
+    setIssueError(null)
     const since = new Date(Date.now() - rangeDays * 24 * 60 * 60 * 1000).toISOString()
+    // 兩張表分開處理錯誤：其中一張讀取失敗（例如 issue_reports 還沒建表）不會讓另一張跟著整頁掛掉
     const [funnelRes, issueRes] = await Promise.all([
       supabase.from('funnel_logs').select('*').gte('created_at', since).order('created_at', { ascending: false }).limit(3000),
       supabase.from('issue_reports').select('*, instructors(name)').gte('created_at', since).order('created_at', { ascending: false }).limit(1000),
     ])
-    if (funnelRes.error || issueRes.error) { setErrored(true); setLoading(false); return }
-    setFunnelLogs(funnelRes.data || [])
-    setIssueReports((issueRes.data as any) || [])
+    if (funnelRes.error) {
+      console.error('funnel_logs fetch error:', funnelRes.error)
+      setFunnelError(funnelRes.error.message)
+      setFunnelLogs([])
+    } else {
+      setFunnelLogs(funnelRes.data || [])
+    }
+    if (issueRes.error) {
+      console.error('issue_reports fetch error:', issueRes.error)
+      setIssueError(issueRes.error.message)
+      setIssueReports([])
+    } else {
+      setIssueReports((issueRes.data as any) || [])
+    }
     setLoading(false)
   }
 
@@ -199,9 +213,15 @@ export default function SystemHealthPage() {
         </div>
       </div>
 
-      {errored && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-600 rounded-2xl px-4 py-3 text-sm">
-          讀取資料失敗，請確認 funnel_logs / issue_reports 資料表已建立、RLS 政策允許讀取。
+      {(funnelError || issueError) && (
+        <div className="mb-6 bg-red-50 border border-red-200 text-red-600 rounded-2xl px-4 py-3 text-sm space-y-1">
+          {funnelError && <p><span className="font-medium">funnel_logs 讀取失敗：</span>{funnelError}</p>}
+          {issueError && (
+            <p>
+              <span className="font-medium">issue_reports 讀取失敗：</span>{issueError}
+              {' '}（若訊息包含 relation ... does not exist，代表 sql/2026-07-14_issue_reports.sql 這份遷移還沒在 Supabase SQL Editor 執行過）
+            </p>
+          )}
         </div>
       )}
 
