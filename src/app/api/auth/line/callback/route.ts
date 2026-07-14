@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
 
+// 系統健康頁的「LINE 登入失敗」偵測用：server 端沒有 client 端的 funnel_session_id，
+// 用固定 session_id 標記為系統事件，fire-and-forget 失敗也不影響登入流程本身
+async function logLineLoginFail(detail: Record<string, any>) {
+  try {
+    const supabase = createServerClient()
+    await supabase.from('funnel_logs').insert({
+      session_id: 'system',
+      step: 'line_login_fail',
+      course_ids: null,
+      detail,
+    })
+  } catch (e) {
+    console.error('logLineLoginFail failed:', e)
+  }
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
@@ -34,6 +50,7 @@ export async function GET(request: NextRequest) {
     // Token 交換失敗時記錄詳細錯誤
     if (!tokenData.access_token) {
       console.error('LINE token error:', JSON.stringify(tokenData))
+      await logLineLoginFail({ stage: 'token_exchange', reason: tokenData.error_description || 'no_token' })
       return NextResponse.redirect(new URL(`/register?error=line_failed&detail=${encodeURIComponent(tokenData.error_description || 'no_token')}`, request.url))
     }
 
@@ -50,6 +67,7 @@ export async function GET(request: NextRequest) {
 
     if (!lineUserId) {
       console.error('LINE profile error:', JSON.stringify(profile))
+      await logLineLoginFail({ stage: 'profile_fetch', reason: 'no_user_id' })
       return NextResponse.redirect(new URL('/register?error=line_failed', request.url))
     }
 
@@ -186,6 +204,7 @@ export async function GET(request: NextRequest) {
     )
   } catch (err: any) {
     console.error('LINE Login unexpected error:', err?.message || err)
+    await logLineLoginFail({ stage: 'unexpected', reason: err?.message || String(err) })
     return NextResponse.redirect(new URL('/register?error=line_failed', request.url))
   }
 }
