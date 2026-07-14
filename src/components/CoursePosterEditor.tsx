@@ -5,7 +5,7 @@ import {
   PosterCourseData, lum, textCol, SCHEMES, ZH_FONTS, EN_FONTS, loadAllGoogleFonts,
   DotShape, DotCoverage, DotArrangement, DOT_SHAPES, DotPatternSvg,
   POSTER_W, POSTER_H, PHOTO_H, INFO_PAD, TITLE_WEIGHT, EN_WEIGHT,
-  exportPosterPNG, ChevronDownIcon, MinusIcon, PlusIcon, SliderRow, sliderTrackStyle, ColorPickerDropdown,
+  exportPosterPNG, ChevronDownIcon, MinusIcon, PlusIcon, SliderRow, sliderTrackStyle, ColorPickerDropdown, SizeSelect, ZH_SIZE_OPTIONS, EN_SIZE_OPTIONS,
 } from './posterEditor/shared'
 
 type CourseData = PosterCourseData
@@ -258,7 +258,7 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                       <p className="text-[11px] text-stone-500 mb-1">中文字體</p>
                       <div className="relative">
                         <select value={zhFontIdx} onChange={e=>setZhFontIdx(parseInt(e.target.value))}
-                          className="w-full appearance-none bg-white border border-stone-200 rounded-md pl-2 pr-7 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300">
+                          className="w-full h-9 appearance-none bg-white border border-stone-200 rounded-md pl-2 pr-7 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300">
                           {ZH_FONTS.map((f,i)=><option key={f.label} value={i} style={{fontFamily:f.value}}>{f.label}</option>)}
                         </select>
                         <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
@@ -269,7 +269,8 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                       <ColorPickerDropdown label="中文字體顏色" value={tc} onChange={setTextColorOverride} />
                     </div>
                     <div className="min-w-0">
-                      <SliderRow label="中文字體大小" min={12} max={28} step={1} value={zhFontSize} onChange={setZhFontSize} unit="px" />
+                      <p className="text-[11px] text-stone-500 mb-1">字級大小</p>
+                      <SizeSelect value={zhFontSize} options={ZH_SIZE_OPTIONS} unit="px" onChange={setZhFontSize} />
                     </div>
                   </div>
                   {textColorOverride && <button onClick={()=>setTextColorOverride('')} className="text-[10px] text-stone-400 hover:text-orange-500 transition-colors mt-1.5">重設自動配色</button>}
@@ -286,7 +287,7 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                       <p className="text-[11px] text-stone-500 mb-1">英文字體</p>
                       <div className="relative">
                         <select value={enFontIdx} onChange={e=>setEnFontIdx(parseInt(e.target.value))}
-                          className="w-full appearance-none bg-white border border-stone-200 rounded-md pl-2 pr-7 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300">
+                          className="w-full h-9 appearance-none bg-white border border-stone-200 rounded-md pl-2 pr-7 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300">
                           {EN_FONTS.map((f,i)=><option key={f.label} value={i} style={{fontFamily:f.value}}>{f.label}</option>)}
                         </select>
                         <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
@@ -297,7 +298,8 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                       <ColorPickerDropdown label="英文字體顏色" value={enTc} onChange={setEnTextColorOverride} />
                     </div>
                     <div className="min-w-0">
-                      <SliderRow label="英文字體大小" min={7} max={14} step={0.5} value={enFontSize} onChange={setEnFontSize} unit="px" />
+                      <p className="text-[11px] text-stone-500 mb-1">字級大小</p>
+                      <SizeSelect value={enFontSize} options={EN_SIZE_OPTIONS} unit="px" onChange={setEnFontSize} />
                     </div>
                   </div>
                   {enTextColorOverride && <button onClick={()=>setEnTextColorOverride('')} className="text-[10px] text-stone-400 hover:text-orange-500 transition-colors mt-1.5">重設自動配色</button>}
@@ -306,14 +308,12 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                 {/* 間距定義 */}
                 <section className="border border-stone-200 rounded-2xl p-4">
                   <p className="text-sm font-medium text-stone-600 mb-3">間距定義</p>
-                  <div className="flex gap-3">
-                    <div className="flex-1">
-                      <p className="text-sm text-stone-600">字距</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="min-w-0">
                       <p className="text-xs text-stone-400 mb-2">文字跟文字間的距離</p>
                       <SliderRow label="字距" min={0} max={10} step={0.5} value={letterSpacingPct} onChange={setLetterSpacingPct} unit="%" />
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-stone-600">行距</p>
+                    <div className="min-w-0">
                       <p className="text-xs text-stone-400 mb-2">標題跟內文間的距離</p>
                       <SliderRow label="行距" min={0.5} max={3} step={0.1} value={lineSpacingMult} onChange={setLineSpacingMult} unit="" decimals={1} />
                     </div>
@@ -391,7 +391,7 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                         </div>
                         {dotColor && <button onClick={()=>setDotColor('')} className="text-[9px] text-stone-400 hover:text-orange-500 transition-colors ml-auto">重設</button>}
                       </div>
-                      <div className="flex flex-col gap-3">
+                      <div className="grid grid-cols-3 gap-2">
                         <SliderRow label="大小" min={2} max={24} step={0.5} value={dotSize} onChange={setDotSize} unit="px" />
                         <SliderRow label="透明度" min={5} max={100} step={1} value={dotOpacity} onChange={setDotOpacity} unit="%" />
                         <SliderRow label="密度" min={10} max={90} step={1} value={dotDensity} onChange={setDotDensity} unit="" />

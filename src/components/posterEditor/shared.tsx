@@ -323,7 +323,7 @@ export interface ExportPosterParams {
 
 export async function exportPosterPNG(p: ExportPosterParams) {
   await document.fonts.ready
-  const SCALE=3
+  const SCALE=8  // 匯出解析度倍率（提高輸出品質；210×297 單位 × 8 = 1680×2376px）
   const canvas=document.createElement('canvas')
   canvas.width=POSTER_W*SCALE; canvas.height=POSTER_H*SCALE
   const ctx=canvas.getContext('2d')!
@@ -473,6 +473,20 @@ export function SliderRow({ label, min, max, step, value, onChange, unit, decima
           {decimals!==undefined ? value.toFixed(decimals) : value}{unit}
         </span>
       </div>
+    </div>
+  )
+}
+
+// ── 統一的大小選擇 Dropdown（字級大小共用同一元件，高度與其他 dropdown 一致）──────────
+export function SizeSelect({ value, options, unit, onChange }: { value: number; options: number[]; unit: string; onChange: (v:number)=>void }) {
+  const opts = options.includes(value) ? options : [...options, value].sort((a,b)=>a-b)
+  return (
+    <div className="relative">
+      <select value={value} onChange={e=>onChange(parseFloat(e.target.value))}
+        className="w-full h-9 appearance-none bg-white border border-stone-200 rounded-md pl-2 pr-7 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300">
+        {opts.map(o=><option key={o} value={o}>{o}{unit}</option>)}
+      </select>
+      <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
     </div>
   )
 }

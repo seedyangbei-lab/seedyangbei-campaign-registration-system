@@ -7,7 +7,7 @@ import {
   PosterCourseData, lum, textCol, SCHEMES_MOBILE, ZH_FONTS, EN_FONTS, ZH_SIZE_OPTIONS, EN_SIZE_OPTIONS, loadAllGoogleFonts,
   DotShape, DotCoverage, DotArrangement, DOT_SHAPES, DotPatternSvg,
   POSTER_W, POSTER_H, PHOTO_H, INFO_PAD, TITLE_WEIGHT, EN_WEIGHT,
-  exportPosterPNG, ChevronDownIcon, MinusIcon, PlusIcon, sliderTrackStyle, SliderRow, ColorPickerDropdown,
+  exportPosterPNG, ChevronDownIcon, MinusIcon, PlusIcon, sliderTrackStyle, SliderRow, ColorPickerDropdown, SizeSelect,
 } from '@/components/posterEditor/shared'
 
 // ── 小型共用 UI（手機版專用） ──────────────────────────────────────────────────
@@ -21,6 +21,13 @@ function BackArrowIcon() {
 function PlusThinIcon({ className }: { className?: string }) {
   return <svg className={className} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
 }
+function PhotoIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+    </svg>
+  )
+}
 function ToggleSwitch({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
     <button onClick={onToggle} aria-label="切換" className="relative rounded-full transition-colors shrink-0"
@@ -29,19 +36,6 @@ function ToggleSwitch({ on, onToggle }: { on: boolean; onToggle: () => void }) {
     </button>
   )
 }
-function SizeSelect({ value, options, unit, onChange }: { value: number; options: number[]; unit: string; onChange: (v:number)=>void }) {
-  const opts = options.includes(value) ? options : [...options, value].sort((a,b)=>a-b)
-  return (
-    <div className="relative">
-      <select value={value} onChange={e=>onChange(parseFloat(e.target.value))}
-        className="w-full appearance-none bg-white border border-stone-200 rounded-md pl-2 pr-7 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300">
-        {opts.map(o=><option key={o} value={o}>{o}{unit}</option>)}
-      </select>
-      <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
-    </div>
-  )
-}
-
 // ── 主要編輯器（手機版頁面） ────────────────────────────────────────────────────
 function PosterEditorMobile({ course, photos }: { course: PosterCourseData; photos: string[] }) {
   const router = useRouter()
@@ -88,6 +82,8 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
   const fileRef  = useRef<HTMLInputElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const [previewScale, setPreviewScale] = useState(1)
+  const sliderColRef = useRef<HTMLDivElement>(null)
+  const [sliderAreaHeight, setSliderAreaHeight] = useState(160)
 
   useEffect(() => { loadAllGoogleFonts() }, [])
 
@@ -140,6 +136,17 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
     const el = stageRef.current
     if (!el) return
     const update = () => setPreviewScale(Math.min(el.clientWidth/POSTER_W, 2))
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  // 直式 zoom slider：量測右側欄可用高度（fill 到變更圖片按鈕上方）
+  useEffect(() => {
+    const el = sliderColRef.current
+    if (!el) return
+    const update = () => setSliderAreaHeight(el.clientHeight)
     update()
     const ro = new ResizeObserver(update)
     ro.observe(el)
@@ -219,7 +226,7 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
   }, [activeBg,tc,enTc,iconColor,dotFill,dotOn,dotShape,dotCustomChar,dotOpacity,dotSize,dotDensity,dotCoverage,dotArrangement,dotSeed,borderOn,borderText,imgSrc,imgPos,imgScale,enFont,zhFont,zhFontSize,enFontSize,zhLetterPx,enLetterPx,locFontSize,borderFontSize,titleGap,course])
 
   return (
-    <div className="min-h-screen bg-[#fafaf9] pb-[104px]">
+    <div className="min-h-screen bg-[#fafaf9] pb-[104px] overflow-x-hidden">
       {/* Navbar */}
       <div className="sticky top-0 z-30 bg-white h-[52px] px-4 flex items-center shadow-[0px_4px_2px_rgba(0,0,0,0.03)]">
         <button onClick={()=>router.push('/instructor')} aria-label="返回" className="w-6 h-6 flex items-center justify-center shrink-0 text-stone-600">
@@ -229,49 +236,29 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
         <div className="w-6 h-6 shrink-0" />
       </div>
 
-      {/* 預覽區（ControlsRow + 畫布 frame）：sticky 貼在 navbar 下方 */}
-      <div className="sticky top-[52px] z-20 bg-white">
-      {/* ControlsRow：zoom + 儲存設定／變更圖片 */}
-      <div className="border-b border-stone-100 px-4 py-3 flex items-center gap-3">
-        <div className="flex items-center gap-2 w-[150px] shrink-0">
-          <MinusIcon className="text-stone-400 shrink-0" />
-          <input type="range" min="0.5" max="3" step="0.05" value={imgScale} onChange={e=>setImgScale(parseFloat(e.target.value))}
-            className="poster-slider flex-1 h-5" style={sliderTrackStyle(imgScale, 0.5, 3)} />
-          <PlusIcon className="text-stone-400 shrink-0" />
-        </div>
-        <div className="flex-1 flex gap-2 min-w-0">
-          <button onClick={handleSaveSettings}
-            className="flex-1 h-9 rounded-lg border border-stone-300 bg-white text-xs font-medium text-stone-600 hover:bg-stone-50 transition-colors">
-            {savedFlash ? '已儲存！' : '儲存設定'}
-          </button>
-          <button onClick={()=>setShowPhotoPicker(true)}
-            className="flex-1 h-9 rounded-lg border text-xs font-medium transition-colors"
-            style={{ background:'#fff7ed', borderColor:'#fed7aa', color:'#ea580c' }}>
-            變更圖片
-          </button>
-        </div>
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
-      </div>
-
-      {/* 畫布 frame：上下虛線＋漸層底＋海報陰影圓角＋左側主視覺色彩直排 */}
-      <div className="border-t border-b border-dashed border-orange-400 flex items-center p-4 gap-[28px] overflow-hidden"
+      {/* 預覽區：sticky 貼在 navbar 下方，色彩選擇／海報／變更圖片三者等高（依 node 341-24687 auto-layout） */}
+      <div className="sticky top-[52px] z-20 bg-white border-b border-t border-dashed border-orange-400 px-4 py-4 overflow-hidden"
         style={{ backgroundImage:'linear-gradient(180deg, #fff7ed 0%, #ffffff 100%)' }}>
-        <div className="flex flex-col gap-2 bg-stone-100 rounded-xl p-1.5 overflow-y-auto shrink-0" style={{ maxHeight: scaledH || 220 }}>
-          {SCHEMES_MOBILE.map(s=>(
-            <button key={s.id} aria-label={s.label}
-              onClick={()=>{ setScheme(s); setCustomBg('') }}
-              className="rounded-full transition-transform active:scale-95 shrink-0"
-              style={{ width:'26px', height:'26px', background:s.bg, outline:(!customBg&&scheme.id===s.id)?'2px solid #f97316':'2px solid transparent', outlineOffset:'2px',
-                boxShadow:s.id==='white'?'inset 0 0 0 1px rgba(0,0,0,0.15)':'0px 0px 0px 0.5px rgba(0,0,0,0.09)' }} />
-          ))}
-          <label className="rounded-md cursor-pointer flex items-center justify-center shrink-0 relative border border-stone-200 bg-white"
-            style={{ width:'26px', height:'26px', outline:customBg?'2px solid #f97316':'none', outlineOffset:'2px' }}>
-            <PlusThinIcon className="text-stone-500" />
-            <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-              value={customBg||scheme.bg} onChange={e=>setCustomBg(e.target.value)} />
-          </label>
-        </div>
-        <div ref={stageRef} className="flex-1 min-w-0 flex items-center justify-center">
+        <div className="flex items-stretch gap-3 w-full">
+          {/* 左：主視覺色彩直排 */}
+          <div className="flex flex-col gap-2 bg-stone-100 rounded-xl p-1.5 overflow-y-auto shrink-0 w-[38px]">
+            {SCHEMES_MOBILE.map(s=>(
+              <button key={s.id} aria-label={s.label}
+                onClick={()=>{ setScheme(s); setCustomBg('') }}
+                className="rounded-full transition-transform active:scale-95 shrink-0"
+                style={{ width:'26px', height:'26px', background:s.bg, outline:(!customBg&&scheme.id===s.id)?'2px solid #f97316':'2px solid transparent', outlineOffset:'2px',
+                  boxShadow:s.id==='white'?'inset 0 0 0 1px rgba(0,0,0,0.15)':'0px 0px 0px 0.5px rgba(0,0,0,0.09)' }} />
+            ))}
+            <label className="rounded-md cursor-pointer flex items-center justify-center shrink-0 relative border border-stone-200 bg-white"
+              style={{ width:'26px', height:'26px', outline:customBg?'2px solid #f97316':'none', outlineOffset:'2px' }}>
+              <PlusThinIcon className="text-stone-500" />
+              <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                value={customBg||scheme.bg} onChange={e=>setCustomBg(e.target.value)} />
+            </label>
+          </div>
+
+          {/* 中：海報預覽 */}
+          <div ref={stageRef} className="flex-1 min-w-0 flex items-center justify-center">
           <div style={{ width:scaledW, height:scaledH, position:'relative', flexShrink:0, overflow:'hidden', borderRadius:'12px', boxShadow:'0px 0px 12px 0px rgba(0,0,0,0.11)' }}>
             <div className="absolute top-0 left-0 origin-top-left" style={{ transform:`scale(${previewScale})`, width:POSTER_W, height:POSTER_H }}>
               <div className="relative select-none" style={{ width:POSTER_W, height:POSTER_H, backgroundColor:activeBg, overflow:'visible' }}
@@ -384,8 +371,26 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
               </div>
             </div>
           </div>
+          </div>
+
+          {/* 右：直式 zoom slider（fill 到變更圖片按鈕，間距 16px）＋ 變更圖片 icon 按鈕 */}
+          <div className="flex flex-col items-center gap-4 shrink-0 w-[38px]">
+            <div ref={sliderColRef} className="relative flex-1 w-full min-h-0">
+              <input type="range" min="0.5" max="3" step="0.05" value={imgScale} onChange={e=>setImgScale(parseFloat(e.target.value))}
+                className="poster-slider"
+                style={{
+                  position:'absolute', left:'50%', top:'50%', width:sliderAreaHeight, height:20,
+                  transform:'translate(-50%, -50%) rotate(-90deg)',
+                  ...sliderTrackStyle(imgScale, 0.5, 3),
+                }} />
+            </div>
+            <button onClick={()=>setShowPhotoPicker(true)} aria-label="變更圖片"
+              className="w-9 h-9 shrink-0 flex items-center justify-center rounded-md border border-stone-200 bg-white hover:bg-stone-50 transition-colors">
+              <PhotoIcon className="text-orange-500" />
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+          </div>
         </div>
-      </div>
       </div>
 
       <div className="bg-white p-4 space-y-4">
@@ -412,7 +417,7 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
                   <p className="text-[11px] text-stone-500 mb-1">中文字體</p>
                   <div className="relative">
                     <select value={zhFontIdx} onChange={e=>setZhFontIdx(parseInt(e.target.value))}
-                      className="w-full appearance-none bg-white border border-stone-200 rounded-md pl-2 pr-7 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300">
+                      className="w-full h-9 appearance-none bg-white border border-stone-200 rounded-md pl-2 pr-7 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300">
                       {ZH_FONTS.map((f,i)=><option key={f.label} value={i} style={{fontFamily:f.value}}>{f.label}</option>)}
                     </select>
                     <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
@@ -441,7 +446,7 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
                   <p className="text-[11px] text-stone-500 mb-1">英文字體</p>
                   <div className="relative">
                     <select value={enFontIdx} onChange={e=>setEnFontIdx(parseInt(e.target.value))}
-                      className="w-full appearance-none bg-white border border-stone-200 rounded-md pl-2 pr-7 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300">
+                      className="w-full h-9 appearance-none bg-white border border-stone-200 rounded-md pl-2 pr-7 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300">
                       {EN_FONTS.map((f,i)=><option key={f.label} value={i} style={{fontFamily:f.value}}>{f.label}</option>)}
                     </select>
                     <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
@@ -462,28 +467,14 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
             {/* 間距定義 */}
             <section className="border border-stone-200 rounded-2xl p-4">
               <p className="text-sm font-medium text-stone-600 mb-3">間距定義</p>
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <p className="text-sm text-stone-600">字距</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="min-w-0">
                   <p className="text-xs text-stone-400 mb-2">文字跟文字間的距離</p>
-                  <div className="bg-stone-100 rounded-lg px-2 py-1">
-                    <div className="flex items-center gap-1.5">
-                      <input type="range" min={0} max={10} step={0.5} value={letterSpacingPct} onChange={e=>setLetterSpacingPct(parseFloat(e.target.value))}
-                        className="poster-slider flex-1 h-5" style={sliderTrackStyle(letterSpacingPct,0,10)} />
-                      <span className="text-[11px] font-medium text-orange-600 w-8 text-right shrink-0">{letterSpacingPct}%</span>
-                    </div>
-                  </div>
+                  <SliderRow label="字距" min={0} max={10} step={0.5} value={letterSpacingPct} onChange={setLetterSpacingPct} unit="%" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm text-stone-600">行距</p>
+                <div className="min-w-0">
                   <p className="text-xs text-stone-400 mb-2">標題跟內文間的距離</p>
-                  <div className="bg-stone-100 rounded-lg px-2 py-1">
-                    <div className="flex items-center gap-1.5">
-                      <input type="range" min={0.5} max={3} step={0.1} value={lineSpacingMult} onChange={e=>setLineSpacingMult(parseFloat(e.target.value))}
-                        className="poster-slider flex-1 h-5" style={sliderTrackStyle(lineSpacingMult,0.5,3)} />
-                      <span className="text-[11px] font-medium text-orange-600 w-8 text-right shrink-0">{lineSpacingMult.toFixed(1)}</span>
-                    </div>
-                  </div>
+                  <SliderRow label="行距" min={0.5} max={3} step={0.1} value={lineSpacingMult} onChange={setLineSpacingMult} unit="" decimals={1} />
                 </div>
               </div>
             </section>
@@ -548,7 +539,7 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
                     <ColorPickerDropdown label="裝飾點顏色" value={dotFill} showHex onChange={setDotColor} />
                   </div>
                 </div>
-                <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-3 gap-2">
                   <SliderRow label="大小" min={2} max={24} step={0.5} value={dotSize} onChange={setDotSize} unit="px" />
                   <SliderRow label="透明度" min={5} max={100} step={1} value={dotOpacity} onChange={setDotOpacity} unit="%" />
                   <SliderRow label="密度" min={10} max={90} step={1} value={dotDensity} onChange={setDotDensity} unit="" />
@@ -594,10 +585,14 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
         </div>
       )}
 
-      {/* sticky 匯出按鈕 */}
-      <div className="fixed bottom-0 inset-x-0 z-30 bg-white rounded-t-2xl shadow-[0px_-3px_4px_0px_rgba(0,0,0,0.08)] p-4">
+      {/* sticky 底部：儲存設定 ＋ 完成！匯出 PNG */}
+      <div className="fixed bottom-0 inset-x-0 z-30 bg-white rounded-t-2xl shadow-[0px_-3px_4px_0px_rgba(0,0,0,0.08)] p-4 flex gap-3">
+        <button onClick={handleSaveSettings}
+          className="shrink-0 w-[110px] h-[50px] rounded-[10px] border border-stone-300 bg-white text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors">
+          {savedFlash ? '已儲存！' : '儲存設定'}
+        </button>
         <button onClick={handleExport} disabled={isExporting}
-          className="w-full h-[50px] rounded-[10px] text-base font-medium text-white transition-opacity disabled:opacity-60"
+          className="flex-1 h-[50px] rounded-[10px] text-base font-medium text-white transition-opacity disabled:opacity-60"
           style={{ background:'#f97316' }}>
           {isExporting ? '產生中...' : '完成！匯出 PNG'}
         </button>
