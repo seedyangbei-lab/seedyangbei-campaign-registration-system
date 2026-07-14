@@ -190,27 +190,26 @@ export default function SystemHealthPage() {
 
   return (
     <div className="p-6 md:p-8">
-      <div className="mb-6 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-        <div>
-          <h2 className="text-stone-800 text-2xl font-bold">系統健康</h2>
-          <p className="text-stone-400 mt-1 text-sm">追蹤系統狀態與異常回報，每走完一步，離穩定更進一步</p>
-        </div>
-        <div className="flex gap-2">
-          {RANGE_OPTIONS.map(opt => {
-            const selected = rangeDays === opt.days
-            return (
-              <button
-                key={opt.days}
-                onClick={() => setRangeDays(opt.days)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                  selected ? 'border-orange-500 text-orange-600 bg-white' : 'border-stone-200 text-stone-600 bg-white hover:bg-stone-50'
-                }`}
-              >
-                {opt.label}
-              </button>
-            )
-          })}
-        </div>
+      <div className="mb-4">
+        <h2 className="text-stone-800 text-2xl font-bold">系統健康</h2>
+        <p className="text-stone-400 mt-1 text-sm">追蹤系統狀態與異常回報，每走完一步，離穩定更進一步</p>
+      </div>
+      <div className="border-b border-[#E7E5E4] mb-4" />
+      <div className="flex items-center gap-2 mb-6">
+        {RANGE_OPTIONS.map(opt => {
+          const selected = rangeDays === opt.days
+          return (
+            <button
+              key={opt.days}
+              onClick={() => setRangeDays(opt.days)}
+              className={`h-8 px-2 rounded-lg text-xs font-medium border transition-colors ${
+                selected ? 'border-orange-500 text-orange-600 bg-white' : 'border-stone-200 text-stone-500 bg-white hover:bg-stone-50'
+              }`}
+            >
+              {opt.label}
+            </button>
+          )
+        })}
       </div>
 
       {(funnelError || issueError) && (
@@ -237,9 +236,12 @@ export default function SystemHealthPage() {
 
       {/* 系統狀態與回報 */}
       <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between flex-wrap gap-3">
+        <div
+          className="px-6 py-3 md:h-16 border-b border-stone-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+          style={{ background: 'linear-gradient(90deg, #FFF3E9 0%, #FFFFFF 100%)' }}
+        >
           <div className="flex items-center gap-2">
-            <h3 className="text-stone-700 font-semibold">系統狀態與回報</h3>
+            <h3 className="text-stone-800 font-semibold" style={{ fontSize: '17px' }}>系統狀態與回報</h3>
             <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-medium min-w-[20px] text-center">{filteredRows.length}</span>
           </div>
           <div className="flex items-center gap-2">
@@ -255,7 +257,7 @@ export default function SystemHealthPage() {
           <div className="px-6 py-10 text-center text-stone-400 text-sm">這段期間沒有符合條件的資料，狀況良好。</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm" style={{ minWidth: '1174px' }}>
+            <table className="w-full text-sm" style={{ minWidth: '1174px', tableLayout: 'fixed' }}>
               <colgroup>
                 <col style={{ width: '40px' }} /><col style={{ width: '90px' }} /><col style={{ width: '130px' }} />
                 <col style={{ width: '110px' }} /><col style={{ width: '160px' }} /><col style={{ width: '468px' }} />
@@ -275,7 +277,7 @@ export default function SystemHealthPage() {
               </thead>
               <tbody className="divide-y divide-[#F0EDEB]">
                 {paginatedRows.map((row, i) => (
-                  <tr key={`${row.source}-${row.id}`}>
+                  <tr key={`${row.source}-${row.id}`} className="h-[63px]">
                     <td className="px-3 py-4 text-stone-400 text-xs">{(page - 1) * pageSize + i + 1}</td>
                     <td className="px-3 py-4"><SourceBadge source={row.source} /></td>
                     <td className="px-3 py-4 text-stone-400 text-xs whitespace-nowrap">{formatDT(row.createdAt)}</td>
@@ -316,7 +318,7 @@ export default function SystemHealthPage() {
         )}
 
         {!loading && filteredRows.length > 0 && (
-          <div className="px-6 py-4 border-t border-stone-100 flex items-center justify-between flex-wrap gap-3">
+          <div className="px-6 border-t border-stone-100 flex items-center justify-between flex-wrap gap-3" style={{ height: '60px' }}>
             <PerPageSelect value={pageSize} onChange={v => { setPageSize(v); setPage(1) }} />
             <PaginationBar page={page} totalPages={totalPages} onChange={setPage} />
           </div>

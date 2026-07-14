@@ -122,7 +122,7 @@ export function FilterSelect({
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full appearance-none bg-stone-50 border border-stone-200 rounded-lg pl-3 pr-8 h-9 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200"
+        className="w-full appearance-none bg-stone-50 border border-stone-200 rounded-lg pl-3 pr-8 h-8 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200"
       >
         <option value="">{placeholder}：全部</option>
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -166,7 +166,7 @@ function buildPageList(current: number, total: number): (number | 'ellipsis')[] 
 export function PaginationBar({ page, totalPages, onChange }: { page: number; totalPages: number; onChange: (p: number) => void }) {
   if (totalPages <= 1) return null
   const pages = buildPageList(page, totalPages)
-  const btnBase = 'w-8 h-8 flex items-center justify-center rounded-md text-sm font-medium transition-colors'
+  const btnBase = 'w-9 h-9 flex items-center justify-center rounded-md text-sm font-medium transition-colors'
   return (
     <div className="flex items-center gap-1">
       <button
@@ -179,7 +179,7 @@ export function PaginationBar({ page, totalPages, onChange }: { page: number; to
       </button>
       {pages.map((p, i) =>
         p === 'ellipsis' ? (
-          <span key={`e-${i}`} className="w-8 h-8 flex items-center justify-center text-stone-400 text-sm">...</span>
+          <span key={`e-${i}`} className="w-9 h-9 flex items-center justify-center text-stone-400 text-sm">...</span>
         ) : (
           <button
             key={p}
