@@ -497,7 +497,9 @@ export function ColorPickerDropdown({ value, onChange, showHex, label, options }
   options?: { bg: string; label: string }[]
 }) {
   const [open, setOpen] = useState(false)
+  const [align, setAlign] = useState<'left'|'right'>('left')
   const wrapRef = useRef<HTMLDivElement>(null)
+  const POPOVER_W = 184
 
   useEffect(() => {
     if (!open) return
@@ -510,16 +512,26 @@ export function ColorPickerDropdown({ value, onChange, showHex, label, options }
 
   const swatches = options || SCHEMES.map(s => ({ bg: s.bg, label: s.label }))
 
+  const toggleOpen = () => {
+    if (!open && wrapRef.current) {
+      // 開啟前先量測，若往右展開會超出畫面（或超出最近的可捲動容器），改成往左展開，避免破版
+      const rect = wrapRef.current.getBoundingClientRect()
+      const viewportW = window.innerWidth
+      setAlign(rect.left + POPOVER_W > viewportW - 8 ? 'right' : 'left')
+    }
+    setOpen(v => !v)
+  }
+
   return (
     <div ref={wrapRef} className="relative">
-      <button type="button" aria-label={label} onClick={() => setOpen(v => !v)}
+      <button type="button" aria-label={label} onClick={toggleOpen}
         className="w-full h-9 flex items-center gap-1.5 px-2 border border-stone-200 rounded-md bg-white">
         <span className="w-5 h-5 rounded shrink-0 border border-black/10" style={{ background: value }} />
         {showHex && <span className="text-xs text-stone-500 flex-1 text-left truncate">{value.toUpperCase()}</span>}
         <ChevronDownIcon className={`text-stone-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''} ${showHex ? '' : 'ml-auto'}`} />
       </button>
       {open && (
-        <div className="absolute z-50 top-[calc(100%+4px)] left-0 bg-white border border-stone-200 rounded-xl shadow-lg p-2.5 w-[184px]">
+        <div className={`absolute z-50 top-[calc(100%+4px)] ${align==='right' ? 'right-0' : 'left-0'} bg-white border border-stone-200 rounded-xl shadow-lg p-2.5 w-[184px]`}>
           <div className="grid grid-cols-5 gap-2 mb-2.5">
             {swatches.map(s => (
               <button key={s.bg} type="button" title={s.label} onClick={() => { onChange(s.bg); setOpen(false) }}
