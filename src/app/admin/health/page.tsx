@@ -307,14 +307,14 @@ export default function SystemHealthPage() {
                       {row.source === 'instructor' ? (
                         <button
                           onClick={() => setDetailTarget(row.data)}
-                          className="text-xs border border-stone-300 text-stone-600 hover:bg-stone-50 px-2 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap"
+                          className="w-full flex items-center justify-center text-xs border border-stone-300 text-stone-600 hover:bg-stone-50 px-2 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap"
                         >
                           查看詳情
                         </button>
                       ) : (
                         <button
                           onClick={() => handleCopyDetail(row.data)}
-                          className="flex items-center gap-1 text-xs bg-orange-50 border border-orange-200 text-orange-600 hover:bg-orange-100 px-2 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap"
+                          className="w-full flex items-center justify-center gap-1 text-xs bg-orange-50 border border-orange-200 text-orange-600 hover:bg-orange-100 px-2 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap"
                         >
                           <CopyIcon />複製資訊
                         </button>
