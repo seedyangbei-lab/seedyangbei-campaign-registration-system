@@ -261,7 +261,8 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
       </div>
 
       {/* 預覽區：sticky 貼在 navbar 下方，色彩選擇／海報／變更圖片三者等高（依 node 341-24687 auto-layout） */}
-      <div className="sticky top-[52px] z-20 bg-white border-b border-stone-200 px-4 py-4 overflow-hidden">
+      <div className="sticky top-[52px] z-20 bg-white border-b border-t border-dashed border-orange-400 px-4 py-4 overflow-hidden"
+        style={{ backgroundImage:'linear-gradient(180deg, #fff7ed 0%, #ffffff 100%)' }}>
         <div className="flex items-stretch gap-3 w-full">
           {/* 左：主視覺色彩直排 */}
           <div ref={colorStripRef} className="flex flex-col gap-2 bg-stone-100 rounded-xl p-1.5 shrink-0 w-[38px]">
