@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
+
 // ── 課程海報編輯器：桌機版／手機版共用的常數與繪製邏輯 ──────────────────────────────
 // （色彩研究、字體清單、Canvas 繪製演算法只維護這一份，避免兩版分岔）
 
@@ -42,6 +44,9 @@ export const SCHEMES = [
   { id: 'black',   label: '黑',       bg: '#111111' },
   { id: 'white',   label: '白',       bg: '#ffffff' },
 ]
+
+// 手機版主視覺色彩：畫面空間有限，只精選 4 色（跨色相）+ 黑白，數量與桌機版不同
+export const SCHEMES_MOBILE = SCHEMES.filter(s => ['lava','mint','aura','fuchsia','black','white'].includes(s.id))
 
 // ── fonts（原 4 中 + 4 英，額外補上熱門 Google Fonts 各 4 款，共 8+8）──────────────
 export const ZH_FONTS = [
@@ -406,8 +411,29 @@ export async function exportPosterPNG(p: ExportPosterParams) {
   }
   ctx.restore()
 
+  const filename = `${p.course.title||'poster'}.png`
+  const blob: Blob | null = await new Promise(resolve => canvas.toBlob(b => resolve(b), 'image/png'))
+  if (!blob) throw new Error('canvas toBlob failed')
+
+  // 手機瀏覽器（尤其 iOS Safari）不支援 <a download>，改用 Web Share API 讓使用者存到相簿；
+  // 桌機或不支援分享檔案的瀏覽器則 fallback 回傳統下載連結
+  const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean; share?: (data: ShareData) => Promise<void> }
+  const file = new File([blob], filename, { type: 'image/png' })
+  if (nav.canShare && nav.share && nav.canShare({ files: [file] })) {
+    try {
+      await nav.share({ files: [file], title: filename })
+      return
+    } catch (_e) {
+      // 使用者取消分享，或分享失敗 → 繼續走下載 fallback
+    }
+  }
+  const url = URL.createObjectURL(blob)
   const a=document.createElement('a')
-  a.href=canvas.toDataURL('image/png'); a.download=`${p.course.title||'poster'}.png`; a.click()
+  a.href=url; a.download=filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 10000)
 }
 
 // ── 小型共用 UI ────────────────────────────────────────────────────────────────
@@ -437,7 +463,7 @@ export function SliderRow({ label, min, max, step, value, onChange, unit, decima
   label: string; min: number; max: number; step: number; value: number; onChange: (v:number)=>void; unit: string; decimals?: number
 }) {
   return (
-    <div className="bg-stone-100 rounded-lg px-2 py-1 flex-1">
+    <div className="bg-stone-100 rounded-lg px-2 py-1 w-full">
       <p className="text-[11px] text-stone-500 mb-0.5">{label}</p>
       <div className="flex items-center gap-1.5">
         <input type="range" min={min} max={max} step={step} value={value}
@@ -447,6 +473,56 @@ export function SliderRow({ label, min, max, step, value, onChange, unit, decima
           {decimals!==undefined ? value.toFixed(decimals) : value}{unit}
         </span>
       </div>
+    </div>
+  )
+}
+
+// ── 統一的顏色選擇 Dropdown（字體顏色／裝飾點顏色共用同一元件，裝飾點多顯示 hex）───────
+export function ColorPickerDropdown({ value, onChange, showHex, label, options }: {
+  value: string; onChange: (v: string) => void; showHex?: boolean; label: string
+  options?: { bg: string; label: string }[]
+}) {
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDocPointer = (e: PointerEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', onDocPointer)
+    return () => document.removeEventListener('pointerdown', onDocPointer)
+  }, [open])
+
+  const swatches = options || SCHEMES.map(s => ({ bg: s.bg, label: s.label }))
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <button type="button" aria-label={label} onClick={() => setOpen(v => !v)}
+        className="w-full h-9 flex items-center gap-1.5 px-2 border border-stone-200 rounded-md bg-white">
+        <span className="w-5 h-5 rounded shrink-0 border border-black/10" style={{ background: value }} />
+        {showHex && <span className="text-xs text-stone-500 flex-1 text-left truncate">{value.toUpperCase()}</span>}
+        <ChevronDownIcon className={`text-stone-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''} ${showHex ? '' : 'ml-auto'}`} />
+      </button>
+      {open && (
+        <div className="absolute z-50 top-[calc(100%+4px)] left-0 bg-white border border-stone-200 rounded-xl shadow-lg p-2.5 w-[184px]">
+          <div className="grid grid-cols-5 gap-2 mb-2.5">
+            {swatches.map(s => (
+              <button key={s.bg} type="button" title={s.label} onClick={() => { onChange(s.bg); setOpen(false) }}
+                className="rounded-full aspect-square transition-transform active:scale-95"
+                style={{ background: s.bg, outline: value.toLowerCase()===s.bg.toLowerCase() ? '2px solid #f97316' : '1px solid rgba(0,0,0,0.09)', outlineOffset:'1px' }} />
+            ))}
+          </div>
+          <label className="flex items-center gap-2 border-t border-stone-100 pt-2.5 cursor-pointer">
+            <span className="relative w-6 h-6 rounded-md border border-stone-200 overflow-hidden shrink-0">
+              <span className="absolute inset-0" style={{ background: value }} />
+              <input type="color" value={value} onChange={e => onChange(e.target.value)}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+            </span>
+            <span className="text-xs text-stone-500">自訂顏色…</span>
+          </label>
+        </div>
+      )}
     </div>
   )
 }

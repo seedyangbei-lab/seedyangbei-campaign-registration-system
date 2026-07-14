@@ -4,10 +4,10 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import {
-  PosterCourseData, lum, textCol, SCHEMES, ZH_FONTS, EN_FONTS, ZH_SIZE_OPTIONS, EN_SIZE_OPTIONS, loadAllGoogleFonts,
+  PosterCourseData, lum, textCol, SCHEMES_MOBILE, ZH_FONTS, EN_FONTS, ZH_SIZE_OPTIONS, EN_SIZE_OPTIONS, loadAllGoogleFonts,
   DotShape, DotCoverage, DotArrangement, DOT_SHAPES, DotPatternSvg,
   POSTER_W, POSTER_H, PHOTO_H, INFO_PAD, TITLE_WEIGHT, EN_WEIGHT,
-  exportPosterPNG, ChevronDownIcon, MinusIcon, PlusIcon, sliderTrackStyle,
+  exportPosterPNG, ChevronDownIcon, MinusIcon, PlusIcon, sliderTrackStyle, SliderRow, ColorPickerDropdown,
 } from '@/components/posterEditor/shared'
 
 // ── 小型共用 UI（手機版專用） ──────────────────────────────────────────────────
@@ -29,18 +29,6 @@ function ToggleSwitch({ on, onToggle }: { on: boolean; onToggle: () => void }) {
     </button>
   )
 }
-function ColorDropdownButton({ value, showHex, onChange, label }: { value: string; showHex?: boolean; onChange: (v:string)=>void; label: string }) {
-  const ref = useRef<HTMLInputElement>(null)
-  return (
-    <button type="button" aria-label={label} onClick={()=>ref.current?.click()}
-      className="w-full h-9 flex items-center gap-1.5 px-2 border border-stone-200 rounded-md bg-white">
-      <span className="w-5 h-5 rounded shrink-0 border border-black/10" style={{background:value}} />
-      {showHex && <span className="text-xs text-stone-500 flex-1 text-left truncate">{value.toUpperCase()}</span>}
-      <ChevronDownIcon className={`text-stone-400 shrink-0 ${showHex ? '' : 'ml-auto'}`} />
-      <input ref={ref} type="color" value={value} onChange={e=>onChange(e.target.value)} className="sr-only" tabIndex={-1} />
-    </button>
-  )
-}
 function SizeSelect({ value, options, unit, onChange }: { value: number; options: number[]; unit: string; onChange: (v:number)=>void }) {
   const opts = options.includes(value) ? options : [...options, value].sort((a,b)=>a-b)
   return (
@@ -50,19 +38,6 @@ function SizeSelect({ value, options, unit, onChange }: { value: number; options
         {opts.map(o=><option key={o} value={o}>{o}{unit}</option>)}
       </select>
       <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
-    </div>
-  )
-}
-function MiniSlider({ label, min, max, step, value, onChange, unit }: {
-  label: string; min: number; max: number; step: number; value: number; onChange: (v:number)=>void; unit: string
-}) {
-  return (
-    <div className="flex-1 min-w-0">
-      <p className="text-[11px] text-stone-500 mb-0.5">{label}</p>
-      <div className="flex items-center gap-1">
-        <input type="range" min={min} max={max} step={step} value={value}
-          onChange={e=>onChange(parseFloat(e.target.value))} className="poster-slider flex-1 h-5" style={sliderTrackStyle(value, min, max)} />
-      </div>
     </div>
   )
 }
@@ -78,7 +53,7 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
   const [isDragging, setIsDragging] = useState(false)
   const dragStart = useRef({ mx:0, my:0, px:0, py:0 })
 
-  const [scheme, setScheme]   = useState(SCHEMES[0])
+  const [scheme, setScheme]   = useState(SCHEMES_MOBILE[0])
   const [customBg, setCustomBg] = useState('')
 
   const [activeTab, setActiveTab] = useState<'字體設定'|'裝飾'>('字體設定')
@@ -122,7 +97,7 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
       const raw = localStorage.getItem(storageKey)
       if (!raw) return
       const s = JSON.parse(raw)
-      if (s.schemeId) { const found = SCHEMES.find((x:any)=>x.id===s.schemeId); if (found) setScheme(found) }
+      if (s.schemeId) { const found = SCHEMES_MOBILE.find((x:any)=>x.id===s.schemeId); if (found) setScheme(found) }
       if (typeof s.customBg === 'string') setCustomBg(s.customBg)
       if (typeof s.dotShape === 'string') setDotShape(s.dotShape)
       if (typeof s.dotCustomChar === 'string') setDotCustomChar(s.dotCustomChar)
@@ -254,8 +229,10 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
         <div className="w-6 h-6 shrink-0" />
       </div>
 
+      {/* 預覽區（ControlsRow + 畫布 frame）：sticky 貼在 navbar 下方 */}
+      <div className="sticky top-[52px] z-20 bg-white">
       {/* ControlsRow：zoom + 儲存設定／變更圖片 */}
-      <div className="bg-white border-b border-stone-100 px-4 py-3 flex items-center gap-3">
+      <div className="border-b border-stone-100 px-4 py-3 flex items-center gap-3">
         <div className="flex items-center gap-2 w-[150px] shrink-0">
           <MinusIcon className="text-stone-400 shrink-0" />
           <input type="range" min="0.5" max="3" step="0.05" value={imgScale} onChange={e=>setImgScale(parseFloat(e.target.value))}
@@ -276,10 +253,25 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
       </div>
 
-      {/* 畫布 frame：上下虛線＋漸層底＋海報陰影圓角 */}
-      <div className="border-t border-b border-dashed border-orange-400 flex items-center justify-center p-4"
+      {/* 畫布 frame：上下虛線＋漸層底＋海報陰影圓角＋左側主視覺色彩直排 */}
+      <div className="border-t border-b border-dashed border-orange-400 flex items-center p-4 gap-[28px] overflow-hidden"
         style={{ backgroundImage:'linear-gradient(180deg, #fff7ed 0%, #ffffff 100%)' }}>
-        <div ref={stageRef} className="w-full flex items-center justify-center" style={{ maxWidth: 300 }}>
+        <div className="flex flex-col gap-2 bg-stone-100 rounded-xl p-1.5 overflow-y-auto shrink-0" style={{ maxHeight: scaledH || 220 }}>
+          {SCHEMES_MOBILE.map(s=>(
+            <button key={s.id} aria-label={s.label}
+              onClick={()=>{ setScheme(s); setCustomBg('') }}
+              className="rounded-full transition-transform active:scale-95 shrink-0"
+              style={{ width:'26px', height:'26px', background:s.bg, outline:(!customBg&&scheme.id===s.id)?'2px solid #f97316':'2px solid transparent', outlineOffset:'2px',
+                boxShadow:s.id==='white'?'inset 0 0 0 1px rgba(0,0,0,0.15)':'0px 0px 0px 0.5px rgba(0,0,0,0.09)' }} />
+          ))}
+          <label className="rounded-md cursor-pointer flex items-center justify-center shrink-0 relative border border-stone-200 bg-white"
+            style={{ width:'26px', height:'26px', outline:customBg?'2px solid #f97316':'none', outlineOffset:'2px' }}>
+            <PlusThinIcon className="text-stone-500" />
+            <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              value={customBg||scheme.bg} onChange={e=>setCustomBg(e.target.value)} />
+          </label>
+        </div>
+        <div ref={stageRef} className="flex-1 min-w-0 flex items-center justify-center">
           <div style={{ width:scaledW, height:scaledH, position:'relative', flexShrink:0, overflow:'hidden', borderRadius:'12px', boxShadow:'0px 0px 12px 0px rgba(0,0,0,0.11)' }}>
             <div className="absolute top-0 left-0 origin-top-left" style={{ transform:`scale(${previewScale})`, width:POSTER_W, height:POSTER_H }}>
               <div className="relative select-none" style={{ width:POSTER_W, height:POSTER_H, backgroundColor:activeBg, overflow:'visible' }}
@@ -394,28 +386,9 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
           </div>
         </div>
       </div>
+      </div>
 
       <div className="bg-white p-4 space-y-4">
-        {/* 主視覺色彩 */}
-        <section>
-          <p className="text-sm font-medium text-stone-600 mb-2">主視覺色彩</p>
-          <div className="bg-stone-100 rounded-xl p-2 flex flex-wrap gap-2">
-            {SCHEMES.map(s=>(
-              <button key={s.id} title={s.label} aria-label={s.label}
-                onClick={()=>{ setScheme(s); setCustomBg('') }}
-                className="rounded-full transition-transform active:scale-95 shrink-0"
-                style={{ width:'28px', height:'28px', background:s.bg, outline:(!customBg&&scheme.id===s.id)?'2px solid #f97316':'2px solid transparent', outlineOffset:'2px',
-                  boxShadow:s.id==='white'?'inset 0 0 0 1px rgba(0,0,0,0.15)':'0px 0px 0px 0.5px rgba(0,0,0,0.09)' }} />
-            ))}
-            <label className="rounded-md cursor-pointer flex items-center justify-center shrink-0 relative border border-stone-200 bg-white"
-              style={{ width:'28px', height:'28px', outline:customBg?'2px solid #f97316':'none', outlineOffset:'2px' }}>
-              <PlusThinIcon className="text-stone-500" />
-              <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                value={customBg||scheme.bg} onChange={e=>setCustomBg(e.target.value)} />
-            </label>
-          </div>
-        </section>
-
         {/* Tab bar */}
         <div className="flex gap-1 p-[5px] border border-stone-300 rounded-xl w-full">
           {(['字體設定','裝飾'] as const).map(t=>(
@@ -447,7 +420,7 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] text-stone-500 mb-1">顏色</p>
-                  <ColorDropdownButton label="中文字體顏色" value={tc} onChange={setTextColorOverride} />
+                  <ColorPickerDropdown label="中文字體顏色" value={tc} onChange={setTextColorOverride} />
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] text-stone-500 mb-1">字體大小</p>
@@ -476,7 +449,7 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] text-stone-500 mb-1">顏色</p>
-                  <ColorDropdownButton label="英文字體顏色" value={enTc} onChange={setEnTextColorOverride} />
+                  <ColorPickerDropdown label="英文字體顏色" value={enTc} onChange={setEnTextColorOverride} />
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] text-stone-500 mb-1">字體大小</p>
@@ -572,13 +545,13 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <p className="text-sm text-stone-500 flex-1">裝飾點顏色</p>
                   <div className="w-[124px]">
-                    <ColorDropdownButton label="裝飾點顏色" value={dotFill} showHex onChange={setDotColor} />
+                    <ColorPickerDropdown label="裝飾點顏色" value={dotFill} showHex onChange={setDotColor} />
                   </div>
                 </div>
-                <div className="bg-stone-100 rounded-lg p-2 flex gap-2">
-                  <MiniSlider label="大小" min={2} max={24} step={0.5} value={dotSize} onChange={setDotSize} unit="px" />
-                  <MiniSlider label="透明度" min={5} max={100} step={1} value={dotOpacity} onChange={setDotOpacity} unit="%" />
-                  <MiniSlider label="密度" min={10} max={90} step={1} value={dotDensity} onChange={setDotDensity} unit="" />
+                <div className="flex flex-col gap-3">
+                  <SliderRow label="大小" min={2} max={24} step={0.5} value={dotSize} onChange={setDotSize} unit="px" />
+                  <SliderRow label="透明度" min={5} max={100} step={1} value={dotOpacity} onChange={setDotOpacity} unit="%" />
+                  <SliderRow label="密度" min={10} max={90} step={1} value={dotDensity} onChange={setDotDensity} unit="" />
                 </div>
               </>)}
             </section>

@@ -5,7 +5,7 @@ import {
   PosterCourseData, lum, textCol, SCHEMES, ZH_FONTS, EN_FONTS, loadAllGoogleFonts,
   DotShape, DotCoverage, DotArrangement, DOT_SHAPES, DotPatternSvg,
   POSTER_W, POSTER_H, PHOTO_H, INFO_PAD, TITLE_WEIGHT, EN_WEIGHT,
-  exportPosterPNG, ChevronDownIcon, MinusIcon, PlusIcon, SliderRow, sliderTrackStyle,
+  exportPosterPNG, ChevronDownIcon, MinusIcon, PlusIcon, SliderRow, sliderTrackStyle, ColorPickerDropdown,
 } from './posterEditor/shared'
 
 type CourseData = PosterCourseData
@@ -266,10 +266,7 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                     </div>
                     <div className="min-w-0">
                       <p className="text-[11px] text-stone-500 mb-1">文字顏色</p>
-                      <label className="relative w-full h-[30px] rounded-md border border-stone-200 overflow-hidden cursor-pointer block">
-                        <div className="w-full h-full" style={{background:tc}} />
-                        <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" value={tc} onChange={e=>setTextColorOverride(e.target.value)} />
-                      </label>
+                      <ColorPickerDropdown label="中文字體顏色" value={tc} onChange={setTextColorOverride} />
                     </div>
                     <div className="min-w-0">
                       <SliderRow label="中文字體大小" min={12} max={28} step={1} value={zhFontSize} onChange={setZhFontSize} unit="px" />
@@ -297,10 +294,7 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                     </div>
                     <div className="min-w-0">
                       <p className="text-[11px] text-stone-500 mb-1">文字顏色</p>
-                      <label className="relative w-full h-[30px] rounded-md border border-stone-200 overflow-hidden cursor-pointer block">
-                        <div className="w-full h-full" style={{background:enTc}} />
-                        <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" value={enTc} onChange={e=>setEnTextColorOverride(e.target.value)} />
-                      </label>
+                      <ColorPickerDropdown label="英文字體顏色" value={enTc} onChange={setEnTextColorOverride} />
                     </div>
                     <div className="min-w-0">
                       <SliderRow label="英文字體大小" min={7} max={14} step={0.5} value={enFontSize} onChange={setEnFontSize} unit="px" />
@@ -391,17 +385,15 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-stone-400 flex-shrink-0">裝飾點顏色</span>
-                        <label className="relative w-5 h-5 rounded border border-stone-200 overflow-hidden cursor-pointer flex-shrink-0">
-                          <div className="w-full h-full" style={{background:dotFill}} />
-                          <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" value={dotFill} onChange={e=>setDotColor(e.target.value)} />
-                        </label>
-                        <span className="text-[10px] text-stone-400">{dotFill.toUpperCase()}</span>
+                        <span className="text-[10px] text-stone-400 flex-shrink-0 w-16">裝飾點顏色</span>
+                        <div className="w-[140px]">
+                          <ColorPickerDropdown label="裝飾點顏色" value={dotFill} showHex onChange={setDotColor} />
+                        </div>
                         {dotColor && <button onClick={()=>setDotColor('')} className="text-[9px] text-stone-400 hover:text-orange-500 transition-colors ml-auto">重設</button>}
                       </div>
-                      <div className="flex gap-2">
-                        <SliderRow label="透明" min={5} max={100} step={1} value={dotOpacity} onChange={setDotOpacity} unit="%" />
+                      <div className="flex flex-col gap-3">
                         <SliderRow label="大小" min={2} max={24} step={0.5} value={dotSize} onChange={setDotSize} unit="px" />
+                        <SliderRow label="透明度" min={5} max={100} step={1} value={dotOpacity} onChange={setDotOpacity} unit="%" />
                         <SliderRow label="密度" min={10} max={90} step={1} value={dotDensity} onChange={setDotDensity} unit="" />
                       </div>
                     </>)}
