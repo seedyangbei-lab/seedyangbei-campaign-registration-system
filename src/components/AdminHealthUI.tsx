@@ -119,7 +119,7 @@ export function FilterSelect({
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full appearance-none bg-stone-50 border border-stone-200 rounded-lg pl-3 pr-8 h-8 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200"
+        className="w-full appearance-none bg-white border border-stone-200 rounded-md pl-2 pr-7 h-8 text-xs text-stone-800 focus:outline-none focus:ring-2 focus:ring-orange-200"
       >
         <option value="">{placeholder}：全部</option>
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -133,15 +133,19 @@ export function FilterSelect({
 
 export function PerPageSelect({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
-    <div className="relative w-[110px] shrink-0">
-      <select
-        value={value}
-        onChange={e => onChange(parseInt(e.target.value))}
-        className="w-full appearance-none bg-white border border-stone-200 rounded-lg pl-3 pr-8 h-9 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200"
-      >
-        {[10, 20, 50].map(n => <option key={n} value={n}>每頁 {n} 筆</option>)}
-      </select>
-      <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
+    <div className="flex items-center gap-1.5 shrink-0">
+      <span className="text-xs text-stone-500 whitespace-nowrap">每頁</span>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={e => onChange(parseInt(e.target.value))}
+          className="appearance-none bg-white border border-stone-200 rounded-md pl-2 pr-6 h-8 text-xs text-stone-800 focus:outline-none focus:ring-2 focus:ring-orange-200"
+        >
+          {[10, 20, 50].map(n => <option key={n} value={n}>{n}</option>)}
+        </select>
+        <ChevronDownIcon className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-stone-400" />
+      </div>
+      <span className="text-xs text-stone-500 whitespace-nowrap">筆</span>
     </div>
   )
 }

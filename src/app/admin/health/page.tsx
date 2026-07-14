@@ -202,8 +202,8 @@ export default function SystemHealthPage() {
             <button
               key={opt.days}
               onClick={() => setRangeDays(opt.days)}
-              className={`h-8 px-2 rounded-lg text-xs font-medium border transition-colors ${
-                selected ? 'border-orange-500 text-orange-600 bg-white' : 'border-stone-200 text-stone-500 bg-white hover:bg-stone-50'
+              className={`p-2 rounded-md text-xs font-medium leading-4 transition-colors ${
+                selected ? 'bg-orange-500 text-white' : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-50'
               }`}
             >
               {opt.label}
@@ -237,18 +237,21 @@ export default function SystemHealthPage() {
       {/* 系統狀態與回報 */}
       <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
         <div
-          className="px-6 py-3 md:h-16 border-b border-stone-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+          className="px-6 h-16 border-b border-stone-200 flex items-center gap-2 shrink-0"
           style={{ background: 'linear-gradient(90deg, #FFF3E9 0%, #FFFFFF 100%)' }}
         >
-          <div className="flex items-center gap-2">
-            <h3 className="text-stone-800 font-semibold" style={{ fontSize: '17px' }}>系統狀態與回報</h3>
-            <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-medium min-w-[20px] text-center">{filteredRows.length}</span>
-          </div>
-          <div className="flex items-center gap-2">
+          <h3 className="text-stone-800" style={{ fontSize: '20px', lineHeight: '28px', fontWeight: 400 }}>系統狀態與回報</h3>
+          <span className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 text-sm font-bold flex items-center justify-center shrink-0">{filteredRows.length}</span>
+        </div>
+
+        {/* 篩選列：來源／狀態／類型 + 每頁筆數，同一列 */}
+        <div className="px-4 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <FilterSelect value={sourceFilter} onChange={setSourceFilter} placeholder="來源" options={[{ value: 'instructor', label: '講師回報' }, { value: 'system', label: '系統偵測' }]} />
             <FilterSelect value={statusFilter} onChange={setStatusFilter} placeholder="狀態" options={STATUS_OPTIONS} />
             <FilterSelect value={typeFilter} onChange={setTypeFilter} placeholder="類型" options={TYPE_OPTIONS} />
           </div>
+          <PerPageSelect value={pageSize} onChange={v => { setPageSize(v); setPage(1) }} />
         </div>
 
         {loading ? (
@@ -257,10 +260,10 @@ export default function SystemHealthPage() {
           <div className="px-6 py-10 text-center text-stone-400 text-sm">這段期間沒有符合條件的資料，狀況良好。</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm" style={{ minWidth: '1174px', tableLayout: 'fixed' }}>
+            <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
               <colgroup>
                 <col style={{ width: '40px' }} /><col style={{ width: '90px' }} /><col style={{ width: '130px' }} />
-                <col style={{ width: '110px' }} /><col style={{ width: '160px' }} /><col style={{ width: '468px' }} />
+                <col style={{ width: '110px' }} /><col style={{ width: '160px' }} /><col />
                 <col style={{ width: '90px' }} /><col style={{ width: '86px' }} />
               </colgroup>
               <thead>
@@ -318,8 +321,7 @@ export default function SystemHealthPage() {
         )}
 
         {!loading && filteredRows.length > 0 && (
-          <div className="px-6 border-t border-stone-100 flex items-center justify-between flex-wrap gap-3" style={{ height: '60px' }}>
-            <PerPageSelect value={pageSize} onChange={v => { setPageSize(v); setPage(1) }} />
+          <div className="px-6 border-t border-stone-100 flex items-center justify-center" style={{ height: '60px' }}>
             <PaginationBar page={page} totalPages={totalPages} onChange={setPage} />
           </div>
         )}
