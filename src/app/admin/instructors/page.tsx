@@ -218,8 +218,8 @@ export default function InstructorsPage() {
                     {inst.avatar_url ? (
                       <img src={inst.avatar_url} alt={inst.name} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center flex-shrink-0">
-                        <span className="text-rose-600 font-bold text-lg">{inst.name[0]}</span>
+                      <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                        <span className="text-orange-600 font-bold text-lg">{inst.name[0]}</span>
                       </div>
                     )}
                     <div className="flex-1 min-w-0 flex items-start justify-between gap-2 flex-wrap">
@@ -272,7 +272,7 @@ export default function InstructorsPage() {
                   )}
                   <button onClick={() => loadCourses(inst.id)}
                     className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium py-2 rounded-md transition-colors">
-                    {expanded ? '收起詳情' : '查看詳情'}
+                    {expanded ? '收起課程' : '查看課程'}
                   </button>
                 </div>
               </div>
@@ -343,11 +343,11 @@ export default function InstructorsPage() {
             </div>
 
             <div className="relative w-[100px] h-[100px] shrink-0">
-              <div className="w-full h-full rounded-full overflow-hidden bg-rose-100 flex items-center justify-center">
+              <div className="w-full h-full rounded-full overflow-hidden bg-orange-100 flex items-center justify-center">
                 {form.avatar_url ? (
                   <img src={form.avatar_url} alt="大頭照" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-rose-600 font-bold text-3xl">{form.name?.[0] || '?'}</span>
+                  <span className="text-orange-600 font-bold text-3xl">{form.name?.[0] || '?'}</span>
                 )}
               </div>
               <label className="absolute right-0 bottom-[6px] bg-orange-500 hover:bg-orange-600 rounded-full p-[7px] cursor-pointer transition-colors">
