@@ -7,8 +7,9 @@ import CoursePosterEditor from '@/components/CoursePosterEditor'
 import {
   InstructorNavbar, InstructorProfileCard, InstructorTitle, InstructorTabBar,
   InstructorCourseCard, InstructorMonthFilter, InstructorProfileEditModal,
-  CloseIcon, ChevronDownIcon,
+  CloseIcon, ChevronDownIcon, IssueReportFab,
 } from '@/components/InstructorMobileUI'
+import IssueReportModal from '@/components/IssueReportModal'
 import { MobileRegistrationCard, MobilePagination } from '@/components/AdminMobileUI'
 import CoursePhotoGrid from '@/components/CoursePhotoGrid'
 import SuitableAgeSelector, { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
@@ -56,6 +57,7 @@ function InstructorPortal() {
   const [filterMonth, setFilterMonth] = useState('')
   const [endedSortOrder, setEndedSortOrder] = useState<'asc' | 'desc'>('desc')
 
+  const [showIssueModal, setShowIssueModal] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [profileForm, setProfileForm] = useState(emptyProfileForm)
   const [profileSaving, setProfileSaving] = useState(false)
@@ -451,10 +453,21 @@ function InstructorPortal() {
         </div>
       </div>
 
+      {/* 問題通報浮動按鈕：僅「我的課程」頁面顯示，海報編輯器開啟時隱藏（對應 Figma node 358:26876 / 14:39466 / 352:26326） */}
+      {!posterEditorCourse && <IssueReportFab onClick={() => setShowIssueModal(true)} />}
+
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-stone-800 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg z-[60]">
           {toast}
         </div>
+      )}
+
+      {showIssueModal && instructor && (
+        <IssueReportModal
+          instructorId={instructor.id}
+          onClose={() => setShowIssueModal(false)}
+          onSuccess={() => setToast('已送出回報，感謝！')}
+        />
       )}
 
       {showProfileModal && (

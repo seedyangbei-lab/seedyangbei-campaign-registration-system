@@ -84,6 +84,30 @@ export function SortIcon({ className }: { className?: string }) {
   )
 }
 
+// 問題通報浮動按鈕的驚嘆號圖示（對應 Figma node 352:26326）
+export function ExclamationIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 9 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="0.75" y="0" width="7.5" height="19" rx="3.75" fill="white" />
+      <circle cx="4.5" cy="28" r="4" fill="white" />
+    </svg>
+  )
+}
+
+/* ---------- 問題通報浮動按鈕（僅「我的課程」頁面顯示，海報編輯器不顯示） ---------- */
+
+export function IssueReportFab({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label="問題通報"
+      className="fixed bottom-4 right-4 md:bottom-14 md:right-14 z-40 flex items-center justify-center rounded-full bg-orange-500 hover:bg-orange-600 transition-colors w-12 h-12 md:w-14 md:h-14 shadow-[0px_3.429px_5.143px_rgba(0,0,0,0.2)] md:shadow-[0px_4px_6px_rgba(0,0,0,0.2)]"
+    >
+      <ExclamationIcon className="w-[7.5px] h-[27px] md:w-[8.75px] md:h-[31.5px]" />
+    </button>
+  )
+}
+
 // 統一下拉選單樣式：appearance-none + 固定位置的自訂 chevron，避免不同瀏覽器原生箭頭位置不一致
 export function ChevronDownIcon({ className }: { className?: string }) {
   return (
