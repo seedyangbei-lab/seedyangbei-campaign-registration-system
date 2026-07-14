@@ -404,14 +404,14 @@ export default function CoursesPage() {
               <div className="hidden md:flex items-center gap-2 mb-4 flex-wrap">
                 <span className="text-xs text-stone-400 font-medium">篩選月份</span>
                 <button onClick={() => setFilterMonth('')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterMonth === '' ? 'bg-stone-800 text-white' : 'bg-white border border-stone-300 text-stone-800 hover:bg-stone-50'}`}>
+                  className={`px-3 py-2 rounded-md text-xs font-medium leading-4 transition-colors ${filterMonth === '' ? 'bg-orange-500 text-white' : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-50'}`}>
                   全部
                 </button>
                 {availableMonths.map(m => {
                   const [y, mo] = m.split('-')
                   return (
                     <button key={m} onClick={() => setFilterMonth(m)}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterMonth === m ? 'bg-stone-800 text-white' : 'bg-white border border-stone-300 text-stone-800 hover:bg-stone-50'}`}>
+                      className={`px-3 py-2 rounded-md text-xs font-medium leading-4 transition-colors ${filterMonth === m ? 'bg-orange-500 text-white' : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-50'}`}>
                       {y}/{parseInt(mo)}月
                     </button>
                   )
