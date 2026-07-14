@@ -265,26 +265,29 @@ export default function InstructorsPage() {
                 </div>
               </div>
 
-              {expanded && (
-                <div className="border-t border-stone-100 bg-stone-50 px-5 py-4">
-                  <p className="text-sm font-medium text-stone-600 mb-3">開設課程</p>
-                  {(coursesByInstructor[inst.id] || []).length === 0 ? (
-                    <p className="text-stone-400 text-sm">尚無開設課程</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {(coursesByInstructor[inst.id] || []).map(c => (
-                        <div key={c.id} className="flex items-center justify-between bg-white rounded-xl px-4 py-3 border border-stone-200">
-                          <div>
-                            <p className="text-stone-600 text-sm font-medium">{c.title}</p>
-                            <p className="text-stone-400 text-xs mt-0.5">{c.date}</p>
+              {/* grid-template-rows 0fr/1fr 技巧：不需量測高度也能讓展開/收合順暢過渡 */}
+              <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                <div className="overflow-hidden">
+                  <div className={`border-t border-stone-100 bg-stone-50 px-5 py-4 transition-opacity duration-300 ${expanded ? 'opacity-100 delay-100' : 'opacity-0'}`}>
+                    <p className="text-sm font-medium text-stone-600 mb-3">開設課程</p>
+                    {(coursesByInstructor[inst.id] || []).length === 0 ? (
+                      <p className="text-stone-400 text-sm">尚無開設課程</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {(coursesByInstructor[inst.id] || []).map(c => (
+                          <div key={c.id} className="flex items-center justify-between bg-white rounded-xl px-4 py-3 border border-stone-200">
+                            <div>
+                              <p className="text-stone-600 text-sm font-medium">{c.title}</p>
+                              <p className="text-stone-400 text-xs mt-0.5">{c.date}</p>
+                            </div>
+                            <ActiveBadge active={c.is_active} />
                           </div>
-                          <ActiveBadge active={c.is_active} />
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           )
         })}
