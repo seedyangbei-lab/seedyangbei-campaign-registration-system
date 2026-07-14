@@ -38,11 +38,8 @@ export function CloseIcon({ className }: { className?: string }) {
 
 export function StatCard({ label, value, desc }: { label: string; value: string | number; desc: string }) {
   return (
-    <div
-      className="rounded-lg p-px shrink-0 w-[222px] h-[120px]"
-      style={{ backgroundImage: 'linear-gradient(180deg, #FFCEAD 0%, #FFFFFF 100%)' }}
-    >
-      <div className="bg-white rounded-lg w-full h-full p-4 flex flex-col justify-center gap-1">
+    <div className="stat-card-flow-border rounded-lg shrink-0 w-[222px] h-[120px]">
+      <div className="relative z-10 bg-white border border-[#ffcead]/50 rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.05)] w-full h-full p-4 flex flex-col justify-center gap-1">
         <p className="text-[#575350] text-xs font-medium leading-tight">{label}</p>
         <p className="text-[#EA5808] text-[32px] font-semibold leading-none" style={{ fontFamily: 'Inter, sans-serif' }}>{value}</p>
         <p className="text-[#787168] text-xs">{desc}</p>
