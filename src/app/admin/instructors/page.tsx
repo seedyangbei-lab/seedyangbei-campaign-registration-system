@@ -211,7 +211,8 @@ export default function InstructorsPage() {
           const expanded = expandedId === inst.id
           return (
             <div key={inst.id} className="bg-white border border-stone-100 rounded-2xl shadow-sm overflow-hidden">
-              <div className="flex items-stretch">
+              {/* 桌機版：橫向 row + 右側直條動作區 */}
+              <div className="hidden md:flex md:items-stretch">
                 <div className="flex-1 min-w-0">
                   <div className="border-b border-stone-100 px-4 pb-2 pt-4 flex items-center gap-2">
                     {inst.avatar_url ? (
@@ -260,6 +261,60 @@ export default function InstructorsPage() {
                   )}
                   <button onClick={() => loadCourses(inst.id)}
                     className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium py-2 rounded-md transition-colors">
+                    {expanded ? '收起課程' : '查看課程'}
+                  </button>
+                </div>
+              </div>
+
+              {/* 手機版：卡片直向堆疊，按鈕橫排在下方（對應 Figma node 387-34119 / 387-34184） */}
+              <div className="flex md:hidden flex-col">
+                <div className="border-b border-stone-100">
+                  <div className="flex items-center gap-2 p-4">
+                    {inst.avatar_url ? (
+                      <img src={inst.avatar_url} alt={inst.name} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
+                        <span className="text-orange-600 font-bold text-lg">{inst.name[0]}</span>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0 flex flex-col gap-1">
+                      <div className="flex items-center gap-1">
+                        <p className="text-stone-800 font-bold text-base whitespace-nowrap">{inst.name}</p>
+                        <button onClick={() => openEdit(inst)} aria-label="編輯講師"
+                          className="w-5 h-5 flex items-center justify-center border border-stone-200 rounded-md hover:bg-stone-50 transition-colors shrink-0 text-stone-500">
+                          <EditIcon />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <BindBadge bound={bound} />
+                        <ActiveBadge active={inst.is_active} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-4 pt-1 pb-3">
+                  <p className="text-stone-400 text-xs truncate">{inst.bio || '尚無簡介'}</p>
+                </div>
+                <div
+                  className="border-t border-dashed border-orange-400 flex items-center gap-2 p-4"
+                  style={{ backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,216,167,0.2) 100%)' }}
+                >
+                  {bound ? (
+                    <button onClick={() => handleUnbind(inst.id)}
+                      className="flex-1 border border-rose-600 text-rose-600 text-xs font-medium py-2 rounded-md hover:bg-rose-50 transition-colors">
+                      解除綁定
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleGenerateClaim(inst.id)}
+                      disabled={claimLoadingId === inst.id}
+                      className="flex-1 bg-orange-50 border border-orange-200 text-orange-600 text-xs font-medium py-2 rounded-md hover:bg-orange-100 disabled:opacity-50 transition-colors"
+                    >
+                      {claimLoadingId === inst.id ? '產生中...' : '產生邀請連結'}
+                    </button>
+                  )}
+                  <button onClick={() => loadCourses(inst.id)}
+                    className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium py-2 rounded-md transition-colors">
                     {expanded ? '收起課程' : '查看課程'}
                   </button>
                 </div>
