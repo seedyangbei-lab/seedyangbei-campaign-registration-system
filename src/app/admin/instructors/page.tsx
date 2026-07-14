@@ -241,10 +241,7 @@ export default function InstructorsPage() {
                   </div>
                 </div>
 
-                <div
-                  className="w-[130px] shrink-0 border-l border-dashed border-orange-400 flex flex-col gap-2 justify-center p-3"
-                  style={{ backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,216,167,0.2) 100%)' }}
-                >
+                <div className="w-[130px] shrink-0 border-l border-dashed border-orange-400 bg-white flex flex-col gap-2 justify-center p-3">
                   {bound ? (
                     <button onClick={() => handleUnbind(inst.id)}
                       className="border border-rose-600 text-rose-600 text-xs font-medium py-2 rounded-md hover:bg-rose-50 transition-colors">
@@ -295,10 +292,7 @@ export default function InstructorsPage() {
                 <div className="px-4 pt-1 pb-3">
                   <p className="text-stone-400 text-xs truncate">{inst.bio || '尚無簡介'}</p>
                 </div>
-                <div
-                  className="border-t border-dashed border-orange-400 flex items-center gap-2 p-4"
-                  style={{ backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,216,167,0.2) 100%)' }}
-                >
+                <div className="border-t border-dashed border-orange-400 bg-white flex items-center gap-2 p-4">
                   {bound ? (
                     <button onClick={() => handleUnbind(inst.id)}
                       className="flex-1 border border-rose-600 text-rose-600 text-xs font-medium py-2 rounded-md hover:bg-rose-50 transition-colors">
