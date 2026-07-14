@@ -358,6 +358,10 @@ export function InstructorProfileEditModal({
           <CloseIcon className="text-stone-600" />
         </button>
 
+        <div className="border-b border-stone-100 pb-4 w-full flex flex-col items-center">
+          <p className="font-medium text-lg leading-7 text-stone-600">編輯個人資料</p>
+        </div>
+
         <div className="relative w-[100px] h-[100px] shrink-0">
           <div className="w-full h-full rounded-full overflow-hidden bg-orange-100 flex items-center justify-center">
             {form.avatar_url ? (
