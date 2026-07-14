@@ -24,7 +24,10 @@ function PlusThinIcon({ className }: { className?: string }) {
 function PhotoIcon({ className }: { className?: string }) {
   return (
     <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+      <path d="M21 3v5h-5"/>
+      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+      <path d="M8 16H3v5"/>
     </svg>
   )
 }
@@ -84,8 +87,18 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
   const [previewScale, setPreviewScale] = useState(1)
   const sliderColRef = useRef<HTMLDivElement>(null)
   const [sliderAreaHeight, setSliderAreaHeight] = useState(160)
+  const colorStripRef = useRef<HTMLDivElement>(null)
+  const [colorStripHeight, setColorStripHeight] = useState(220)
 
   useEffect(() => { loadAllGoogleFonts() }, [])
+
+  // 禁止頁面左右滑動：直接作用在 body 上，避免用一個帶 overflow 的祖先 div 包住整棵樹
+  // （那樣會讓 sticky 的捲動祖先變成該 div，導致 sticky 失效）
+  useEffect(() => {
+    const prev = document.body.style.overflowX
+    document.body.style.overflowX = 'hidden'
+    return () => { document.body.style.overflowX = prev }
+  }, [])
 
   // ── 讀取上次「儲存設定」──────────────────────────────────────────────────────
   useEffect(() => {
@@ -131,11 +144,22 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
     } catch (_e) { /* localStorage 不可用時靜默略過 */ }
   }
 
-  // 手機版：畫布寬度撐滿版面即可，不需扣高度（頁面可垂直捲動）
+  // 手機版：海報以左側色彩選擇欄的高度為準縮放（三欄等高），寬度僅作為上限
   useEffect(() => {
     const el = stageRef.current
     if (!el) return
-    const update = () => setPreviewScale(Math.min(el.clientWidth/POSTER_W, 2))
+    const update = () => setPreviewScale(Math.min(el.clientWidth/POSTER_W, colorStripHeight/POSTER_H))
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [colorStripHeight])
+
+  // 量測左側色彩選擇欄的實際高度
+  useEffect(() => {
+    const el = colorStripRef.current
+    if (!el) return
+    const update = () => setColorStripHeight(el.clientHeight)
     update()
     const ro = new ResizeObserver(update)
     ro.observe(el)
@@ -226,7 +250,7 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
   }, [activeBg,tc,enTc,iconColor,dotFill,dotOn,dotShape,dotCustomChar,dotOpacity,dotSize,dotDensity,dotCoverage,dotArrangement,dotSeed,borderOn,borderText,imgSrc,imgPos,imgScale,enFont,zhFont,zhFontSize,enFontSize,zhLetterPx,enLetterPx,locFontSize,borderFontSize,titleGap,course])
 
   return (
-    <div className="min-h-screen bg-[#fafaf9] pb-[104px] overflow-x-hidden">
+    <div className="min-h-screen bg-[#fafaf9] pb-[104px]">
       {/* Navbar */}
       <div className="sticky top-0 z-30 bg-white h-[52px] px-4 flex items-center shadow-[0px_4px_2px_rgba(0,0,0,0.03)]">
         <button onClick={()=>router.push('/instructor')} aria-label="返回" className="w-6 h-6 flex items-center justify-center shrink-0 text-stone-600">
@@ -237,11 +261,10 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
       </div>
 
       {/* 預覽區：sticky 貼在 navbar 下方，色彩選擇／海報／變更圖片三者等高（依 node 341-24687 auto-layout） */}
-      <div className="sticky top-[52px] z-20 bg-white border-b border-t border-dashed border-orange-400 px-4 py-4 overflow-hidden"
-        style={{ backgroundImage:'linear-gradient(180deg, #fff7ed 0%, #ffffff 100%)' }}>
+      <div className="sticky top-[52px] z-20 bg-white border-b border-stone-200 px-4 py-4 overflow-hidden">
         <div className="flex items-stretch gap-3 w-full">
           {/* 左：主視覺色彩直排 */}
-          <div className="flex flex-col gap-2 bg-stone-100 rounded-xl p-1.5 overflow-y-auto shrink-0 w-[38px]">
+          <div ref={colorStripRef} className="flex flex-col gap-2 bg-stone-100 rounded-xl p-1.5 shrink-0 w-[38px]">
             {SCHEMES_MOBILE.map(s=>(
               <button key={s.id} aria-label={s.label}
                 onClick={()=>{ setScheme(s); setCustomBg('') }}
@@ -373,16 +396,20 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
           </div>
           </div>
 
-          {/* 右：直式 zoom slider（fill 到變更圖片按鈕，間距 16px）＋ 變更圖片 icon 按鈕 */}
+          {/* 右：直式 zoom slider（+ 在上／- 在下，fill 到變更圖片按鈕，間距 16px）＋ 變更圖片 icon 按鈕 */}
           <div className="flex flex-col items-center gap-4 shrink-0 w-[38px]">
-            <div ref={sliderColRef} className="relative flex-1 w-full min-h-0">
-              <input type="range" min="0.5" max="3" step="0.05" value={imgScale} onChange={e=>setImgScale(parseFloat(e.target.value))}
-                className="poster-slider"
-                style={{
-                  position:'absolute', left:'50%', top:'50%', width:sliderAreaHeight, height:20,
-                  transform:'translate(-50%, -50%) rotate(-90deg)',
-                  ...sliderTrackStyle(imgScale, 0.5, 3),
-                }} />
+            <div className="flex-1 min-h-0 w-full flex flex-col items-center gap-1.5">
+              <PlusIcon className="text-stone-400 shrink-0" />
+              <div ref={sliderColRef} className="relative flex-1 w-full min-h-0">
+                <input type="range" min="0.5" max="3" step="0.05" value={imgScale} onChange={e=>setImgScale(parseFloat(e.target.value))}
+                  className="poster-slider"
+                  style={{
+                    position:'absolute', left:'50%', top:'50%', width:sliderAreaHeight, height:20,
+                    transform:'translate(-50%, -50%) rotate(-90deg)',
+                    ...sliderTrackStyle(imgScale, 0.5, 3),
+                  }} />
+              </div>
+              <MinusIcon className="text-stone-400 shrink-0" />
             </div>
             <button onClick={()=>setShowPhotoPicker(true)} aria-label="變更圖片"
               className="w-9 h-9 shrink-0 flex items-center justify-center rounded-md border border-stone-200 bg-white hover:bg-stone-50 transition-colors">

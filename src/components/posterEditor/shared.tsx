@@ -463,11 +463,11 @@ export function SliderRow({ label, min, max, step, value, onChange, unit, decima
   label: string; min: number; max: number; step: number; value: number; onChange: (v:number)=>void; unit: string; decimals?: number
 }) {
   return (
-    <div className="bg-stone-100 rounded-lg px-2 py-1 w-full">
-      <p className="text-[11px] text-stone-500 mb-0.5">{label}</p>
-      <div className="flex items-center gap-1.5">
+    <div className="bg-stone-100 rounded-lg px-2 py-1 w-full min-w-0">
+      <p className="text-[11px] text-stone-500 mb-0.5 truncate">{label}</p>
+      <div className="flex items-center gap-1.5 min-w-0">
         <input type="range" min={min} max={max} step={step} value={value}
-          onChange={e=>onChange(parseFloat(e.target.value))} className="poster-slider flex-1 accent-orange-500 h-5"
+          onChange={e=>onChange(parseFloat(e.target.value))} className="poster-slider flex-1 min-w-0 accent-orange-500 h-5"
           style={sliderTrackStyle(value, min, max)} />
         <span className="text-[11px] font-medium text-orange-600 w-8 text-right shrink-0">
           {decimals!==undefined ? value.toFixed(decimals) : value}{unit}
