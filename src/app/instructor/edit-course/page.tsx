@@ -17,10 +17,10 @@ function BackArrowIcon() {
 const emptyForm: CourseForm = {
   title: '', description: '', date: '', time_start: '', time_end: '',
   location: '', custom_location: '', notes: '', suitable_age: '全年齡', custom_age: '',
-  photos: [], max_seats: 20,
+  photos: [], max_seats: 20, co_instructor_ids: [],
 }
 
-function buildForm(course: any, mode: 'edit' | 'copy'): CourseForm {
+function buildForm(course: any, mode: 'edit' | 'copy', currentInstructorId: string): CourseForm {
   const agePreset = AGE_OPTIONS.slice(0, 4).includes(course.suitable_age) ? course.suitable_age : (course.suitable_age ? '其他' : '全年齡')
   return {
     title: course.title || '', description: course.description || '', date: mode === 'copy' ? '' : (course.date || ''),
@@ -31,6 +31,7 @@ function buildForm(course: any, mode: 'edit' | 'copy'): CourseForm {
     custom_age: agePreset === '其他' ? (course.suitable_age || '') : '',
     photos: (course.photo_urls && course.photo_urls.length > 0) ? course.photo_urls : (course.poster_url ? [course.poster_url] : []),
     max_seats: course.max_seats || 20,
+    co_instructor_ids: (course.instructor_ids || []).filter((id: string) => id !== currentInstructorId),
   }
 }
 
@@ -50,6 +51,7 @@ function EditCoursePageInner() {
   const [form, setForm] = useState<CourseForm>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [allInstructors, setAllInstructors] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
     (async () => {
@@ -62,11 +64,14 @@ function EditCoursePageInner() {
       if (!instr) { router.replace('/instructor'); return }
       setInstructor(instr)
 
+      const { data: roster } = await supabase.from('instructors').select('id, name').eq('is_active', true).order('name')
+      setAllInstructors(roster || [])
+
       if (courseId) {
         const { data: course } = await supabase.from('courses').select('*').eq('id', courseId).maybeSingle()
         if (course) {
           setCourseRow(course)
-          setForm(buildForm(course, mode))
+          setForm(buildForm(course, mode, instr.id))
         }
       }
       setLoading(false)
@@ -92,11 +97,14 @@ function EditCoursePageInner() {
 
     const location = form.location === '其他' ? form.custom_location : form.location
     const suitableAge = form.suitable_age === '其他' ? form.custom_age : form.suitable_age
+    const coInstructorIds = form.co_instructor_ids.filter(id => id && id !== instructor.id)
+    const instructorIds = Array.from(new Set([instructor.id, ...coInstructorIds]))
     const payload = {
       title: form.title, description: form.description, date: form.date,
       time_start: form.time_start, time_end: form.time_end,
       location, notes: form.notes, suitable_age: suitableAge,
       photo_urls: form.photos, poster_url: form.photos[0] || null, max_seats: form.max_seats,
+      instructor_ids: instructorIds,
     }
 
     if (mode === 'edit' && courseRow) {
@@ -111,7 +119,6 @@ function EditCoursePageInner() {
       await supabase.from('courses').insert({
         ...payload,
         instructor_id: instructor.id,
-        instructor_ids: [instructor.id],
         is_active: true,
       })
     }
@@ -135,7 +142,10 @@ function EditCoursePageInner() {
       </div>
 
       <form onSubmit={handleSave} className="p-4">
-        <CourseEditFormFields form={form} setForm={setForm} uploadCoursePhoto={uploadCoursePhoto} />
+        <CourseEditFormFields
+          form={form} setForm={setForm} uploadCoursePhoto={uploadCoursePhoto}
+          instructorOptions={allInstructors.filter(i => i.id !== instructor?.id)}
+        />
 
         {error && <p className="text-red-500 text-xs mt-3">{error}</p>}
 

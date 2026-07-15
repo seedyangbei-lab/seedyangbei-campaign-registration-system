@@ -15,6 +15,7 @@ interface Course {
   poster_url?: string; photo_urls?: string[]; notes?: string; suitable_age?: string
   line_group_url?: string
   instructors?: { id: string; name: string; phone?: string; line_id?: string } | null
+  instructors_list?: { id: string; name: string }[]
   course_categories?: { id: string; name: string; color: string } | null
 }
 
@@ -494,10 +495,17 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
                         <InfoRow icon={<IconPin />}>{course.location}</InfoRow>
                         <InfoRow icon={<IconPerson />}>{course.suitable_age || '全年齡'}</InfoRow>
                       </div>
-                      {course.instructors && (
+                      {(course.instructors_list && course.instructors_list.length > 0 ? course.instructors_list : (course.instructors ? [course.instructors] : [])).length > 0 && (
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="bg-orange-500 text-white text-xs font-medium px-2 py-0.5 rounded flex-shrink-0">講師</span>
-                          <span className="text-sm text-stone-800 truncate">{course.instructors.name}</span>
+                          <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+                            {(course.instructors_list && course.instructors_list.length > 0 ? course.instructors_list : (course.instructors ? [course.instructors] : [])).map((inst, idx, arr) => (
+                              <span key={inst.id} className="flex items-center gap-1 shrink-0">
+                                <span className="text-sm font-medium text-stone-800 whitespace-nowrap">{inst.name}</span>
+                                {idx < arr.length - 1 && <span className="text-sm font-medium text-stone-400">/</span>}
+                              </span>
+                            ))}
+                          </div>
                           {lineUrl && (
                             <button
                               onClick={e => {
