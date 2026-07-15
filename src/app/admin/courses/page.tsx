@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import CourseScheduleExporter from '@/components/CourseScheduleExporter'
+import WalkInRegistrationModal from '@/components/WalkInRegistrationModal'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import AdminCourseEditFormFields, {
   LOCATIONS, emptyAdminCourseForm, type AdminCourseForm, type AdminCategory,
@@ -40,10 +41,7 @@ export default function CoursesPage() {
   const [attendanceLoading, setAttendanceLoading] = useState(false)   
   const [attendanceSaving, setAttendanceSaving] = useState(false)
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
-  const [walkInOpen, setWalkInOpen] = useState(false)
-  const [walkInForm, setWalkInForm] = useState({ name: '', room_number: '' })
-  const [walkInSaving, setWalkInSaving] = useState(false)
-  const [walkInError, setWalkInError] = useState('')
+  const [walkInModalOpen, setWalkInModalOpen] = useState(false)
   const supabase = createClient()
   const router = useRouter()
 
@@ -157,51 +155,21 @@ export default function CoursesPage() {
     setAttendanceModal(course)
     setAttendanceLoading(true)
     setCheckedIds(new Set())
-    setWalkInOpen(false)
-    setWalkInForm({ name: '', room_number: '' })
-    setWalkInError('')
-    const { data: regs } = await supabase
+    setWalkInModalOpen(false)
+    const { data: regs, error } = await supabase
       .from('registrations')
       .select('id, status, is_walk_in, users(id, name, room_number, line_id)')
       .eq('course_id', course.id)
       .in('status', ['confirmed', 'attended'])
       .order('registered_at')
+    if (error) {
+      console.error('attendance fetch error:', error)
+      alert('讀取報名名單失敗：' + error.message + (error.message.includes('is_walk_in') ? '\n\nsql/2026-07-16_registrations_walk_in.sql 這份遷移可能還沒在 Supabase SQL Editor 執行過。' : ''))
+    }
     setAttendanceList(regs || [])
     const attended = new Set((regs || []).filter((r: any) => r.status === 'attended').map((r: any) => r.id))
     setCheckedIds(attended)
     setAttendanceLoading(false)
-  }
-
-  // 現場報到（無網路報名居民）：直接建立最簡 users + registrations 紀錄，不走 LINE 登入
-  const addWalkIn = async () => {
-    const name = walkInForm.name.trim()
-    const roomNumber = walkInForm.room_number.trim()
-    if (!name || !roomNumber) { setWalkInError('請填寫姓名與戶號'); return }
-    setWalkInError('')
-    setWalkInSaving(true)
-    const { data: newUser, error: userErr } = await supabase.from('users')
-      .insert({ name, room_number: roomNumber })
-      .select('id, name, room_number, line_id')
-      .single()
-    if (userErr || !newUser) {
-      setWalkInError('新增失敗：' + (userErr?.message || '未知錯誤'))
-      setWalkInSaving(false)
-      return
-    }
-    const { data: newReg, error: regErr } = await supabase.from('registrations')
-      .insert({ user_id: newUser.id, course_id: attendanceModal.id, status: 'confirmed', is_social_housing_resident: true, is_walk_in: true })
-      .select('id, status, is_walk_in')
-      .single()
-    if (regErr || !newReg) {
-      setWalkInError('新增失敗：' + (regErr?.message || '未知錯誤'))
-      setWalkInSaving(false)
-      return
-    }
-    setAttendanceList(list => [...list, { ...newReg, users: newUser }])
-    setCheckedIds(prev => new Set(prev).add(newReg.id))
-    setWalkInForm({ name: '', room_number: '' })
-    setWalkInOpen(false)
-    setWalkInSaving(false)
   }
 
   const saveAttendance = async () => {
@@ -557,33 +525,11 @@ export default function CoursesPage() {
                 <>
                   {/* 現場報到：不管名單是否為空都能新增，供無網路報名的居民現場登記 */}
                   <div className="mb-4">
-                    {!walkInOpen ? (
-                      <button type="button" onClick={() => setWalkInOpen(true)}
-                        className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-orange-600 border border-dashed border-orange-300 rounded-xl py-2.5 hover:bg-orange-50 transition-colors">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                        現場新增報到
-                      </button>
-                    ) : (
-                      <div className="bg-stone-50 border border-stone-200 rounded-xl p-3 flex flex-col gap-2">
-                        <div className="flex gap-2">
-                          <input value={walkInForm.name} onChange={e => setWalkInForm(f => ({ ...f, name: e.target.value }))} placeholder="姓名"
-                            className="flex-1 h-9 px-3 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200" />
-                          <input value={walkInForm.room_number} onChange={e => setWalkInForm(f => ({ ...f, room_number: e.target.value }))} placeholder="戶號"
-                            className="flex-1 h-9 px-3 rounded-lg border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200" />
-                        </div>
-                        {walkInError && <p className="text-xs text-red-500">{walkInError}</p>}
-                        <div className="flex gap-2">
-                          <button type="button" onClick={() => { setWalkInOpen(false); setWalkInForm({ name: '', room_number: '' }); setWalkInError('') }}
-                            className="flex-1 h-9 text-xs font-medium text-stone-500 border border-stone-200 rounded-lg transition-colors hover:bg-stone-100">
-                            取消
-                          </button>
-                          <button type="button" onClick={addWalkIn} disabled={walkInSaving}
-                            className="flex-1 h-9 text-xs font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 rounded-lg transition-colors">
-                            {walkInSaving ? '新增中...' : '確認新增'}
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                    <button type="button" onClick={() => setWalkInModalOpen(true)}
+                      className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-orange-600 border border-dashed border-orange-300 rounded-xl py-2.5 hover:bg-orange-50 transition-colors">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                      現場新增報到
+                    </button>
                   </div>
 
                   {attendanceList.length === 0 ? (
@@ -627,6 +573,18 @@ export default function CoursesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {walkInModalOpen && attendanceModal && (
+        <WalkInRegistrationModal
+          courseId={attendanceModal.id}
+          onClose={() => setWalkInModalOpen(false)}
+          onCreated={(reg) => {
+            setAttendanceList(list => [...list, reg])
+            setCheckedIds(prev => new Set(prev).add(reg.id))
+            setWalkInModalOpen(false)
+          }}
+        />
       )}
 
       {/* 新增/編輯課程彈窗（桌機；手機版編輯/複製已改為獨立頁面 /admin/courses/edit，對照 Figma node 359-27297） */}

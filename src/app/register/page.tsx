@@ -11,6 +11,7 @@ import TutorialTooltip from '@/components/TutorialTooltip'
 import TutorialSkipButton from '@/components/TutorialSkipButton'
 import SiteNavbar from '@/components/SiteNavbar'
 import Link from 'next/link'
+import { BUILDINGS, UNIT_NUMBERS, FLOORS, SUB_UNITS } from '@/lib/address'
 
 const DEMO_COURSE_DISPLAY = { id: DEMO_COURSE_ID, title: '範例課程（僅供教學示範）', date: new Date().toISOString().split('T')[0], time_start: '10:00', time_end: '12:00', location: '示範地點' }
 
@@ -35,10 +36,6 @@ function IconBack() {
 }
 
 const AGE_GROUPS = ['18歲以下','18~25歲','26~35歲','36~45歲','46~55歲','56~65歲','65歲以上']
-const BUILDINGS = ['A棟','B棟','C棟','D棟']
-const UNIT_NUMBERS = ['398','400','135','137']
-const FLOORS = Array.from({ length: 17 }, (_, i) => String(i + 2)) // 2 ~ 18
-const SUB_UNITS = Array.from({ length: 9 }, (_, i) => String(i + 1)) // 1 ~ 9
 
 function RegisterForm() {
   const router = useRouter()
