@@ -242,17 +242,24 @@ export default function SystemHealthPage() {
         ))}
       </div>
 
-      {/* 手機版：前 4 張卡片同列＋流動箭頭，「報名成功」空間不足時自動換行並強調顯示 */}
-      <div className="md:hidden bg-gradient-to-b from-white to-[#ffe2cd] border border-[#ffe2cd] rounded-[10px] p-2 flex flex-wrap gap-1 items-center mb-8">
-        {FUNNEL_CARDS.map((c, i) => {
-          const isLast = i === FUNNEL_CARDS.length - 1
-          return (
+      {/* 手機版：固定「上面四個、下面一個」兩列排版，不依賴視窗寬度自動換行 */}
+      <div className="md:hidden bg-gradient-to-b from-white to-[#ffe2cd] border border-[#ffe2cd] rounded-[10px] p-2 flex flex-col gap-2 mb-8">
+        <div
+          className="grid gap-1 items-center"
+          style={{ gridTemplateColumns: Array(4).fill('minmax(0, 1fr)').join(' 12px ') }}
+        >
+          {FUNNEL_CARDS.slice(0, 4).map((c, i) => (
             <Fragment key={c.step}>
-              <MobileFunnelCard label={STEP_LABELS[c.step]} value={loading ? '···' : (stepCounts[c.step] || 0)} highlight={isLast} />
-              {i < FUNNEL_CARDS.length - 2 && <MobileFunnelArrow delay={i * 0.18} />}
+              <MobileFunnelCard label={STEP_LABELS[c.step]} value={loading ? '···' : (stepCounts[c.step] || 0)} />
+              {i < 3 && <MobileFunnelArrow delay={i * 0.18} />}
             </Fragment>
-          )
-        })}
+          ))}
+        </div>
+        <MobileFunnelCard
+          label={STEP_LABELS[FUNNEL_CARDS[4].step]}
+          value={loading ? '···' : (stepCounts[FUNNEL_CARDS[4].step] || 0)}
+          highlight
+        />
       </div>
 
       {/* 系統狀態與回報 */}

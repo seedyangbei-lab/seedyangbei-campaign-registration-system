@@ -55,14 +55,14 @@ export function StatCard({ label, value, desc }: { label: string; value: string 
 export function MobileFunnelCard({ label, value, highlight = false }: { label: string; value: string | number; highlight?: boolean }) {
   if (highlight) {
     return (
-      <div className="flex-1 min-w-[112px] bg-white border border-orange-500 rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.05)] flex items-center justify-center gap-1 px-2 py-2.5">
+      <div className="w-full bg-white border border-orange-500 rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.05)] flex items-center justify-center gap-1 px-2 py-2.5">
         <span className="text-[10px] leading-[15px] text-stone-600 tracking-[0.5px] whitespace-nowrap">{label}</span>
         <span className="text-[18px] leading-7 font-medium text-orange-600" style={{ fontFamily: 'Inter, sans-serif' }}>{value}</span>
       </div>
     )
   }
   return (
-    <div className="w-[70px] h-20 shrink-0 bg-white border border-[#ffcead] rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.05)] flex flex-col items-center justify-center gap-1 px-1 py-2">
+    <div className="w-full min-w-0 h-20 bg-white border border-[#ffcead] rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.05)] flex flex-col items-center justify-center gap-1 px-1 py-2">
       <span className="text-[10px] leading-[15px] text-stone-600 text-center tracking-[0.5px]">{label}</span>
       <span className="text-[18px] leading-7 font-medium text-orange-600" style={{ fontFamily: 'Inter, sans-serif' }}>{value}</span>
     </div>
