@@ -49,7 +49,7 @@ function XIcon({ className }: { className?: string }) {
 
 // 合作講師搜尋多選（對應 Figma node 426-47378/426-47142）：可輸入關鍵字篩選，
 // 選項只會出現後台已建檔的講師，選取後以 chips 呈現、點 x 移除
-function InstructorMultiSelect({
+export function InstructorMultiSelect({
   options, selectedIds, onChange,
 }: {
   options: InstructorOption[]
@@ -116,7 +116,7 @@ function InstructorMultiSelect({
 }
 
 // 下拉選單裡若目前值不在預設清單中（例如舊資料是 15 分鐘為單位），把它加進去，避免選單顯示空白
-function withCurrentValue(options: string[], current: string) {
+export function withCurrentValue(options: string[], current: string) {
   if (current && !options.includes(current)) return [current, ...options]
   return options
 }

@@ -1,170 +1,20 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
-  import { createClient } from '@/lib/supabase'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase'
 import CourseScheduleExporter from '@/components/CourseScheduleExporter'
-import CoursePhotoGrid from '@/components/CoursePhotoGrid'
-import SuitableAgeSelector, { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
+import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
+import AdminCourseEditFormFields, {
+  LOCATIONS, emptyAdminCourseForm, type AdminCourseForm, type AdminCategory,
+} from '@/components/AdminCourseEditFormFields'
 
 interface Instructor { id: string; name: string }
 interface Category { id: string; name: string; color: string }
 
-const LOCATIONS = ['C 小客廳', 'D 小客廳', '閱覽室 1', '閱覽室 2', '其他']
-const HOURS = Array.from({length: 12}, (_, i) => String(i + 1).padStart(2, '0'))
-const MINUTES = ['00', '15', '30', '45']
-const NOTES_MAX = 40
+const isMobileViewport = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
 
-const emptyForm = {
-  title: '', description: '', date: '',
-  period_start: 'AM', hour_start: '09', min_start: '00',
-  period_end: 'AM', hour_end: '10', min_end: '00',
-  location: '', custom_location: '', max_seats: 20,
-  photo_urls: [] as string[], instructor_id: '', instructor_ids: [] as string[], category_id: '',
-  notes: '', suitable_age: '全年齡', custom_age: '',
-}
-
-function toTime(period: string, hour: string, min: string) {
-  let h = parseInt(hour)
-  if (period === 'AM' && h === 12) h = 0
-  if (period === 'PM' && h !== 12) h += 12
-  return `${String(h).padStart(2,'0')}:${min}`
-}
-function fromTime(time: string) {
-  if (!time) return { period: 'AM', hour: '09', min: '00' }
-  const [hStr, minStr] = time.split(':')
-  let h = parseInt(hStr); const min = minStr || '00'
-  const period = h >= 12 ? 'PM' : 'AM'
-  if (h === 0) h = 12; else if (h > 12) h -= 12
-  return { period, hour: String(h).padStart(2,'0'), min }
-}
-
-function CalendarPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const today = new Date()
-  const [viewYear, setViewYear] = useState(value ? parseInt(value.split('-')[0]) : today.getFullYear())
-  const [viewMonth, setViewMonth] = useState(value ? parseInt(value.split('-')[1]) - 1 : today.getMonth())
-  const firstDay = new Date(viewYear, viewMonth, 1).getDay()
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
-  const weeks: (number|null)[][] = []
-  let week: (number|null)[] = Array(firstDay).fill(null)
-  for (let d = 1; d <= daysInMonth; d++) { week.push(d); if (week.length === 7) { weeks.push(week); week = [] } }
-  if (week.length) weeks.push([...week, ...Array(7-week.length).fill(null)])
-  const selDay = value ? parseInt(value.split('-')[2]) : null
-  const selMon = value ? parseInt(value.split('-')[1]) - 1 : null
-  const selYear = value ? parseInt(value.split('-')[0]) : null
-  const isPast = (d: number) => { const date = new Date(viewYear, viewMonth, d); const t = new Date(); t.setHours(0,0,0,0); return date < t }
-  const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月']
-  return (
-    <div className="bg-white border border-stone-200 rounded-2xl p-4 shadow-lg w-72 z-50">
-      <div className="flex items-center justify-between mb-3">
-        <button type="button" onClick={() => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y=>y-1) } else setViewMonth(m=>m-1) }} className="p-1 hover:bg-stone-100 rounded-lg">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
-        <span className="text-sm font-semibold text-stone-700">{viewYear} 年 {monthNames[viewMonth]}</span>
-        <button type="button" onClick={() => { if (viewMonth === 11) { setViewMonth(0); setViewYear(y=>y+1) } else setViewMonth(m=>m+1) }} className="p-1 hover:bg-stone-100 rounded-lg">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
-        </button>
-      </div>
-      <div className="grid grid-cols-7 mb-1">{['日','一','二','三','四','五','六'].map(d => <div key={d} className="text-center text-xs text-stone-400 py-1">{d}</div>)}</div>
-      {weeks.map((wk, wi) => (
-        <div key={wi} className="grid grid-cols-7">
-          {wk.map((d, di) => {
-            const isSel = d && selDay === d && selMon === viewMonth && selYear === viewYear
-            const isToday = d && today.getDate() === d && today.getMonth() === viewMonth && today.getFullYear() === viewYear
-            const past = d && isPast(d)
-            return <button key={di} type="button" disabled={!!past} onClick={() => d && !past && onChange(`${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`)}
-              className={`text-center text-sm py-1.5 rounded-lg transition-colors ${!d ? '' : past ? 'text-stone-300 cursor-not-allowed' : isSel ? 'bg-orange-500 text-white' : isToday ? 'bg-orange-50 text-orange-600' : 'hover:bg-stone-100 text-stone-700'}`}>{d || ''}</button>
-          })}
-        </div>
-      ))}
-      <p className="text-xs text-stone-400 text-center mt-2">灰色為過去日期，無法選擇</p>
-    </div>
-  )
-}
-
-function TimePicker({
-  period, hour, min, prefix, form, setForm, validateTimes,
-}: {
-  period: string; hour: string; min: string; prefix: 'start' | 'end'
-  form: typeof emptyForm; setForm: (f: typeof emptyForm) => void; validateTimes: (f: typeof emptyForm) => boolean
-}) {
-  return (
-    <div className="grid grid-cols-[72px_1fr_1fr] gap-1.5 w-full">
-      <div className="relative">
-        <select value={period} onChange={e => { const f = {...form, [`period_${prefix}`]: e.target.value}; setForm(f); validateTimes(f) }} className="w-full appearance-none border border-stone-300 rounded-xl pl-2 pr-6 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-          <option value="AM">上午</option>
-          <option value="PM">下午</option>
-        </select>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
-      </div>
-      <div className="relative">
-        <select value={hour} onChange={e => { const f = {...form, [`hour_${prefix}`]: e.target.value}; setForm(f); validateTimes(f) }} className="w-full appearance-none border border-stone-300 rounded-xl pl-2 pr-6 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-          {HOURS.map(h => <option key={h} value={h}>{h} 時</option>)}
-        </select>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
-      </div>
-      <div className="relative">
-        <select value={min} onChange={e => { const f = {...form, [`min_${prefix}`]: e.target.value}; setForm(f); validateTimes(f) }} className="w-full appearance-none border border-stone-300 rounded-xl pl-2 pr-6 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-          {MINUTES.map(m => <option key={m} value={m}>{m} 分</option>)}
-        </select>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
-      </div>
-    </div>
-  )
-}
-
-function InstructorDropdown({ instructors, selectedIds, onChange }: {
-  instructors: Instructor[]
-  selectedIds: string[]
-  onChange: (ids: string[]) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const ref = React.useRef<HTMLDivElement>(null)
-
-  React.useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  const selectedNames = instructors.filter(i => selectedIds.includes(i.id)).map(i => i.name)
-
-  return (
-    <div ref={ref} className="relative">
-      <button type="button" onClick={() => setOpen(v => !v)}
-        className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-        <span className={selectedIds.length ? 'text-stone-800' : 'text-stone-400'}>
-          {selectedIds.length ? selectedNames.join('、') : '選擇講師'}
-        </span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-          className={`text-stone-400 transition-transform flex-shrink-0 ${open ? 'rotate-180' : ''}`}>
-          <polyline points="6 9 12 15 18 9"/>
-        </svg>
-      </button>
-      {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-stone-200 rounded-xl shadow-lg z-20 max-h-56 overflow-y-auto">
-          {instructors.map(inst => {
-            const checked = selectedIds.includes(inst.id)
-            return (
-              <label key={inst.id}
-                className="flex items-center gap-3 px-4 py-2.5 hover:bg-stone-50 cursor-pointer transition-colors">
-                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${checked ? 'bg-orange-500 border-orange-500' : 'border-stone-300'}`}>
-                  {checked && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>}
-                </div>
-                <span className="text-sm text-stone-700">{inst.name}</span>
-                <input type="checkbox" className="hidden" checked={checked} onChange={() => {
-                  const next = checked ? selectedIds.filter(id => id !== inst.id) : [...selectedIds, inst.id]
-                  onChange(next)
-                }} />
-              </label>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
+const emptyForm: AdminCourseForm = emptyAdminCourseForm
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<any[]>([])
@@ -184,7 +34,6 @@ export default function CoursesPage() {
   const [mainTab, setMainTab] = useState<'courses' | 'categories'>('courses')
   const [courseTab, setCourseTab] = useState<'active' | 'ended'>('active')
   const [filterMonth, setFilterMonth] = useState('')
-  const [timeError, setTimeError] = useState('')
   const [pageLoading, setPageLoading] = useState(true)
   const [attendanceModal, setAttendanceModal] = useState<any>(null)
   const [attendanceList, setAttendanceList] = useState<any[]>([])
@@ -192,6 +41,7 @@ export default function CoursesPage() {
   const [attendanceSaving, setAttendanceSaving] = useState(false)
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const supabase = createClient()
+  const router = useRouter()
 
   const fetchAll = async () => {
     const [{ data: c }, { data: i }, { data: cat }, { data: siteSettings }] = await Promise.all([
@@ -219,55 +69,47 @@ export default function CoursesPage() {
   }
   useEffect(() => { fetchAll() }, [])
 
-  const validateTimes = (f: typeof emptyForm) => {
-    const start = toTime(f.period_start, f.hour_start, f.min_start)
-    const end = toTime(f.period_end, f.hour_end, f.min_end)
-    if (end <= start) { setTimeError('結束時間不能早於或等於開始時間'); return false }
-    setTimeError(''); return true
-  }
+  // 24 小時制字串可以直接比大小，不需要再算上午/下午
+  const timeError = form.time_start && form.time_end && form.time_end <= form.time_start ? '結束時間不能早於或等於開始時間' : ''
 
-  const openAdd = () => { setEditTarget(null); setForm(emptyForm); setTimeError(''); setShowModal(true) }
+  const openAdd = () => { setEditTarget(null); setForm(emptyForm); setShowModal(true) }
 
   const openEdit = (course: any) => {
+    if (isMobileViewport()) { router.push(`/admin/courses/edit?courseId=${course.id}&mode=edit`); return }
     setEditTarget(course)
-    const s = fromTime(course.time_start); const e = fromTime(course.time_end)
     const agePreset = AGE_OPTIONS.slice(0, 4).includes(course.suitable_age) ? course.suitable_age : (course.suitable_age ? '其他' : '全年齡')
     setForm({
       title: course.title, description: course.description || '', date: course.date,
-      period_start: s.period, hour_start: s.hour, min_start: s.min,
-      period_end: e.period, hour_end: e.hour, min_end: e.min,
+      time_start: (course.time_start || '').slice(0, 5), time_end: (course.time_end || '').slice(0, 5),
       location: LOCATIONS.includes(course.location) ? course.location : '其他',
       custom_location: LOCATIONS.includes(course.location) ? '' : course.location,
       max_seats: course.max_seats,
       photo_urls: (course.photo_urls && course.photo_urls.length > 0) ? course.photo_urls : (course.poster_url ? [course.poster_url] : []),
-      instructor_id: course.instructor_id || '',
       instructor_ids: course.instructor_ids || (course.instructor_id ? [course.instructor_id] : []),
       category_id: course.category_id || '',
       notes: course.notes || '', suitable_age: agePreset,
       custom_age: agePreset === '其他' ? (course.suitable_age || '') : '',
     })
-    setTimeError(''); setShowModal(true)
+    setShowModal(true)
   }
 
   const openCopy = (course: any) => {
-    const tS = fromTime(course.time_start); const tE = fromTime(course.time_end)
+    if (isMobileViewport()) { router.push(`/admin/courses/edit?courseId=${course.id}&mode=copy`); return }
     setEditTarget(null)
     const agePreset = AGE_OPTIONS.slice(0, 4).includes(course.suitable_age) ? course.suitable_age : (course.suitable_age ? '其他' : '全年齡')
     setForm({
       title: course.title, description: course.description || '', date: '',
-      period_start: tS.period, hour_start: tS.hour, min_start: tS.min,
-      period_end: tE.period, hour_end: tE.hour, min_end: tE.min,
+      time_start: (course.time_start || '').slice(0, 5), time_end: (course.time_end || '').slice(0, 5),
       location: LOCATIONS.includes(course.location) ? course.location : '其他',
       custom_location: LOCATIONS.includes(course.location) ? '' : course.location,
       max_seats: course.max_seats,
       photo_urls: (course.photo_urls && course.photo_urls.length > 0) ? course.photo_urls : (course.poster_url ? [course.poster_url] : []),
-      instructor_id: course.instructor_id || '',
       instructor_ids: course.instructor_ids || (course.instructor_id ? [course.instructor_id] : []),
       category_id: course.category_id || '',
       notes: course.notes || '', suitable_age: agePreset,
       custom_age: agePreset === '其他' ? (course.suitable_age || '') : '',
     })
-    setTimeError(''); setShowModal(true)
+    setShowModal(true)
   }
 
   const uploadCoursePhoto = async (blob: Blob): Promise<string | null> => {
@@ -279,20 +121,18 @@ export default function CoursesPage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); if (!validateTimes(form)) return
+    e.preventDefault(); if (timeError) return
     if (form.photo_urls.length === 0) { alert('請至少上傳 1 張課程照片'); return }
     if (form.suitable_age === '其他' && !form.custom_age.trim()) { alert('請填寫適合年齡的說明'); return }
     setLoading(true)
     const location = form.location === '其他' ? form.custom_location : form.location
     const suitableAge = form.suitable_age === '其他' ? form.custom_age : form.suitable_age
-    const resolvedInstructorIds = form.instructor_ids.length > 0 ? form.instructor_ids : (form.instructor_id ? [form.instructor_id] : [])
     const payload = {
       title: form.title, description: form.description, date: form.date,
-      time_start: toTime(form.period_start, form.hour_start, form.min_start),
-      time_end: toTime(form.period_end, form.hour_end, form.min_end),
+      time_start: form.time_start, time_end: form.time_end,
       location, max_seats: form.max_seats, photo_urls: form.photo_urls, poster_url: form.photo_urls[0] || null,
-      instructor_id: resolvedInstructorIds[0] || null,
-      instructor_ids: resolvedInstructorIds,
+      instructor_id: form.instructor_ids[0] || null,
+      instructor_ids: form.instructor_ids,
       category_id: form.category_id || null,
       notes: form.notes || null, suitable_age: suitableAge || '全年齡',
     }
@@ -348,8 +188,6 @@ export default function CoursesPage() {
   const displayCourses = courseTab === 'active'
     ? courses.filter((c: any) => c.is_active && !isExpired(c))
     : endedCourses.filter((c: any) => filterMonth ? c.date?.startsWith(filterMonth) : true)
-  const notesCount = form.notes.length
-  const notesOver = notesCount > NOTES_MAX
 
   const primaryBtnCls = "bg-orange-500 hover:bg-orange-600 text-white p-2 rounded-md text-xs font-medium transition-colors whitespace-nowrap"
   const secondaryBtnCls = "bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 p-2 rounded-md text-xs font-medium transition-colors whitespace-nowrap"
@@ -714,7 +552,7 @@ export default function CoursesPage() {
         </div>
       )}
 
-      {/* 新增/編輯課程彈窗 */}
+      {/* 新增/編輯課程彈窗（桌機；手機版編輯/複製已改為獨立頁面 /admin/courses/edit，對照 Figma node 359-27297） */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) { setShowModal(false); setShowCalendar(false) }}}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -727,119 +565,35 @@ export default function CoursesPage() {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-stone-600 text-sm font-medium mb-1.5">課程名稱 *</label>
-                <input required value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-              </div>
-              <div>
-                <label className="block text-stone-600 text-sm font-medium mb-1.5">課程說明</label>
-                <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} rows={2} className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none" />
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-stone-600 text-sm font-medium mb-1.5">
-                    講師 <span className="text-stone-400 font-normal">（可多選）</span>
-                  </label>
-                <InstructorDropdown
-                  instructors={instructors}
-                  selectedIds={form.instructor_ids}
-                  onChange={ids => setForm({...form, instructor_ids: ids, instructor_id: ids[0] || ''})}
-                />
-              </div>
-              <div>
-                <label className="block text-stone-600 text-sm font-medium mb-1.5">課程類別</label>
-                <div className="relative">
-                  <select value={form.category_id} onChange={e => setForm({...form, category_id: e.target.value})}
-                    className="w-full appearance-none border border-stone-300 rounded-xl pl-4 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-                    <option value="">不分類</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
-                </div>
-              </div>
-                    
-              </div>
-              <div>
-                <label className="block text-stone-600 text-sm font-medium mb-1.5">適合年齡</label>
-                <SuitableAgeSelector
-                  value={form.suitable_age}
-                  customValue={form.custom_age}
-                  onChange={v => setForm({ ...form, suitable_age: v })}
-                  onCustomChange={v => setForm({ ...form, custom_age: v })}
-                />
-              </div>
-              <div className="relative">
-                <label className="block text-stone-600 text-sm font-medium mb-1.5">活動日期 *</label>
-                <button type="button" onClick={() => setShowCalendar(!showCalendar)} className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-orange-300">
-                  <span className={form.date ? 'text-stone-800' : 'text-stone-400'}>{form.date || '選擇日期'}</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-stone-400"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                </button>
-                {showCalendar && <div className="absolute top-full left-0 mt-1 z-20"><CalendarPicker value={form.date} onChange={v => { setForm({...form, date: v}); setShowCalendar(false) }} /></div>}
-              </div>
-              <div>
-                <label className="block text-stone-600 text-sm font-medium mb-2">時間 *</label>
-                <div className="grid grid-cols-2 gap-3 w-full">
-                  <div className="min-w-0">
-                    <p className="text-xs text-stone-400 mb-1.5">開始</p>
-                    <TimePicker period={form.period_start} hour={form.hour_start} min={form.min_start} prefix="start" form={form} setForm={setForm} validateTimes={validateTimes} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs text-stone-400 mb-1.5">結束</p>
-                    <TimePicker period={form.period_end} hour={form.hour_end} min={form.min_end} prefix="end" form={form} setForm={setForm} validateTimes={validateTimes} />
-                  </div>
-                </div>
-                {timeError && <p className="text-red-500 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-2">{timeError}</p>}
-              </div>
-              <div>
-                <label className="block text-stone-600 text-sm font-medium mb-1.5">地點 *</label>
-                <div className="relative">
-                  <select required value={form.location} onChange={e => setForm({...form, location: e.target.value})} className="w-full appearance-none border border-stone-300 rounded-xl pl-4 pr-9 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-                    <option value="">選擇地點</option>
-                    {LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
-                  </select>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
-                </div>
-              </div>
-              {form.location === '其他' && <input required value={form.custom_location} onChange={e => setForm({...form, custom_location: e.target.value})} placeholder="請填寫實際地點" className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />}
-              <div>
-                <label className="block text-stone-600 text-sm font-medium mb-1.5">名額上限 *</label>
-                <input required type="number" min="1"
-                  value={form.max_seats === 0 ? '' : form.max_seats}
-                  onChange={e => { const val = e.target.value; setForm({...form, max_seats: val === '' ? 0 : Math.max(1, parseInt(val) || 0)}) }}
-                  onBlur={e => { if (!e.target.value || parseInt(e.target.value) < 1) setForm({...form, max_seats: 1}) }}
-                  className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-stone-600 text-sm font-medium">注意事項 <span className="text-stone-400 font-normal">（選填，最多顯示兩行）</span></label>
-                  <span className={`text-xs font-medium tabular-nums ${notesOver ? 'text-red-500' : notesCount >= NOTES_MAX * 0.8 ? 'text-orange-500' : 'text-stone-400'}`}>{notesCount} / {NOTES_MAX}</span>
-                </div>
-                <textarea value={form.notes}
-                  onChange={e => { const newVal = e.target.value; if (newVal.length <= NOTES_MAX || newVal.length < form.notes.length) setForm({...form, notes: newVal}) }}
-                  rows={2} placeholder="例：閱覽室內書籍僅供室內閱讀，不可私自帶離。"
-                  className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 resize-none transition-colors ${notesOver ? 'border-red-400 focus:ring-red-300 bg-red-50' : 'border-stone-300 focus:ring-orange-300'}`} />
-                {notesOver && <p className="text-red-500 text-xs mt-1">已達字數上限（{NOTES_MAX} 字），請刪減內容</p>}
-              </div>
-              <CoursePhotoGrid
-                photos={form.photo_urls}
-                onChange={photo_urls => setForm({ ...form, photo_urls })}
-                uploadImage={uploadCoursePhoto}
+              <AdminCourseEditFormFields
+                form={form}
+                setForm={setForm}
+                categories={categories}
+                instructorOptions={instructors}
+                timeError={timeError}
+                showCalendar={showCalendar}
+                setShowCalendar={setShowCalendar}
+                uploadCoursePhoto={uploadCoursePhoto}
               />
-              <div className="flex gap-3 pt-2">
-                <button type="submit" disabled={loading || !form.date || !!timeError || notesOver} className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
+              {/* 按鈕改上下排列：編輯時下方是「刪除課程」，新增/複製時下方是「取消」（對照 Figma node 359-27297） */}
+              <div className="flex flex-col gap-3 pt-2">
+                <button type="submit" disabled={loading || !form.date || !!timeError} className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
                   {loading ? '儲存中...' : editTarget ? '更新課程' : '新增課程'}
                 </button>
-                <button type="button" onClick={() => { setShowModal(false); setShowCalendar(false) }} className="px-6 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-xl text-sm transition-colors">取消</button>
+                {editTarget ? (
+                  <button type="button" onClick={async () => {
+                    if (!confirm('確定要刪除這個課程嗎？')) return
+                    setShowModal(false)
+                    await handleDelete(editTarget.id)
+                  }} className="w-full border border-rose-600 text-rose-600 hover:bg-rose-50 font-medium py-3 rounded-xl text-sm transition-colors">
+                    刪除課程
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => { setShowModal(false); setShowCalendar(false) }} className="w-full border border-stone-300 text-stone-600 hover:bg-stone-50 font-medium py-3 rounded-xl text-sm transition-colors">
+                    取消
+                  </button>
+                )}
               </div>
-              {editTarget && (
-                <button type="button" onClick={async () => {
-                  if (!confirm('確定要刪除這個課程嗎？')) return
-                  setShowModal(false)
-                  await handleDelete(editTarget.id)
-                }} className="w-full text-center text-xs text-red-400 hover:text-red-600 transition-colors pt-1">
-                  刪除此課程
-                </button>
-              )}
             </form>
           </div>
         </div>
