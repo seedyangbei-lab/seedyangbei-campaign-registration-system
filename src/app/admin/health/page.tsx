@@ -6,6 +6,7 @@ import {
   ArrowRightIcon, CopyIcon, CloseIcon, StatCard,
   SourceBadge, IssueTypeBadge, AnomalyTypeBadge, InstructorStatusBadge, SystemStatusBadge,
   INSTRUCTOR_STATUS_OPTIONS, FilterSelect, PerPageSelect, PaginationBar,
+  MobileFunnelCard, MobileFunnelArrow,
 } from '@/components/AdminHealthUI'
 
 type FunnelLog = {
@@ -202,7 +203,7 @@ export default function SystemHealthPage() {
             <button
               key={opt.days}
               onClick={() => setRangeDays(opt.days)}
-              className={`p-2 rounded-md text-xs font-medium leading-4 transition-colors ${
+              className={`flex-1 md:flex-none h-8 md:h-auto md:p-2 px-2 flex items-center justify-center rounded-md text-xs font-medium leading-4 transition-colors ${
                 selected ? 'bg-orange-500 text-white' : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-50'
               }`}
             >
@@ -224,9 +225,9 @@ export default function SystemHealthPage() {
         </div>
       )}
 
-      {/* 報名流程統計卡片 + 步驟箭頭：5 張卡片等分寬度，箭頭獨立佔一欄，卡片不會被撐出區域 */}
+      {/* 報名流程統計卡片 + 步驟箭頭：桌面版 5 張卡片等分寬度，箭頭獨立佔一欄，卡片不會被撐出區域 */}
       <div
-        className="grid gap-2 mb-8"
+        className="hidden md:grid gap-2 mb-8"
         style={{ gridTemplateColumns: Array(FUNNEL_CARDS.length).fill('minmax(0, 1fr)').join(' 20px ') }}
       >
         {FUNNEL_CARDS.map((c, i) => (
@@ -241,6 +242,19 @@ export default function SystemHealthPage() {
         ))}
       </div>
 
+      {/* 手機版：前 4 張卡片同列＋流動箭頭，「報名成功」空間不足時自動換行並強調顯示 */}
+      <div className="md:hidden bg-gradient-to-b from-white to-[#ffe2cd] border border-[#ffe2cd] rounded-[10px] p-2 flex flex-wrap gap-1 items-center mb-8">
+        {FUNNEL_CARDS.map((c, i) => {
+          const isLast = i === FUNNEL_CARDS.length - 1
+          return (
+            <Fragment key={c.step}>
+              <MobileFunnelCard label={STEP_LABELS[c.step]} value={loading ? '···' : (stepCounts[c.step] || 0)} highlight={isLast} />
+              {i < FUNNEL_CARDS.length - 2 && <MobileFunnelArrow delay={i * 0.18} />}
+            </Fragment>
+          )
+        })}
+      </div>
+
       {/* 系統狀態與回報 */}
       <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
         <div
@@ -253,12 +267,14 @@ export default function SystemHealthPage() {
 
         {/* 篩選列：來源／狀態／類型 + 每頁筆數，同一列 */}
         <div className="px-4 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <FilterSelect value={sourceFilter} onChange={setSourceFilter} placeholder="來源" options={[{ value: 'instructor', label: '講師回報' }, { value: 'system', label: '系統偵測' }]} />
-            <FilterSelect value={statusFilter} onChange={setStatusFilter} placeholder="狀態" options={STATUS_OPTIONS} />
-            <FilterSelect value={typeFilter} onChange={setTypeFilter} placeholder="類型" options={TYPE_OPTIONS} />
+          <div className="grid grid-cols-3 gap-2 md:flex md:items-center md:gap-2 md:flex-wrap">
+            <FilterSelect value={sourceFilter} onChange={setSourceFilter} placeholder="來源" options={[{ value: 'instructor', label: '講師回報' }, { value: 'system', label: '系統偵測' }]} className="relative w-full md:w-[200px] shrink-0" />
+            <FilterSelect value={statusFilter} onChange={setStatusFilter} placeholder="狀態" options={STATUS_OPTIONS} className="relative w-full md:w-[200px] shrink-0" />
+            <FilterSelect value={typeFilter} onChange={setTypeFilter} placeholder="類型" options={TYPE_OPTIONS} className="relative w-full md:w-[200px] shrink-0" />
           </div>
-          <PerPageSelect value={pageSize} onChange={v => { setPageSize(v); setPage(1) }} />
+          <div className="hidden md:block">
+            <PerPageSelect value={pageSize} onChange={v => { setPageSize(v); setPage(1) }} />
+          </div>
         </div>
 
         {loading ? (
@@ -266,65 +282,114 @@ export default function SystemHealthPage() {
         ) : paginatedRows.length === 0 ? (
           <div className="px-6 py-10 text-center text-stone-400 text-sm">這段期間沒有符合條件的資料，狀況良好。</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
-              <colgroup>
-                <col style={{ width: '40px' }} /><col style={{ width: '90px' }} /><col style={{ width: '120px' }} />
-                <col style={{ width: '100px' }} /><col style={{ width: '150px' }} /><col />
-                <col style={{ width: '80px' }} /><col style={{ width: '112px' }} />
-              </colgroup>
-              <thead>
-                <tr className="bg-stone-50 text-stone-500 text-xs">
-                  <th className="text-left font-medium px-2 py-3 overflow-hidden">#</th>
-                  <th className="text-left font-medium px-2 py-3 overflow-hidden">來源</th>
-                  <th className="text-left font-medium px-2 py-3 overflow-hidden">時間</th>
-                  <th className="text-left font-medium px-2 py-3 overflow-hidden">類型</th>
-                  <th className="text-left font-medium px-2 py-3 overflow-hidden">課程名稱</th>
-                  <th className="text-left font-medium px-2 py-3 overflow-hidden">詳細資訊</th>
-                  <th className="text-left font-medium px-2 py-3 overflow-hidden">狀態</th>
-                  <th className="text-left font-medium px-2 py-3 overflow-hidden">操作</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#F0EDEB]">
-                {paginatedRows.map((row, i) => (
-                  <tr key={`${row.source}-${row.id}`} className="h-[63px]">
-                    <td className="px-2 py-4 text-stone-400 text-xs overflow-hidden">{(page - 1) * pageSize + i + 1}</td>
-                    <td className="px-2 py-4 overflow-hidden"><SourceBadge source={row.source} /></td>
-                    <td className="px-2 py-4 text-stone-400 text-xs whitespace-nowrap overflow-hidden">{formatDT(row.createdAt)}</td>
-                    <td className="px-2 py-4 overflow-hidden">
-                      {row.source === 'instructor' ? <IssueTypeBadge issueType={row.data.issue_type} /> : <AnomalyTypeBadge step={row.data.step} />}
-                    </td>
-                    <td className="px-2 py-4 text-stone-600 text-xs truncate overflow-hidden">
-                      {row.source === 'instructor' ? (row.data.instructors?.name ? `講師：${row.data.instructors.name}` : '—') : (row.data.course_ids || '—')}
-                    </td>
-                    <td className="px-2 py-4 text-stone-500 text-xs truncate overflow-hidden" title={row.source === 'instructor' ? row.data.description : (row.data.detail ? JSON.stringify(row.data.detail) : '')}>
-                      {row.source === 'instructor' ? row.data.description : (row.data.detail ? JSON.stringify(row.data.detail) : '—')}
-                    </td>
-                    <td className="px-2 py-4 overflow-hidden">
-                      {row.source === 'instructor' ? <InstructorStatusBadge status={row.data.status} /> : <SystemStatusBadge createdAt={row.createdAt} />}
-                    </td>
-                    <td className="px-2 py-4 overflow-hidden">
-                      {row.source === 'instructor' ? (
-                        <button
-                          onClick={() => setDetailTarget(row.data)}
-                          className="w-full flex items-center justify-center text-xs border border-stone-300 text-stone-600 hover:bg-stone-50 px-2 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap"
-                        >
-                          查看詳情
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleCopyDetail(row.data)}
-                          className="w-full flex items-center justify-center gap-1 text-xs bg-orange-50 border border-orange-200 text-orange-600 hover:bg-orange-100 px-2 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap"
-                        >
-                          <CopyIcon />複製資訊
-                        </button>
-                      )}
-                    </td>
+          <>
+            {/* 桌面版：表格 */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col style={{ width: '40px' }} /><col style={{ width: '90px' }} /><col style={{ width: '120px' }} />
+                  <col style={{ width: '100px' }} /><col style={{ width: '150px' }} /><col />
+                  <col style={{ width: '80px' }} /><col style={{ width: '112px' }} />
+                </colgroup>
+                <thead>
+                  <tr className="bg-stone-50 text-stone-500 text-xs">
+                    <th className="text-left font-medium px-2 py-3 overflow-hidden">#</th>
+                    <th className="text-left font-medium px-2 py-3 overflow-hidden">來源</th>
+                    <th className="text-left font-medium px-2 py-3 overflow-hidden">時間</th>
+                    <th className="text-left font-medium px-2 py-3 overflow-hidden">類型</th>
+                    <th className="text-left font-medium px-2 py-3 overflow-hidden">課程名稱</th>
+                    <th className="text-left font-medium px-2 py-3 overflow-hidden">詳細資訊</th>
+                    <th className="text-left font-medium px-2 py-3 overflow-hidden">狀態</th>
+                    <th className="text-left font-medium px-2 py-3 overflow-hidden">操作</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-[#F0EDEB]">
+                  {paginatedRows.map((row, i) => (
+                    <tr key={`${row.source}-${row.id}`} className="h-[63px]">
+                      <td className="px-2 py-4 text-stone-400 text-xs overflow-hidden">{(page - 1) * pageSize + i + 1}</td>
+                      <td className="px-2 py-4 overflow-hidden"><SourceBadge source={row.source} /></td>
+                      <td className="px-2 py-4 text-stone-400 text-xs whitespace-nowrap overflow-hidden">{formatDT(row.createdAt)}</td>
+                      <td className="px-2 py-4 overflow-hidden">
+                        {row.source === 'instructor' ? <IssueTypeBadge issueType={row.data.issue_type} /> : <AnomalyTypeBadge step={row.data.step} />}
+                      </td>
+                      <td className="px-2 py-4 text-stone-600 text-xs truncate overflow-hidden">
+                        {row.source === 'instructor' ? (row.data.instructors?.name ? `講師：${row.data.instructors.name}` : '—') : (row.data.course_ids || '—')}
+                      </td>
+                      <td className="px-2 py-4 text-stone-500 text-xs truncate overflow-hidden" title={row.source === 'instructor' ? row.data.description : (row.data.detail ? JSON.stringify(row.data.detail) : '')}>
+                        {row.source === 'instructor' ? row.data.description : (row.data.detail ? JSON.stringify(row.data.detail) : '—')}
+                      </td>
+                      <td className="px-2 py-4 overflow-hidden">
+                        {row.source === 'instructor' ? <InstructorStatusBadge status={row.data.status} /> : <SystemStatusBadge createdAt={row.createdAt} />}
+                      </td>
+                      <td className="px-2 py-4 overflow-hidden">
+                        {row.source === 'instructor' ? (
+                          <button
+                            onClick={() => setDetailTarget(row.data)}
+                            className="w-full flex items-center justify-center text-xs border border-stone-300 text-stone-600 hover:bg-stone-50 px-2 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap"
+                          >
+                            查看詳情
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleCopyDetail(row.data)}
+                            className="w-full flex items-center justify-center gap-1 text-xs bg-orange-50 border border-orange-200 text-orange-600 hover:bg-orange-100 px-2 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap"
+                          >
+                            <CopyIcon />複製資訊
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 手機版：卡片列表 */}
+            <div className="md:hidden flex flex-col gap-3 px-4 py-4">
+              {paginatedRows.map(row => (
+                <div key={`${row.source}-${row.id}`} className="bg-white border border-stone-200 rounded-xl px-4 py-4 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <SourceBadge source={row.source} />
+                    <span className="text-xs text-stone-400">{formatDT(row.createdAt)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    {row.source === 'instructor' ? (
+                      <>
+                        <IssueTypeBadge issueType={row.data.issue_type} />
+                        <span className="text-xs font-medium text-stone-800 truncate">
+                          {row.data.instructors?.name ? `講師：${row.data.instructors.name}` : '—'}
+                        </span>
+                      </>
+                    ) : (
+                      <AnomalyTypeBadge step={row.data.step} />
+                    )}
+                  </div>
+                  <p className="text-[11px] text-stone-500 truncate">
+                    {row.source === 'instructor' ? row.data.description : (row.data.detail ? JSON.stringify(row.data.detail) : '—')}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-stone-600">狀態</span>
+                    {row.source === 'instructor' ? <InstructorStatusBadge status={row.data.status} /> : <SystemStatusBadge createdAt={row.createdAt} />}
+                  </div>
+                  {row.source === 'instructor' ? (
+                    <button
+                      onClick={() => setDetailTarget(row.data)}
+                      className="w-full h-8 flex items-center justify-center text-xs border border-stone-300 text-stone-600 rounded-md font-medium transition-colors"
+                    >
+                      查看詳情
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleCopyDetail(row.data)}
+                      className="w-full h-8 flex items-center justify-center gap-1.5 text-xs bg-orange-50 border border-orange-200 text-orange-600 rounded-md font-medium transition-colors"
+                    >
+                      <CopyIcon />複製資訊
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {!loading && filteredRows.length > 0 && (

@@ -4,9 +4,9 @@ import type { CSSProperties } from 'react'
 
 /* ---------- Icons ---------- */
 
-export function ArrowRightIcon({ className, style }: { className?: string; style?: CSSProperties }) {
+export function ArrowRightIcon({ className, style, size = 16 }: { className?: string; style?: CSSProperties; size?: number }) {
   return (
-    <svg className={className} style={style} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className={className} style={style} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M9 5l7 7-7 7" />
     </svg>
   )
@@ -46,6 +46,33 @@ export function StatCard({ label, value, desc }: { label: string; value: string 
         <p className="text-[#EA5808] text-[32px] font-semibold leading-none" style={{ fontFamily: 'Inter, sans-serif' }}>{value}</p>
         <p className="text-[#787168] text-xs truncate">{desc}</p>
       </div>
+    </div>
+  )
+}
+
+/* ---------- 漏斗統計卡片（手機版精簡版：小卡片 + 換行流動箭頭） ---------- */
+
+export function MobileFunnelCard({ label, value, highlight = false }: { label: string; value: string | number; highlight?: boolean }) {
+  if (highlight) {
+    return (
+      <div className="flex-1 min-w-[112px] bg-white border border-orange-500 rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.05)] flex items-center justify-center gap-1 px-2 py-2.5">
+        <span className="text-[10px] leading-[15px] text-stone-600 tracking-[0.5px] whitespace-nowrap">{label}</span>
+        <span className="text-[18px] leading-7 font-medium text-orange-600" style={{ fontFamily: 'Inter, sans-serif' }}>{value}</span>
+      </div>
+    )
+  }
+  return (
+    <div className="w-[70px] h-20 shrink-0 bg-white border border-[#ffcead] rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.05)] flex flex-col items-center justify-center gap-1 px-1 py-2">
+      <span className="text-[10px] leading-[15px] text-stone-600 text-center tracking-[0.5px]">{label}</span>
+      <span className="text-[18px] leading-7 font-medium text-orange-600" style={{ fontFamily: 'Inter, sans-serif' }}>{value}</span>
+    </div>
+  )
+}
+
+export function MobileFunnelArrow({ delay = 0 }: { delay?: number }) {
+  return (
+    <div className="shrink-0 flex items-center justify-center w-3">
+      <ArrowRightIcon size={12} className="funnel-arrow-flow" style={{ animationDelay: `${delay}s` }} />
     </div>
   )
 }
@@ -114,10 +141,10 @@ export function SystemStatusBadge({ createdAt }: { createdAt: string }) {
 /* ---------- 下拉篩選（sm, filled） ---------- */
 
 export function FilterSelect({
-  value, onChange, options, placeholder,
-}: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[]; placeholder: string }) {
+  value, onChange, options, placeholder, className,
+}: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[]; placeholder: string; className?: string }) {
   return (
-    <div className="relative w-[200px] shrink-0">
+    <div className={className || "relative w-[200px] shrink-0"}>
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
