@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import CourseScheduleExporter from '@/components/CourseScheduleExporter'
 import WalkInRegistrationModal from '@/components/WalkInRegistrationModal'
+import AttendeeCheckItem from '@/components/AttendeeCheckItem'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import AdminCourseEditFormFields, {
   LOCATIONS, emptyAdminCourseForm, type AdminCourseForm, type AdminCategory,
@@ -538,24 +539,14 @@ export default function CoursesPage() {
                     <div className="space-y-2">
                       <p className="text-xs text-stone-400 mb-4">勾選代表已出席，取消勾選代表撤銷出席（點數同步調整）</p>
                       {attendanceList.map((reg: any) => (
-                        <label key={reg.id} className="flex items-center gap-3 bg-stone-50 rounded-xl px-4 py-3 border border-stone-100 cursor-pointer hover:bg-orange-50 hover:border-orange-200 transition-colors">
-                          <input type="checkbox" checked={checkedIds.has(reg.id)}
-                            onChange={e => { const next = new Set(checkedIds); e.target.checked ? next.add(reg.id) : next.delete(reg.id); setCheckedIds(next) }}
-                            className="w-4 h-4 accent-orange-500 cursor-pointer" />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <p className="text-stone-700 text-sm font-medium">{reg.users?.name}</p>
-                              {reg.is_walk_in && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 whitespace-nowrap">現場報到</span>}
-                            </div>
-                            <p className="text-stone-400 text-xs">{reg.users?.room_number}</p>
-                          </div>
-                          {checkedIds.has(reg.id) && (
-                            <span className="text-xs text-green-600 font-medium flex items-center gap-1">
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                              出席
-                            </span>
-                          )}
-                        </label>
+                        <AttendeeCheckItem
+                          key={reg.id}
+                          checked={checkedIds.has(reg.id)}
+                          name={reg.users?.name}
+                          roomNumber={reg.users?.room_number}
+                          badge={reg.is_walk_in ? '現場報到' : undefined}
+                          onToggle={() => { const next = new Set(checkedIds); checkedIds.has(reg.id) ? next.delete(reg.id) : next.add(reg.id); setCheckedIds(next) }}
+                        />
                       ))}
                     </div>
                   )}
