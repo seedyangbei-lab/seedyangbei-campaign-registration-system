@@ -7,7 +7,7 @@ import CoursePosterEditor from '@/components/CoursePosterEditor'
 import {
   InstructorNavbar, InstructorProfileCard, InstructorTitle, InstructorTabBar,
   InstructorCourseCard, InstructorMonthFilter, InstructorProfileEditModal,
-  CloseIcon, IssueReportFab, PlusIcon,
+  CloseIcon, IssueReportFab,
 } from '@/components/InstructorMobileUI'
 import IssueReportModal from '@/components/IssueReportModal'
 import { MobileRegistrationCard, MobilePagination } from '@/components/AdminMobileUI'
@@ -462,9 +462,9 @@ function InstructorPortal() {
             action={
               <button
                 onClick={openAdd}
-                className="shrink-0 flex items-center gap-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium px-3 py-2 rounded-lg transition-colors whitespace-nowrap"
+                className="shrink-0 flex items-center justify-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium p-2 rounded-md transition-colors whitespace-nowrap"
               >
-                <PlusIcon />新增課程
+                新增課程
               </button>
             }
           >
