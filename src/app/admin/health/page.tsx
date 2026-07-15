@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import {
-  ArrowRightIcon, CopyIcon, CloseIcon, StatCard,
+  ArrowRightIcon, ArrowLeftIcon, CopyIcon, CloseIcon, StatCard,
   SourceBadge, IssueTypeBadge, AnomalyTypeBadge, InstructorStatusBadge, SystemStatusBadge,
   INSTRUCTOR_STATUS_OPTIONS, FilterSelect, PerPageSelect, PaginationBar,
   MobileFunnelCard, MobileFunnelArrow,
@@ -96,6 +96,7 @@ export default function SystemHealthPage() {
   const [detailTarget, setDetailTarget] = useState<IssueReport | null>(null)
   const [statusSaving, setStatusSaving] = useState(false)
   const [toast, setToast] = useState('')
+  const [zoomImage, setZoomImage] = useState<string | null>(null)
 
   useEffect(() => { fetchData() }, [rangeDays])
   useEffect(() => { setPage(1) }, [sourceFilter, statusFilter, typeFilter, rangeDays])
@@ -104,6 +105,14 @@ export default function SystemHealthPage() {
     const t = setTimeout(() => setToast(''), 2000)
     return () => clearTimeout(t)
   }, [toast])
+
+  // 詳情頁 / 截圖放大時鎖定整體頁面捲動（手機版全螢幕頁面體驗）
+  useEffect(() => {
+    if (!detailTarget && !zoomImage) return
+    const original = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = original }
+  }, [detailTarget, zoomImage])
 
   const fetchData = async () => {
     setLoading(true)
@@ -412,9 +421,9 @@ export default function SystemHealthPage() {
         </div>
       )}
 
-      {/* 講師回報：查看詳情彈窗（可切換處理狀態） */}
+      {/* 講師回報：查看詳情彈窗（桌面版，可切換處理狀態） */}
       {detailTarget && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setDetailTarget(null) }}>
+        <div className="hidden md:flex fixed inset-0 bg-black/40 z-50 items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setDetailTarget(null) }}>
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-stone-100">
               <h3 className="text-stone-800 font-bold text-lg">問題回報詳情</h3>
@@ -437,9 +446,9 @@ export default function SystemHealthPage() {
                   <p className="text-sm font-medium text-stone-600 mb-1.5">截圖（{detailTarget.screenshot_urls.length}）</p>
                   <div className="grid grid-cols-4 gap-2">
                     {detailTarget.screenshot_urls.map((url, i) => (
-                      <a key={url + i} href={url} target="_blank" rel="noopener noreferrer" className="aspect-square rounded-lg overflow-hidden border border-stone-200 block">
+                      <button key={url + i} type="button" onClick={() => setZoomImage(url)} className="aspect-square rounded-lg overflow-hidden border border-stone-200 block">
                         <img src={url} alt="" className="w-full h-full object-cover" />
-                      </a>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -463,6 +472,98 @@ export default function SystemHealthPage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 講師回報：查看詳情（手機版，全螢幕頁面樣式，底部按鈕 sticky，頁面本身不可捲動） */}
+      {detailTarget && (
+        <div className="md:hidden fixed inset-0 z-50 bg-white flex flex-col">
+          <div className="shrink-0 h-[52px] px-4 flex items-center justify-between shadow-[0px_4px_2px_0px_rgba(0,0,0,0.03)]">
+            <button onClick={() => setDetailTarget(null)} className="p-1 -ml-1" aria-label="返回">
+              <ArrowLeftIcon className="text-stone-700" />
+            </button>
+            <p className="text-[14px] font-bold text-stone-600 tracking-[3px]">問題回報詳情</p>
+            <div className="w-4 h-4" aria-hidden="true" />
+          </div>
+
+          <div className="flex-1 min-h-0 overflow-y-auto p-8 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-stone-600">回報來源</span>
+              <SourceBadge source="instructor" />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-stone-600">時間</span>
+              <span className="text-sm text-stone-500">{formatDT(detailTarget.created_at)}</span>
+            </div>
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-medium text-stone-600">問題描述</span>
+              <div className="bg-stone-50 rounded-xl p-3">
+                <p className="text-sm text-stone-600 whitespace-pre-wrap">{detailTarget.description}</p>
+              </div>
+            </div>
+            {detailTarget.screenshot_urls && detailTarget.screenshot_urls.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-medium text-stone-600">
+                  截圖上傳 <span className="text-xs text-stone-400">({detailTarget.screenshot_urls.length})</span>
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  {detailTarget.screenshot_urls.map((url, i) => (
+                    <button
+                      key={url + i}
+                      type="button"
+                      onClick={() => setZoomImage(url)}
+                      className="h-[100px] rounded-xl border border-stone-300 overflow-hidden"
+                    >
+                      <img src={url} alt="" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-medium text-stone-600">處理狀態</span>
+              <div className="flex gap-2 pt-1.5">
+                {INSTRUCTOR_STATUS_OPTIONS.map(o => (
+                  <button
+                    key={o.value}
+                    onClick={() => handleStatusChange(o.value)}
+                    disabled={statusSaving}
+                    className={`flex-1 h-11 flex items-center justify-center rounded-lg border text-sm font-medium transition-colors disabled:opacity-50 ${
+                      detailTarget.status === o.value ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-stone-200 text-stone-500'
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="shrink-0 p-4 rounded-t-2xl shadow-[0px_-3px_4px_0px_rgba(0,0,0,0.08)] bg-white">
+            <button
+              onClick={() => setDetailTarget(null)}
+              className="w-full h-[50px] flex items-center justify-center rounded-[10px] bg-orange-500 text-white text-base font-medium"
+            >
+              確認
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 截圖放大檢視（桌機／手機共用） */}
+      {zoomImage && (
+        <div
+          className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setZoomImage(null)}
+        >
+          <button
+            onClick={() => setZoomImage(null)}
+            className="absolute top-4 right-4 p-2 text-white/80 hover:text-white"
+            aria-label="關閉"
+          >
+            <CloseIcon />
+          </button>
+          <img src={zoomImage} alt="" className="max-w-full max-h-full object-contain rounded-lg" onClick={e => e.stopPropagation()} />
         </div>
       )}
     </div>
