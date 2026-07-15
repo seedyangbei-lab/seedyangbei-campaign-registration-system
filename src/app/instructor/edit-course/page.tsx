@@ -20,7 +20,7 @@ const emptyForm: CourseForm = {
   photos: [], max_seats: 20, co_instructor_ids: [],
 }
 
-function buildForm(course: any, mode: 'edit' | 'copy', currentInstructorId: string): CourseForm {
+function buildForm(course: any, mode: 'edit' | 'copy' | 'create', currentInstructorId: string): CourseForm {
   const agePreset = AGE_OPTIONS.slice(0, 4).includes(course.suitable_age) ? course.suitable_age : (course.suitable_age ? '其他' : '全年齡')
   return {
     title: course.title || '', description: course.description || '', date: mode === 'copy' ? '' : (course.date || ''),
@@ -43,7 +43,8 @@ function EditCoursePageInner() {
   const supabase = createClient()
 
   const courseId = searchParams.get('courseId')
-  const mode = (searchParams.get('mode') === 'copy' ? 'copy' : 'edit') as 'edit' | 'copy'
+  const modeParam = searchParams.get('mode')
+  const mode = (modeParam === 'copy' ? 'copy' : modeParam === 'create' ? 'create' : 'edit') as 'edit' | 'copy' | 'create'
 
   const [loading, setLoading] = useState(true)
   const [instructor, setInstructor] = useState<any>(null)
@@ -137,7 +138,7 @@ function EditCoursePageInner() {
         <button onClick={() => router.push('/instructor')} aria-label="返回" className="w-6 h-6 flex items-center justify-center shrink-0 text-stone-600">
           <BackArrowIcon />
         </button>
-        <p className="flex-1 text-center text-sm font-bold tracking-[3px] text-stone-600">{mode === 'edit' ? '編輯課程' : '複製課程'}</p>
+        <p className="flex-1 text-center text-sm font-bold tracking-[3px] text-stone-600">{mode === 'edit' ? '編輯課程' : mode === 'copy' ? '複製課程' : '新增課程'}</p>
         <div className="w-6 h-6 shrink-0" />
       </div>
 

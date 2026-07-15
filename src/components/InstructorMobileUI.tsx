@@ -28,6 +28,14 @@ export function EditIcon({ className }: { className?: string }) {
   )
 }
 
+export function PlusIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  )
+}
+
 export function CopyIcon({ className }: { className?: string }) {
   return (
     <svg className={className} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -174,10 +182,11 @@ export function InstructorProfileCard({
 
 /* ---------- 標題 ---------- */
 
-export function InstructorTitle({ children }: { children: React.ReactNode }) {
+export function InstructorTitle({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <div className="border-b border-stone-200 pb-4 md:pb-[17px] w-full">
+    <div className="border-b border-stone-200 pb-4 md:pb-[17px] w-full flex items-center justify-between gap-3">
       <h2 className="text-xl font-bold text-stone-600">{children}</h2>
+      {action}
     </div>
   )
 }

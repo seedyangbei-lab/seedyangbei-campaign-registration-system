@@ -7,7 +7,7 @@ import CoursePosterEditor from '@/components/CoursePosterEditor'
 import {
   InstructorNavbar, InstructorProfileCard, InstructorTitle, InstructorTabBar,
   InstructorCourseCard, InstructorMonthFilter, InstructorProfileEditModal,
-  CloseIcon, IssueReportFab,
+  CloseIcon, IssueReportFab, PlusIcon,
 } from '@/components/InstructorMobileUI'
 import IssueReportModal from '@/components/IssueReportModal'
 import { MobileRegistrationCard, MobilePagination } from '@/components/AdminMobileUI'
@@ -64,6 +64,7 @@ function InstructorPortal() {
 
   const [showModal, setShowModal] = useState(false)
   const [editTarget, setEditTarget] = useState<any>(null)
+  const [createMode, setCreateMode] = useState<'copy' | 'create'>('create')
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
   const [allInstructors, setAllInstructors] = useState<{ id: string; name: string }[]>([])
@@ -221,6 +222,7 @@ function InstructorPortal() {
   const openCopy = (course: any) => {
     if (isMobileViewport()) { router.push(`/instructor/edit-course?courseId=${course.id}&mode=copy`); return }
     setEditTarget(null)
+    setCreateMode('copy')
     const agePreset = AGE_OPTIONS.slice(0, 4).includes(course.suitable_age) ? course.suitable_age : (course.suitable_age ? '其他' : '全年齡')
     setForm({
       title: course.title || '', description: course.description || '', date: '',
@@ -233,6 +235,14 @@ function InstructorPortal() {
       max_seats: course.max_seats || 20,
       co_instructor_ids: (course.instructor_ids || []).filter((id: string) => id !== instructor?.id),
     })
+    setShowModal(true)
+  }
+
+  const openAdd = () => {
+    if (isMobileViewport()) { router.push('/instructor/edit-course?mode=create'); return }
+    setEditTarget(null)
+    setCreateMode('create')
+    setForm(emptyForm)
     setShowModal(true)
   }
 
@@ -409,7 +419,18 @@ function InstructorPortal() {
         />
 
         <div className="px-4 pt-6 md:px-0 md:pt-6 flex flex-col gap-4 md:gap-6">
-          <InstructorTitle>我的課程</InstructorTitle>
+          <InstructorTitle
+            action={
+              <button
+                onClick={openAdd}
+                className="shrink-0 flex items-center gap-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium px-3 py-2 rounded-lg transition-colors whitespace-nowrap"
+              >
+                <PlusIcon />新增課程
+              </button>
+            }
+          >
+            我的課程
+          </InstructorTitle>
           <InstructorTabBar
             tab={courseTab}
             onChange={t => { setCourseTab(t); setFilterMonth('') }}
@@ -501,7 +522,7 @@ function InstructorPortal() {
               <CloseIcon className="text-stone-600" />
             </button>
             <div className="p-6 border-b border-stone-200">
-              <h3 className="text-stone-800 font-bold text-lg">{editTarget ? '編輯課程' : '複製課程'}</h3>
+              <h3 className="text-stone-800 font-bold text-lg">{editTarget ? '編輯課程' : createMode === 'copy' ? '複製課程' : '新增課程'}</h3>
             </div>
             <form onSubmit={handleSave} className="p-6 space-y-4">
               <CourseEditFormFields
