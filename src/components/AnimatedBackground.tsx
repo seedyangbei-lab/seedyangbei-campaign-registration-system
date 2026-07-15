@@ -8,6 +8,9 @@ export default function AnimatedBackground({ className = '' }: { className?: str
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
+    // 型別窄化（narrowing）不會延伸進下面用 function 宣告的 resize()，
+    // 另外存一個明確型別（非 null）的常數給它用，才不會一直報 canvas 可能是 null
+    const canvasEl: HTMLCanvasElement = canvas
     const ctx = canvas.getContext('2d')!
     let animId: number
     let t = 0
@@ -25,10 +28,10 @@ export default function AnimatedBackground({ className = '' }: { className?: str
     let blobs: Blob[], circles: Circle[], waves: Wave[], dots: Dot[], stars: Star[], triangles: Triangle[]
 
     function resize() {
-      W = canvas.offsetWidth
-      H = canvas.offsetHeight
-      canvas.width  = W * devicePixelRatio
-      canvas.height = H * devicePixelRatio
+      W = canvasEl.offsetWidth
+      H = canvasEl.offsetHeight
+      canvasEl.width  = W * devicePixelRatio
+      canvasEl.height = H * devicePixelRatio
       ctx.scale(devicePixelRatio, devicePixelRatio)
       init()
     }

@@ -14,6 +14,7 @@ const [settings, setSettings] = useState({
     hero_image_desktop: '', hero_image_mobile: '',
     hero_cutout_desktop: '',
     hero_cutout_mobile: '',
+    hero_video: '',
     hero_bg_opacity: '0.18',
     hero_title_color: '#1c1917',
     hero_title_stroke: '',
