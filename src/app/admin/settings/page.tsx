@@ -109,8 +109,8 @@ const [settings, setSettings] = useState({
 
   const handleKvSave = async () => {
     setKvSaving(true)
-    await upsertSettings(['hero_image_desktop','hero_image_mobile','hero_cutout_desktop','hero_cutout_mobile','hero_bg_opacity','hero_title_color','hero_title_stroke'])
-    setSavedSettings(prev => ({ ...prev, hero_image_desktop: settings.hero_image_desktop, hero_image_mobile: settings.hero_image_mobile, hero_cutout_desktop: settings.hero_cutout_desktop, hero_cutout_mobile: settings.hero_cutout_mobile, hero_bg_opacity: settings.hero_bg_opacity,
+    await upsertSettings(['hero_image_desktop','hero_image_mobile','hero_cutout_desktop','hero_cutout_mobile','hero_video','hero_bg_opacity','hero_title_color','hero_title_stroke'])
+    setSavedSettings(prev => ({ ...prev, hero_image_desktop: settings.hero_image_desktop, hero_image_mobile: settings.hero_image_mobile, hero_cutout_desktop: settings.hero_cutout_desktop, hero_cutout_mobile: settings.hero_cutout_mobile, hero_video: settings.hero_video, hero_bg_opacity: settings.hero_bg_opacity,
     hero_title_color: settings.hero_title_color,hero_title_stroke: settings.hero_title_stroke }))
     setKvSaved(true); setKvSaving(false); setIsKvEditing(false)
     setTimeout(() => setKvSaved(false), 3000)
@@ -475,6 +475,10 @@ const [settings, setSettings] = useState({
   </div>
 </div>
 <div className="border-t border-stone-100 pt-6">
+              <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-4">背景影片（選填，優先於下方靜態底圖）</p>
+              <VideoUploadField />
+            </div>
+            <div className="border-t border-stone-100 pt-6">
               <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-4">靜態背景底圖（影片未設定時顯示）</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
