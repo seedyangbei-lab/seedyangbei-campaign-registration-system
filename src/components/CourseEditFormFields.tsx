@@ -76,27 +76,25 @@ function InstructorMultiSelect({
 
   return (
     <div ref={ref} className="relative">
-      <div className="border border-stone-300 rounded-xl bg-white px-3 py-2 flex flex-col gap-2 focus-within:ring-2 focus-within:ring-orange-300">
+      {/* tags 跟搜尋文字共用同一個可換行的 flex row：沒有選任何講師時只顯示 placeholder（單行高度）；
+          選了講師後 placeholder 消失、改由 tags 佔住那個位置，高度只有在 tags 多到自然換行時才會變高 */}
+      <div className="border border-stone-300 rounded-xl bg-white px-2.5 py-1.5 flex flex-wrap items-center gap-1.5 min-h-[40px] focus-within:ring-2 focus-within:ring-orange-300">
+        {selected.map(o => (
+          <span key={o.id} className="inline-flex items-center gap-1 bg-orange-50 text-orange-600 text-xs font-medium px-2 py-1 rounded-md shrink-0">
+            {o.name}
+            <button type="button" onClick={() => removeOne(o.id)} aria-label={`移除 ${o.name}`}
+              className="w-4 h-4 rounded-full bg-orange-500 flex items-center justify-center shrink-0">
+              <XIcon />
+            </button>
+          </span>
+        ))}
         <input
           value={query}
           onChange={e => { setQuery(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
-          placeholder="搜尋或選擇講師"
-          className="w-full text-sm py-0.5 outline-none placeholder:text-stone-400"
+          placeholder={selected.length === 0 ? '搜尋或選擇講師' : ''}
+          className="flex-1 min-w-[60px] text-sm py-0.5 px-0.5 outline-none placeholder:text-stone-400"
         />
-        {selected.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {selected.map(o => (
-              <span key={o.id} className="inline-flex items-center gap-1 bg-orange-50 text-orange-600 text-xs font-medium px-2 py-1 rounded-md">
-                {o.name}
-                <button type="button" onClick={() => removeOne(o.id)} aria-label={`移除 ${o.name}`}
-                  className="w-4 h-4 rounded-full bg-orange-500 flex items-center justify-center shrink-0">
-                  <XIcon />
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
       </div>
       {open && suggestions.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-stone-200 rounded-xl shadow-lg z-20 max-h-48 overflow-y-auto">
