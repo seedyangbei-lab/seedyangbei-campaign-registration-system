@@ -24,7 +24,14 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get('error')
 
   if (error || !code) {
-    return NextResponse.redirect(new URL('/register?error=line_denied', request.url))
+    let coursesParam = ''
+    if (state) {
+      try {
+        const parsedState = JSON.parse(decodeURIComponent(state))
+        if (parsedState.courses) coursesParam = `&courses=${encodeURIComponent(parsedState.courses)}`
+      } catch {}
+    }
+    return NextResponse.redirect(new URL(`/register?error=line_denied${coursesParam}`, request.url))
   }
 
   // 從 NEXT_PUBLIC_ 或 server-side 環境變數都嘗試讀取
@@ -51,7 +58,14 @@ export async function GET(request: NextRequest) {
     if (!tokenData.access_token) {
       console.error('LINE token error:', JSON.stringify(tokenData))
       await logLineLoginFail({ stage: 'token_exchange', reason: tokenData.error_description || 'no_token' })
-      return NextResponse.redirect(new URL(`/register?error=line_failed&detail=${encodeURIComponent(tokenData.error_description || 'no_token')}`, request.url))
+      let coursesParam = ''
+      if (state) {
+        try {
+          const parsedState = JSON.parse(decodeURIComponent(state))
+          if (parsedState.courses) coursesParam = `&courses=${encodeURIComponent(parsedState.courses)}`
+        } catch {}
+      }
+      return NextResponse.redirect(new URL(`/register?error=line_failed&detail=${encodeURIComponent(tokenData.error_description || 'no_token')}${coursesParam}`, request.url))
     }
 
     // Step 2: Get user profile
@@ -68,7 +82,14 @@ export async function GET(request: NextRequest) {
     if (!lineUserId) {
       console.error('LINE profile error:', JSON.stringify(profile))
       await logLineLoginFail({ stage: 'profile_fetch', reason: 'no_user_id' })
-      return NextResponse.redirect(new URL('/register?error=line_failed', request.url))
+      let coursesParam = ''
+      if (state) {
+        try {
+          const parsedState = JSON.parse(decodeURIComponent(state))
+          if (parsedState.courses) coursesParam = `&courses=${encodeURIComponent(parsedState.courses)}`
+        } catch {}
+      }
+      return NextResponse.redirect(new URL(`/register?error=line_failed${coursesParam}`, request.url))
     }
 
     // Step 2.5: 講師中台登入／邀請連結綁定分流（跟居民報名流程互不影響）
@@ -205,6 +226,13 @@ export async function GET(request: NextRequest) {
   } catch (err: any) {
     console.error('LINE Login unexpected error:', err?.message || err)
     await logLineLoginFail({ stage: 'unexpected', reason: err?.message || String(err) })
-    return NextResponse.redirect(new URL('/register?error=line_failed', request.url))
+    let coursesParam = ''
+    if (state) {
+      try {
+        const parsedState = JSON.parse(decodeURIComponent(state))
+        if (parsedState.courses) coursesParam = `&courses=${encodeURIComponent(parsedState.courses)}`
+      } catch {}
+    }
+    return NextResponse.redirect(new URL(`/register?error=line_failed${coursesParam}`, request.url))
   }
 }
