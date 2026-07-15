@@ -42,7 +42,7 @@ function ToggleSwitch({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 // ── 主要編輯器（手機版頁面） ────────────────────────────────────────────────────
 function PosterEditorMobile({ course, photos }: { course: PosterCourseData; photos: string[] }) {
   const router = useRouter()
-  const storageKey = `yangbei-poster-settings:${course.id || 'default'}`
+  const storageKey = 'yangbei-poster-settings:global' // 全域共用：只保留「最後一次儲存設定」，不分課程
 
   const [imgSrc, setImgSrc]     = useState<string|null>(photos[0] || null)
   const [imgPos, setImgPos]     = useState({ x:0, y:0 })

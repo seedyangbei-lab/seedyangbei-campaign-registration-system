@@ -18,7 +18,7 @@ interface Props {
 }
 
 export default function CoursePosterEditor({ course, initialImage, photos, onClose }: Props) {
-  const storageKey = `yangbei-poster-settings:${course.id || 'default'}`
+  const storageKey = 'yangbei-poster-settings:global' // 全域共用：只保留「最後一次儲存設定」，不分課程
 
   const [imgSrc, setImgSrc]     = useState<string|null>(initialImage||null)
   const [imgPos, setImgPos]     = useState({ x:0, y:0 })
