@@ -139,7 +139,7 @@ function RegisterForm() {
     setPrefilling(true)
     const { data: user } = await supabase
       .from('users')
-      .select('name, room_number, phone, age_group')
+      .select('name, room_number, phone, age_group, other_community')
       .eq('line_id', lineUserId)
       .maybeSingle()
 
@@ -171,6 +171,7 @@ function RegisterForm() {
         name: user.name || f.name,
         phone: user.phone || f.phone,
         age_group: user.age_group || f.age_group,
+        other_community: isSocial ? f.other_community : (user.other_community || f.other_community),
       }))
       setIsSocialHousing(isSocial)
       if (isSocial) {
@@ -218,6 +219,7 @@ function RegisterForm() {
         await supabase.from('users').update({
           name: form.name, room_number: roomNumber,
           phone: form.phone.replace(/-/g, ''), age_group: form.age_group,
+          other_community: isSocialHousing ? null : form.other_community,
         }).eq('id', userId)
       } else {
         const { data: newUser, error: userErr } = await supabase.from('users').insert({
@@ -225,6 +227,7 @@ function RegisterForm() {
           phone: form.phone.replace(/-/g, ''),
           email: `${lineUserId}@line.user`,
           line_id: lineUserId, age_group: form.age_group,
+          other_community: isSocialHousing ? null : form.other_community,
         }).select('id').single()
         if (userErr) throw userErr
         userId = newUser.id

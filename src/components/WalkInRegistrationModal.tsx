@@ -18,10 +18,12 @@ function SearchIcon({ className }: { className?: string }) {
 // 現場報到（無網路報名居民）：中台／後台簽到彈窗共用同一個新增視窗（對照 Figma node 471:19309）
 // - 姓名輸入同時是搜尋框：先查有沒有既有紀錄（例如之前線上報名過、或已是 LINE 會員），有的話直接選用，不重複建檔
 // - 找不到才走「新建」：身份（住戶／非社區住戶）＋ 房號（棟別/號數/樓層/幾之幾，格式與樣式與 /register 報名表單一致）
+// - 新增後直接視為「已出席」（現場報到本來就代表人已經到了），並支援連續新增多筆，不用每加一個人就重開一次彈窗
 export default function WalkInRegistrationModal({
-  courseId, onClose, onCreated,
+  courseId, courseTitle, onClose, onCreated,
 }: {
   courseId: string
+  courseTitle?: string
   onClose: () => void
   onCreated: (reg: CreatedReg) => void
 }) {
@@ -36,6 +38,7 @@ export default function WalkInRegistrationModal({
   const [subUnit, setSubUnit] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [addedList, setAddedList] = useState<{ name: string; roomNumber: string }[]>([])
 
   const runSearch = async (q: string) => {
     if (!q) { setSuggestions([]); return }
@@ -55,6 +58,17 @@ export default function WalkInRegistrationModal({
   }, [query, selected])
 
   const roomNumber = isResident ? formatRoomNumber(building, unitNumber, floor, subUnit) : '非社宅居民'
+
+  const resetForNextEntry = () => {
+    setQuery('')
+    setSelected(null)
+    setSuggestions([])
+    setIsResident(true)
+    setBuilding('')
+    setUnitNumber('')
+    setFloor('')
+    setSubUnit('')
+  }
 
   const handleConfirm = async () => {
     setError('')
@@ -79,9 +93,10 @@ export default function WalkInRegistrationModal({
       userRow = newUser
     }
 
+    // 現場報到＝人已經在現場，直接以「已出席」建立，不用另外再手動勾選
     const { data: newReg, error: regErr } = await supabase.from('registrations')
       .insert({
-        user_id: userRow.id, course_id: courseId, status: 'confirmed',
+        user_id: userRow.id, course_id: courseId, status: 'attended',
         is_social_housing_resident: selected ? true : isResident,
         is_walk_in: true,
       })
@@ -94,7 +109,18 @@ export default function WalkInRegistrationModal({
       return
     }
 
+    // 若剛好對應到既有 LINE 會員，出席點數比照一般出席流程即時發放
+    if (userRow.line_id) {
+      fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registrationId: newReg.id, courseTitle: courseTitle || '', lineUserId: userRow.line_id, action: 'attend' }),
+      }).catch(() => {})
+    }
+
     onCreated({ ...newReg, users: userRow })
+    setAddedList(list => [...list, { name: userRow.name, roomNumber: userRow.room_number }])
+    resetForNextEntry()
     setSaving(false)
   }
 
@@ -107,6 +133,17 @@ export default function WalkInRegistrationModal({
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </div>
+
+        {addedList.length > 0 && (
+          <div className="mx-5 mt-4 bg-green-50 border border-green-200 rounded-xl p-3">
+            <p className="text-xs font-medium text-green-700 mb-1.5">已新增 {addedList.length} 位（可以繼續新增下一位，都好了按右上角關閉）</p>
+            <div className="flex flex-wrap gap-1.5">
+              {addedList.map((a, i) => (
+                <span key={i} className="text-xs bg-white border border-green-200 text-green-700 px-2 py-1 rounded-full">{a.name}</span>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="p-5 flex flex-col gap-5">
           <div className="relative">

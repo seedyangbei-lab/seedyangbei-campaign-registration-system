@@ -569,11 +569,11 @@ export default function CoursesPage() {
       {walkInModalOpen && attendanceModal && (
         <WalkInRegistrationModal
           courseId={attendanceModal.id}
+          courseTitle={attendanceModal.title}
           onClose={() => setWalkInModalOpen(false)}
           onCreated={(reg) => {
             setAttendanceList(list => [...list, reg])
             setCheckedIds(prev => new Set(prev).add(reg.id))
-            setWalkInModalOpen(false)
           }}
         />
       )}

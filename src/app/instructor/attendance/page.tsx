@@ -144,11 +144,11 @@ function AttendancePageInner() {
       {walkInModalOpen && (
         <WalkInRegistrationModal
           courseId={courseId}
+          courseTitle={course?.title}
           onClose={() => setWalkInModalOpen(false)}
           onCreated={(reg) => {
             setList(l => [...l, reg])
             setCheckedIds(prev => new Set(prev).add(reg.id))
-            setWalkInModalOpen(false)
           }}
         />
       )}
