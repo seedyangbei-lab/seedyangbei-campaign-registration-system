@@ -18,19 +18,18 @@ export async function POST(req: NextRequest) {
     : action === 'unattend' ? `撤銷出席：${courseTitle}`
     : (manualReason || '手動調整')
 
-  if (registrationId) {
-    await supabase.from('registrations')
-      .update({ status: action === 'attend' ? 'attended' : 'confirmed' })
-      .eq('id', registrationId)
-  }
+  // 更新報名狀態、查詢 LINE 會員這兩件事互不相依，平行處理縮短單次請求耗時
+  const [, memberResult] = await Promise.all([
+    registrationId
+      ? supabase.from('registrations').update({ status: action === 'attend' ? 'attended' : 'confirmed' }).eq('id', registrationId)
+      : Promise.resolve(null),
+    lineUserId
+      ? supabase.from('line_members').select('id').eq('line_user_id', lineUserId).maybeSingle()
+      : Promise.resolve(null),
+  ])
 
   if (lineUserId) {
-    const { data: member } = await supabase
-      .from('line_members')
-      .select('id')
-      .eq('line_user_id', lineUserId)
-      .maybeSingle()
-
+    const member = memberResult?.data
     if (member) {
       const { error } = await supabase.from('point_logs').insert({
         line_member_id: member.id,

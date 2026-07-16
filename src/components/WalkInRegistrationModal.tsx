@@ -76,9 +76,11 @@ export default function WalkInRegistrationModal({
 
   const runSearch = async (q: string) => {
     if (!q) { setSuggestions([]); return }
-    const [{ data: userRows }, { data: memberRows }] = await Promise.all([
+    // users 表 RLS 對匿名讀取是開放的，可以直接查；line_members 沒有開放匿名讀取（跟後台會員頁一樣走 service role），
+    // 所以另外打一支用 service role 查的 API，才能搜到「是 LINE 會員但沒報名過活動」的人
+    const [{ data: userRows }, memberRows] = await Promise.all([
       supabase.from('users').select('id, name, room_number, line_id').ilike('name', `%${q}%`).limit(6),
-      supabase.from('line_members').select('line_user_id, display_name, building, unit_number, floor_number').ilike('display_name', `%${q}%`).limit(6),
+      fetch(`/api/search-members?q=${encodeURIComponent(q)}`).then(r => r.ok ? r.json() : []).catch(() => []) as Promise<{ line_user_id: string; display_name: string | null; building: string | null; unit_number: string | null; floor_number: string | null }[]>,
     ])
     const userLineIds = new Set((userRows || []).map(u => u.line_id).filter(Boolean))
     const userCandidates: Candidate[] = (userRows || []).map(u => ({

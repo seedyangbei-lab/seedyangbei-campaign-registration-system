@@ -63,15 +63,17 @@ function AttendancePageInner() {
 
   const handleConfirm = async () => {
     setSaving(true)
-    for (const reg of list) {
+    // 平行送出所有變更，而非一筆一筆等待，避免多人異動時儲存時間疊加
+    await Promise.all(list.map((reg: any) => {
       const shouldAttend = checkedIds.has(reg.id)
       const isAttended = reg.status === 'attended'
       if (shouldAttend && !isAttended) {
-        await fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ registrationId: reg.id, courseTitle: course?.title, lineUserId: reg.users?.line_id || '', action: 'attend' }) })
+        return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ registrationId: reg.id, courseTitle: course?.title, lineUserId: reg.users?.line_id || '', action: 'attend' }) })
       } else if (!shouldAttend && isAttended) {
-        await fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ registrationId: reg.id, courseTitle: course?.title, lineUserId: reg.users?.line_id || '', action: 'unattend' }) })
+        return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ registrationId: reg.id, courseTitle: course?.title, lineUserId: reg.users?.line_id || '', action: 'unattend' }) })
       }
-    }
+      return Promise.resolve()
+    }))
     setSaving(false)
     router.push('/instructor')
   }
