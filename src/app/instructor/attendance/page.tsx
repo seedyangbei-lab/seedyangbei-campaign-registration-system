@@ -145,10 +145,16 @@ function AttendancePageInner() {
         <WalkInRegistrationModal
           courseId={courseId}
           courseTitle={course?.title}
+          existingUserIds={list.map((r: any) => r.users?.id).filter(Boolean)}
           onClose={() => setWalkInModalOpen(false)}
-          onCreated={(reg) => {
-            setList(l => [...l, reg])
-            setCheckedIds(prev => new Set(prev).add(reg.id))
+          onConfirmed={(regs) => {
+            setList(l => [...l, ...regs])
+            setCheckedIds(prev => {
+              const next = new Set(prev)
+              regs.forEach(r => next.add(r.id))
+              return next
+            })
+            setWalkInModalOpen(false)
           }}
         />
       )}

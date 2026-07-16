@@ -617,10 +617,16 @@ function InstructorPortal() {
         <WalkInRegistrationModal
           courseId={attendanceModal.id}
           courseTitle={attendanceModal.title}
+          existingUserIds={attendanceList.map((r: any) => r.users?.id).filter(Boolean)}
           onClose={() => setWalkInModalOpen(false)}
-          onCreated={(reg) => {
-            setAttendanceList(list => [...list, reg])
-            setCheckedIds(prev => new Set(prev).add(reg.id))
+          onConfirmed={(regs) => {
+            setAttendanceList(list => [...list, ...regs])
+            setCheckedIds(prev => {
+              const next = new Set(prev)
+              regs.forEach(r => next.add(r.id))
+              return next
+            })
+            setWalkInModalOpen(false)
           }}
         />
       )}
