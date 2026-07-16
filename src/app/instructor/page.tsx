@@ -150,7 +150,7 @@ function InstructorPortal() {
         .from('registrations')
         .select('course_id, status')
         .in('course_id', ids)
-        .in('status', ['confirmed', 'attended'])
+        .in('status', ['confirmed', 'attended', 'absent'])
       const counts: Record<string, number> = {}
       ;(regs || []).forEach((r: any) => { counts[r.course_id] = (counts[r.course_id] || 0) + 1 })
       setRegCounts(counts)
@@ -325,7 +325,7 @@ function InstructorPortal() {
       .from('registrations')
       .select('id, status, is_walk_in, users(id, name, room_number, line_id)')
       .eq('course_id', course.id)
-      .in('status', ['confirmed', 'attended'])
+      .in('status', ['confirmed', 'attended', 'absent'])
       .order('registered_at')
     if (error) {
       console.error('attendance fetch error:', error)
@@ -340,13 +340,17 @@ function InstructorPortal() {
   const saveAttendance = async () => {
     setAttendanceSaving(true)
     // 平行送出所有變更，而非一筆一筆等待，避免多人異動時儲存時間疊加
+    // 三種情況：勾選出席／原本已出席被取消（撤銷＋收回點數）／原本未確認且這次審核後仍未勾選（標記未出席，不動點數）
     await Promise.all(attendanceList.map((reg: any) => {
       const shouldAttend = checkedIds.has(reg.id)
       const isAttended = reg.status === 'attended'
+      const isAbsent = reg.status === 'absent'
       if (shouldAttend && !isAttended) {
         return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ registrationId: reg.id, courseTitle: attendanceModal.title, lineUserId: reg.users?.line_id || '', action: 'attend' }) })
       } else if (!shouldAttend && isAttended) {
         return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ registrationId: reg.id, courseTitle: attendanceModal.title, lineUserId: reg.users?.line_id || '', action: 'unattend' }) })
+      } else if (!shouldAttend && !isAttended && !isAbsent) {
+        return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ registrationId: reg.id, courseTitle: attendanceModal.title, lineUserId: reg.users?.line_id || '', action: 'mark_absent' }) })
       }
       return Promise.resolve()
     }))
