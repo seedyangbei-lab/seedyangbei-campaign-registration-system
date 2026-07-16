@@ -4,6 +4,21 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
+type Member = {
+  id: string
+  source: 'line' | 'unbound'
+  display_name: string
+  picture_url?: string | null
+  line_user_id?: string | null
+  building?: string | null
+  unit_number?: string | null
+  floor_number?: string | null
+  notes?: string | null
+  points?: number | null
+  created_at: string
+  room_number?: string | null
+}
+
 function getTag(count: number) {
   if (count === 0) return { label: '尚未參與', color: '#9ca3af', bg: '#f3f4f6' }
   if (count === 1) return { label: '初次體驗', color: '#3b82f6', bg: '#eff6ff' }
@@ -14,60 +29,96 @@ function getTag(count: number) {
 
 const BUILDINGS = ['A棟','B棟','C棟','D棟']
 
+// 曾經有效參與過的狀態（未確認+已出席，不含已標記未出席）
+const PARTICIPATED_STATUSES = ['confirmed', 'attended']
+
+function SearchIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+    </svg>
+  )
+}
+
+function IdentityBadge({ source }: { source: 'line' | 'unbound' }) {
+  const isLine = source === 'line'
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-white shrink-0 ${isLine ? 'bg-[#06c755]' : 'bg-stone-400'}`}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </svg>
+      {isLine ? 'LINE' : '未綁定LINE'}
+    </span>
+  )
+}
+
 export default function MembersPage() {
-  const [members, setMembers] = useState<any[]>([])
-  const [editMember, setEditMember] = useState<any>(null)
-  const [editForm, setEditForm] = useState({ building: '', unit_number: '', floor_number: '', notes: '' })
+  const [members, setMembers] = useState<Member[]>([])
+  const [editMember, setEditMember] = useState<Member | null>(null)
+  const [editForm, setEditForm] = useState({ building: '', unit_number: '', floor_number: '', notes: '', room_number: '' })
   const [saving, setSaving] = useState(false)
-  const [historyMember, setHistoryMember] = useState<any>(null)
+  const [historyMember, setHistoryMember] = useState<Member | null>(null)
   const [historyRegs, setHistoryRegs] = useState<any[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
   const [regCounts, setRegCounts] = useState<Record<string, number>>({})
-  const [chartTab, setChartTab] = useState<'overall' | 'personal'>('overall')
+
+  // 篩選 chip：全部會員 / LINE 會員 / 未綁定會員——同時控制下面的名單跟走勢圖的統計範圍
+  const [groupFilter, setGroupFilter] = useState<'all' | 'line' | 'unbound'>('all')
   const [chartData, setChartData] = useState<any[]>([])
-  const [selectedMemberForChart, setSelectedMemberForChart] = useState<any>(null)
-  const [personalChartData, setPersonalChartData] = useState<any[]>([])
   const [selectedMonth, setSelectedMonth] = useState<string>('')
   const [monthBarData, setMonthBarData] = useState<any[]>([])
-  const [addPointModal, setAddPointModal] = useState<any>(null)
+
+  // 搜尋：下拉候選 + 選中後切換走勢圖成個人視圖（跟 chip 篩選是互斥的兩條路徑）
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchSuggestions, setSearchSuggestions] = useState<Member[]>([])
+  const [selectedMemberForChart, setSelectedMemberForChart] = useState<Member | null>(null)
+  const [personalChartData, setPersonalChartData] = useState<any[]>([])
+
+  const [addPointModal, setAddPointModal] = useState<Member | null>(null)
   const [addPointForm, setAddPointForm] = useState({ delta: 1, reason: '' })
   const [addPointSaving, setAddPointSaving] = useState(false)
   const supabase = createClient()
 
-   const fetchMembers = async () => {
+  const fetchMembers = async () => {
     const res = await fetch('/api/admin/members')
     const data = await res.json()
     if (!Array.isArray(data)) { setMembers([]); return }
     setMembers(data)
 
-    // 批次撈所有 confirmed 報名，一次 query 取代 N 次
+    // 批次撈所有有效報名，一次 query 取代 N 次；同時支援 LINE 會員（用 line_id 對應）跟未綁定會員（用 user_id 本身對應）
     const { data: allRegs } = await supabase
       .from('registrations')
-      .select('user_id, users!inner(line_id)')
-      .eq('status', 'confirmed')
+      .select('user_id, users!inner(id, line_id)')
+      .in('status', PARTICIPATED_STATUSES)
 
     const counts: Record<string, number> = {}
     if (allRegs) {
-      const lineIdToCount: Record<string, number> = {}
+      const lineIdCount: Record<string, number> = {}
+      const userIdCount: Record<string, number> = {}
       allRegs.forEach((r: any) => {
         const lid = r.users?.line_id
-        if (lid) lineIdToCount[lid] = (lineIdToCount[lid] || 0) + 1
+        const uid = r.users?.id
+        if (lid) lineIdCount[lid] = (lineIdCount[lid] || 0) + 1
+        else if (uid) userIdCount[uid] = (userIdCount[uid] || 0) + 1
       })
       data.forEach((m: any) => {
-        counts[m.id] = lineIdToCount[m.line_user_id] || 0
+        counts[m.id] = m.source === 'line' ? (lineIdCount[m.line_user_id] || 0) : (userIdCount[m.id] || 0)
       })
     }
     setRegCounts(counts)
   }
 
-  useEffect(() => { fetchMembers(); fetchOverallChart() }, [])
+  useEffect(() => { fetchMembers(); fetchOverallChart('all') }, [])
 
-  const fetchOverallChart = async () => {
-    const { data: regs } = await supabase
+  const fetchOverallChart = async (scope: 'all' | 'line' | 'unbound') => {
+    let query = supabase
       .from('registrations')
-      .select('course_id, courses!inner(date)')
-      .eq('status', 'confirmed')
-    if (!regs) return
+      .select('course_id, courses!inner(date), users!inner(line_id)')
+      .in('status', PARTICIPATED_STATUSES)
+    if (scope === 'line') query = query.not('users.line_id', 'is', null)
+    if (scope === 'unbound') query = query.is('users.line_id', null)
+    const { data: regs } = await query
+    if (!regs) { setChartData([]); return }
     const monthMap: Record<string, number> = {}
     regs.forEach((r: any) => {
       const date = (r.courses as any)?.date
@@ -81,6 +132,15 @@ export default function MembersPage() {
     }))
   }
 
+  const handleChipClick = (scope: 'all' | 'line' | 'unbound') => {
+    setGroupFilter(scope)
+    setSelectedMemberForChart(null)
+    setPersonalChartData([])
+    setSelectedMonth('')
+    setMonthBarData([])
+    fetchOverallChart(scope)
+  }
+
   const fetchMonthBar = async (monthKey: string) => {
     if (!monthKey) return
     const startDate = `${monthKey}-01`
@@ -90,7 +150,6 @@ export default function MembersPage() {
       ? `${parseInt(y) + 1}-01-01`
       : `${y}-${String(nextMonth).padStart(2, '0')}-01`
 
-    // 先撈出該月份的課程 id 清單
     const { data: monthlyCourses } = await supabase
       .from('courses')
       .select('id, title')
@@ -101,12 +160,14 @@ export default function MembersPage() {
 
     const courseIds = monthlyCourses.map((c: any) => c.id)
 
-    // 再撈這些課程的 confirmed 報名數
-    const { data: regs } = await supabase
+    let query = supabase
       .from('registrations')
-      .select('course_id')
-      .eq('status', 'confirmed')
+      .select('course_id, users!inner(line_id)')
+      .in('status', PARTICIPATED_STATUSES)
       .in('course_id', courseIds)
+    if (groupFilter === 'line') query = query.not('users.line_id', 'is', null)
+    if (groupFilter === 'unbound') query = query.is('users.line_id', null)
+    const { data: regs } = await query
 
     if (!regs) { setMonthBarData([]); return }
 
@@ -123,15 +184,38 @@ export default function MembersPage() {
         .sort((a, b) => b.count - a.count)
     )
   }
-  const fetchPersonalChart = async (member: any) => {
+
+  // 搜尋是獨立於 chip 篩選的第二條路徑：不分身份，全部人都能被搜到
+  useEffect(() => {
+    const q = searchQuery.trim()
+    if (!q) { setSearchSuggestions([]); return }
+    const matches = members.filter(m => {
+      const loc = m.source === 'line' ? `${m.building || ''}${m.unit_number || ''}` : (m.room_number || '')
+      return m.display_name?.includes(q) || loc.includes(q)
+    }).slice(0, 8)
+    setSearchSuggestions(matches)
+  }, [searchQuery, members])
+
+  const fetchPersonalChart = async (member: Member) => {
+    setSearchQuery('')
+    setSearchSuggestions([])
+    setSelectedMonth('')
+    setMonthBarData([])
     setSelectedMemberForChart(member)
-    const { data: user } = await supabase.from('users').select('id').eq('line_id', member.line_user_id).maybeSingle()
-    if (!user) { setPersonalChartData([]); return }
+
+    let userId: string | null = null
+    if (member.source === 'unbound') {
+      userId = member.id
+    } else {
+      const { data: user } = await supabase.from('users').select('id').eq('line_id', member.line_user_id).maybeSingle()
+      userId = user?.id ?? null
+    }
+    if (!userId) { setPersonalChartData([]); return }
     const { data: regs } = await supabase
       .from('registrations')
       .select('registered_at')
-      .eq('user_id', user.id)
-      .eq('status', 'confirmed')
+      .eq('user_id', userId)
+      .in('status', PARTICIPATED_STATUSES)
     if (!regs) { setPersonalChartData([]); return }
     const monthMap: Record<string, number> = {}
     regs.forEach((r: any) => {
@@ -145,28 +229,42 @@ export default function MembersPage() {
     }))
   }
 
-  const openHistory = async (member: any) => {
+  const clearPersonalChart = () => {
+    setSelectedMemberForChart(null)
+    setPersonalChartData([])
+  }
+
+  const openHistory = async (member: Member) => {
     setHistoryMember(member)
     setHistoryLoading(true)
     setHistoryRegs([])
-    const { data: user } = await supabase.from('users').select('id').eq('line_id', member.line_user_id).maybeSingle()
-    if (user) {
+
+    let userId: string | null = null
+    if (member.source === 'unbound') {
+      userId = member.id
+    } else {
+      const { data: user } = await supabase.from('users').select('id').eq('line_id', member.line_user_id).maybeSingle()
+      userId = user?.id ?? null
+    }
+    if (userId) {
       const { data: regs } = await supabase.from('registrations')
         .select('*, courses(title, date, time_start, time_end, location)')
-        .eq('user_id', user.id).eq('status', 'confirmed')
+        .eq('user_id', userId).in('status', PARTICIPATED_STATUSES)
         .order('registered_at', { ascending: false })
       setHistoryRegs(regs || [])
     }
     setHistoryLoading(false)
   }
 
- const openEdit = async (member: any) => {
+  const openEdit = async (member: Member) => {
     setEditMember(member)
-    // 先用 line_members 資料帶入
+    if (member.source === 'unbound') {
+      setEditForm({ building: '', unit_number: '', floor_number: '', notes: '', room_number: member.room_number || '' })
+      return
+    }
     let building = member.building || ''
     let unit_number = member.unit_number || ''
     let floor_number = member.floor_number || ''
-    // 若 line_members 沒有，嘗試從 users 表解析 room_number
     if (!building && member.line_user_id) {
       const { data: user } = await supabase.from('users').select('room_number').eq('line_id', member.line_user_id).maybeSingle()
       if (user?.room_number) {
@@ -178,21 +276,27 @@ export default function MembersPage() {
         }
       }
     }
-    setEditForm({ building, unit_number, floor_number, notes: member.notes || '' })
+    setEditForm({ building, unit_number, floor_number, notes: member.notes || '', room_number: '' })
   }
+
   const handleSave = async () => {
+    if (!editMember) return
     setSaving(true)
-    await supabase.from('line_members').update({
-      building: editForm.building || null, unit_number: editForm.unit_number || null,
-      floor_number: editForm.floor_number || null, notes: editForm.notes || null,
-    }).eq('id', editMember.id)
+    if (editMember.source === 'unbound') {
+      await supabase.from('users').update({ room_number: editForm.room_number || null }).eq('id', editMember.id)
+    } else {
+      await supabase.from('line_members').update({
+        building: editForm.building || null, unit_number: editForm.unit_number || null,
+        floor_number: editForm.floor_number || null, notes: editForm.notes || null,
+      }).eq('id', editMember.id)
+    }
     setEditMember(null)
     await fetchMembers()
     setSaving(false)
   }
 
-   const handleAddPoint = async () => {
-    if (!addPointForm.reason.trim()) { alert('請填寫原因'); return }
+  const handleAddPoint = async () => {
+    if (!addPointModal || !addPointForm.reason.trim()) { alert('請填寫原因'); return }
     setAddPointSaving(true)
     await fetch('/api/attendance', {
       method: 'POST',
@@ -232,155 +336,169 @@ export default function MembersPage() {
     )
   }
 
+  const visibleMembers = members.filter(m => groupFilter === 'all' || m.source === groupFilter)
+  const chipLabel = (scope: 'all' | 'line' | 'unbound') => scope === 'all' ? '全部會員' : scope === 'line' ? 'LINE會員' : '未綁定會員'
+
   return (
     <div className="p-6 md:p-8">
-      <div className="mb-4">
-        <h2 className="text-stone-800 text-2xl font-bold">LINE 會員</h2>
-        <p className="text-stone-400 mt-1 text-sm">透過 LINE 登入的會員資料，共 {members.length} 位</p>
+      <div className="mb-6 pb-4 border-b border-stone-200">
+        <h2 className="text-stone-800 text-2xl font-bold">用戶查詢</h2>
+        <p className="text-stone-400 mt-1 text-sm">查詢所有曾報名或現場報到過的居民，不分是否綁定 LINE</p>
+      </div>
+
+      {/* 篩選 chip + 搜尋 */}
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <div className="flex gap-1 p-1 bg-white/60 border border-stone-300 rounded-lg">
+          {(['all', 'line', 'unbound'] as const).map(scope => (
+            <button key={scope} onClick={() => handleChipClick(scope)}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${groupFilter === scope ? 'bg-orange-500 text-white' : 'text-stone-500 hover:text-stone-700'}`}>
+              {chipLabel(scope)}
+            </button>
+          ))}
+        </div>
+        <span className="text-sm text-stone-400">或是</span>
+        <div className="relative w-full max-w-xs">
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="輸入姓名或房號搜尋"
+            className="w-full border border-stone-200 rounded-md pl-3 pr-9 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 placeholder:text-stone-400"
+          />
+          <SearchIcon className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+          {searchSuggestions.length > 0 && (
+            <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-stone-200 rounded-xl shadow-lg max-h-56 overflow-y-auto">
+              {searchSuggestions.map(m => (
+                <button key={m.id + m.source} type="button" onClick={() => fetchPersonalChart(m)}
+                  className="w-full text-left px-3 py-2.5 hover:bg-orange-50 transition-colors border-b border-stone-50 last:border-0 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm text-stone-700 truncate">{m.display_name}</p>
+                    <p className="text-xs text-stone-400 truncate">{m.source === 'line' ? `${m.building || ''} ${m.unit_number || ''}` : (m.room_number || '')}</p>
+                  </div>
+                  <IdentityBadge source={m.source} />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 走勢圖區塊（預設展開，無收合） */}
       <div className="bg-white border border-stone-200 rounded-2xl shadow-sm mb-6 overflow-hidden">
-        <div className="flex items-center gap-2 px-6 py-4 border-b border-stone-100">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          <span className="font-semibold text-stone-700 text-sm">參與走勢圖</span>
+        <div className="flex items-center justify-between gap-2 px-6 py-4 border-b border-stone-100">
+          <div className="flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
+            <span className="font-semibold text-stone-700 text-sm">
+              {selectedMemberForChart ? `${selectedMemberForChart.display_name} 的參與走勢` : '參與走勢圖'}
+            </span>
+          </div>
+          {selectedMemberForChart && (
+            <button onClick={clearPersonalChart} className="flex items-center gap-1 text-xs text-stone-400 hover:text-stone-600 transition-colors">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              返回全體走勢
+            </button>
+          )}
         </div>
 
-        <div>
-          {/* Tab */}
-          <div className="flex gap-1 p-1 mx-6 mt-4 bg-stone-100 rounded-xl w-fit">
-            {([['overall', '全體走勢'], ['personal', '個人查詢']] as const).map(([t, label]) => (
-              <button key={t} onClick={() => setChartTab(t)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${chartTab === t ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}>
-                {label}
-              </button>
-            ))}
+        {selectedMemberForChart ? (
+          <div className="px-6 py-4">
+            {personalChartData.length === 0 ? (
+              <div className="text-center py-8 text-stone-400 text-sm">此會員尚無參與記錄</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={personalChartData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f4" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#78716c' }} />
+                  <YAxis tick={{ fontSize: 12, fill: '#78716c' }} allowDecimals={false} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: 12 }}
+                    formatter={(v: any) => [`${v} 次`, selectedMemberForChart.display_name]}
+                  />
+                  <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2.5} dot={{ fill: '#3b82f6', r: 4 }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </div>
+        ) : (
+          <div className="px-6 py-4 space-y-6">
+            <div>
+              <p className="text-xs text-stone-400 mb-4">每月課程報名總次數（點擊圓點查看當月課程細項）</p>
+              {chartData.length === 0 ? (
+                <div className="text-center py-8 text-stone-400 text-sm">尚無資料</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart
+                    data={chartData}
+                    margin={{ top: 5, right: 20, left: -20, bottom: 5 }}
+                    onClick={(e) => {
+                      if (e?.activePayload?.[0]) {
+                        const key = e.activePayload[0].payload.key
+                        setSelectedMonth(key)
+                        fetchMonthBar(key)
+                      }
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f4" />
+                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#78716c' }} />
+                    <YAxis tick={{ fontSize: 12, fill: '#78716c' }} allowDecimals={false} />
+                    <Tooltip content={<OverallTooltip />} />
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      stroke="#f97316"
+                      strokeWidth={2.5}
+                      dot={{ fill: '#f97316', r: 5, cursor: 'pointer' }}
+                      activeDot={{ r: 7, stroke: '#f97316', strokeWidth: 2, fill: 'white' }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </div>
 
-          {/* 全體走勢 */}
-          {chartTab === 'overall' && (
-            <div className="px-6 py-4 space-y-6">
+            {/* 月份細項柱狀圖（直式） */}
+            {selectedMonth && (
               <div>
-                <p className="text-xs text-stone-400 mb-4">每月課程報名總次數（點擊圓點查看當月課程細項）</p>
-                {chartData.length === 0 ? (
-                  <div className="text-center py-8 text-stone-400 text-sm">尚無資料</div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-semibold text-stone-700">
+                    {parseInt(selectedMonth.split('-')[1])}月 各課程報名人數
+                  </p>
+                  <button
+                    onClick={() => { setSelectedMonth(''); setMonthBarData([]) }}
+                    className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+                  >
+                    關閉
+                  </button>
+                </div>
+                {monthBarData.length === 0 ? (
+                  <div className="text-center py-6 text-stone-400 text-sm">此月無報名資料</div>
                 ) : (
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart
-                      data={chartData}
-                      margin={{ top: 5, right: 20, left: -20, bottom: 5 }}
-                      onClick={(e) => {
-                        if (e?.activePayload?.[0]) {
-                          const key = e.activePayload[0].payload.key
-                          setSelectedMonth(key)
-                          fetchMonthBar(key)
-                        }
-                      }}
-                      style={{ cursor: 'pointer' }}
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart
+                      data={monthBarData}
+                      margin={{ top: 10, right: 10, left: -10, bottom: 80 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f4" />
-                      <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#78716c' }} />
-                      <YAxis tick={{ fontSize: 12, fill: '#78716c' }} allowDecimals={false} />
-                      <Tooltip content={<OverallTooltip />} />
-                      <Line
-                        type="monotone"
-                        dataKey="count"
-                        stroke="#f97316"
-                        strokeWidth={2.5}
-                        dot={{ fill: '#f97316', r: 5, cursor: 'pointer' }}
-                        activeDot={{ r: 7, stroke: '#f97316', strokeWidth: 2, fill: 'white' }}
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f4" vertical={false} />
+                      <XAxis
+                        dataKey="title"
+                        tick={{ fontSize: 11, fill: '#57534e' }}
+                        angle={-45}
+                        textAnchor="end"
+                        interval={0}
+                        dy={4}
                       />
-                    </LineChart>
+                      <YAxis tick={{ fontSize: 11, fill: '#78716c' }} allowDecimals={false} />
+                      <Tooltip
+                        contentStyle={{ borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: 12 }}
+                        formatter={(v: any) => [`${v} 人`, '報名人數']}
+                      />
+                      <Bar dataKey="count" fill="#f97316" radius={[6, 6, 0, 0]} />
+                    </BarChart>
                   </ResponsiveContainer>
                 )}
               </div>
-
-              {/* 月份細項柱狀圖（直式） */}
-              {selectedMonth && (
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-semibold text-stone-700">
-                      {parseInt(selectedMonth.split('-')[1])}月 各課程報名人數
-                    </p>
-                    <button
-                      onClick={() => { setSelectedMonth(''); setMonthBarData([]) }}
-                      className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
-                    >
-                      關閉
-                    </button>
-                  </div>
-                  {monthBarData.length === 0 ? (
-                    <div className="text-center py-6 text-stone-400 text-sm">此月無報名資料</div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height={280}>
-                      <BarChart
-                        data={monthBarData}
-                        margin={{ top: 10, right: 10, left: -10, bottom: 80 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f4" vertical={false} />
-                        <XAxis
-                          dataKey="title"
-                          tick={{ fontSize: 11, fill: '#57534e' }}
-                          angle={-45}
-                          textAnchor="end"
-                          interval={0}
-                          dy={4}
-                        />
-                        <YAxis tick={{ fontSize: 11, fill: '#78716c' }} allowDecimals={false} />
-                        <Tooltip
-                          contentStyle={{ borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: 12 }}
-                          formatter={(v: any) => [`${v} 人`, '報名人數']}
-                        />
-                        <Bar dataKey="count" fill="#f97316" radius={[6, 6, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 個人查詢 */}
-          {chartTab === 'personal' && (
-            <div className="px-6 py-4">
-              <p className="text-xs text-stone-400 mb-3">選擇會員查看個人每月參與次數</p>
-              <div className="relative mb-4">
-                <select
-                  onChange={e => {
-                    const m = members.find(m => m.id === e.target.value)
-                    if (m) fetchPersonalChart(m)
-                  }}
-                  className="w-full appearance-none border border-stone-200 rounded-xl pl-3 pr-9 py-2 text-sm text-stone-600 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300"
-                  defaultValue=""
-                >
-                  <option value="" disabled>選擇會員</option>
-                  {members.map(m => (
-                    <option key={m.id} value={m.id}>{m.display_name}</option>
-                  ))}
-                </select>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
-              </div>
-              {selectedMemberForChart && (
-                personalChartData.length === 0 ? (
-                  <div className="text-center py-8 text-stone-400 text-sm">此會員尚無參與記錄</div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={personalChartData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f4" />
-                      <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#78716c' }} />
-                      <YAxis tick={{ fontSize: 12, fill: '#78716c' }} allowDecimals={false} />
-                      <Tooltip
-                        contentStyle={{ borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: 12 }}
-                        formatter={(v: any) => [`${v} 次`, selectedMemberForChart.display_name]}
-                      />
-                      <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2.5} dot={{ fill: '#3b82f6', r: 4 }} activeDot={{ r: 6 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                )
-              )}
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-3 mb-6">
@@ -394,54 +512,53 @@ export default function MembersPage() {
       </div>
 
       <div className="space-y-3">
-        {members.length === 0 && (
-          <div className="bg-white border border-stone-200 rounded-2xl p-12 text-center text-stone-400"><p>尚無 LINE 會員登入記錄</p></div>
+        {visibleMembers.length === 0 && (
+          <div className="bg-white border border-stone-200 rounded-2xl p-12 text-center text-stone-400"><p>找不到符合的居民</p></div>
         )}
-        {members.map(member => {
+        {visibleMembers.map(member => {
           const count = regCounts[member.id] ?? 0
           const tag = getTag(count)
-          const hasLocation = member.building || member.unit_number
+          const dateLabel = member.source === 'line' ? '加入日期' : '首次報到日期'
 
           return (
-            <div key={member.id} className="bg-white border border-stone-200 rounded-2xl p-5 shadow-sm">
+            <div key={member.id} className="bg-white border border-stone-200 rounded-2xl p-4 shadow-sm">
               <div className="flex items-center gap-4">
                 {member.picture_url
                   ? <img src={member.picture_url} alt="" className="w-12 h-12 rounded-full object-cover flex-shrink-0" />
-                  : <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0"><span className="text-green-600 font-bold text-lg">{member.display_name?.[0]}</span></div>
+                  : (
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${member.source === 'line' ? 'bg-green-100' : 'bg-stone-200'}`}>
+                      <span className={`font-bold text-lg ${member.source === 'line' ? 'text-green-600' : 'text-stone-500'}`}>{member.display_name?.[0]}</span>
+                    </div>
+                  )
                 }
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                    <p className="text-stone-800 font-semibold">{member.display_name}</p>
-                    <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ color: tag.color, backgroundColor: tag.bg }}>
-                      {tag.label}
-                    </span>
-                    {member.points > 0 && (
-                      <span className="text-xs text-orange-500 font-bold">{member.points} 點</span>
-                    )}
+                  <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                    <p className="text-stone-800 font-semibold text-base">{member.display_name}</p>
+                    <button onClick={() => openEdit(member)} className="flex items-center justify-center size-6 rounded-full border border-stone-200 bg-white text-stone-400 hover:text-stone-600 hover:bg-stone-50 transition-colors">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                    </button>
+                    <IdentityBadge source={member.source} />
                   </div>
-                  {hasLocation && (
-                    <p className="text-stone-500 text-xs">{member.building} {member.unit_number}{member.floor_number && `-${member.floor_number}F`}</p>
-                  )}
-                  {member.notes && <p className="text-stone-400 text-xs mt-0.5 truncate">{member.notes}</p>}
-                  <p className="text-stone-300 text-xs mt-0.5">加入：{member.created_at?.split('T')[0]}</p>
+                  <div className="flex items-center gap-1.5 flex-wrap text-xs text-stone-500">
+                    <span>{dateLabel}</span>
+                    <span>|</span>
+                    <span className="text-stone-400">{member.created_at?.split('T')[0]}</span>
+                    <span className="px-3 py-1 rounded-md font-medium" style={{ color: tag.color, backgroundColor: tag.bg }}>{tag.label}</span>
+                  </div>
                 </div>
-                <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                 <div className="flex items-center gap-1">
-                  <button onClick={() => openEdit(member)} className="p-2 hover:bg-stone-100 rounded-lg transition-colors text-stone-500">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {member.source === 'line' && (
+                    <button onClick={() => { setAddPointModal(member); setAddPointForm({ delta: 1, reason: '' }) }}
+                      className="flex items-center gap-1 text-xs bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 px-2.5 py-1.5 rounded-lg transition-colors font-medium">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                      調整點數
+                    </button>
+                  )}
+                  <button onClick={() => openHistory(member)}
+                    className="flex items-center gap-1.5 text-xs bg-white hover:bg-stone-50 text-stone-600 border border-stone-300 px-3 py-1.5 rounded-lg transition-colors">
+                    上課記錄
+                    <span className="bg-stone-100 text-stone-600 text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">{count}</span>
                   </button>
-                  <button onClick={() => { setAddPointModal(member); setAddPointForm({ delta: 1, reason: '' }) }}
-                    className="flex items-center gap-1 text-xs bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 px-2.5 py-1.5 rounded-lg transition-colors font-medium">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    調整點數
-
-                  </button>
-                 <button onClick={() => openHistory(member)}
-                    className="flex items-center gap-1.5 text-xs bg-stone-100 hover:bg-stone-200 text-stone-600 px-3 py-1.5 rounded-lg transition-colors">
-                    課程記錄
-                    <span className="bg-orange-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">{count}</span>
-                  </button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -458,7 +575,7 @@ export default function MembersPage() {
               <div className="flex items-center gap-3">
                 {historyMember.picture_url
                   ? <img src={historyMember.picture_url} alt="" className="w-10 h-10 rounded-full" />
-                  : <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center"><span className="text-green-600 font-bold">{historyMember.display_name?.[0]}</span></div>
+                  : <div className={`w-10 h-10 rounded-full flex items-center justify-center ${historyMember.source === 'line' ? 'bg-green-100' : 'bg-stone-200'}`}><span className={`font-bold ${historyMember.source === 'line' ? 'text-green-600' : 'text-stone-500'}`}>{historyMember.display_name?.[0]}</span></div>
                 }
                 <div>
                   <h3 className="font-bold text-stone-800">{historyMember.display_name}</h3>
@@ -466,7 +583,7 @@ export default function MembersPage() {
                 </div>
               </div>
               <button onClick={() => setHistoryMember(null)} className="p-2 hover:bg-stone-100 rounded-xl">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-6">
@@ -503,7 +620,7 @@ export default function MembersPage() {
         </div>
       )}
 
-       {/* 手動加點彈窗 */}
+      {/* 手動加點彈窗（只有 LINE 會員能開啟，點數只存在 line_members 表） */}
       {addPointModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
           onClick={e => { if (e.target === e.currentTarget) setAddPointModal(null) }}>
@@ -520,7 +637,7 @@ export default function MembersPage() {
                 </div>
               </div>
               <button onClick={() => setAddPointModal(null)} className="p-2 hover:bg-stone-100 rounded-xl">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>
             </div>
             <div className="p-6 space-y-4">
@@ -565,58 +682,70 @@ export default function MembersPage() {
         </div>
       )}
 
-      {/* 編輯彈窗 */}
+      {/* 編輯彈窗：LINE 會員編輯 line_members 的棟別/戶號/樓層/備註；未綁定會員只編輯 users 的房號文字 */}
       {editMember && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
           onClick={e => { if (e.target === e.currentTarget) setEditMember(null) }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
             <div className="flex items-center justify-between p-6 border-b border-stone-200">
-              <h3 className="font-bold text-stone-800">編輯會員資料</h3>
+              <h3 className="font-bold text-stone-800">編輯用戶資料</h3>
               <button onClick={() => setEditMember(null)} className="p-2 hover:bg-stone-100 rounded-xl">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>
             </div>
             <div className="p-6 space-y-4">
               <div className="flex items-center gap-3 bg-stone-50 rounded-xl p-3">
                 {editMember.picture_url ? <img src={editMember.picture_url} alt="" className="w-10 h-10 rounded-full" />
-                  : <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center"><span className="text-green-600 font-bold">{editMember.display_name?.[0]}</span></div>}
+                  : <div className={`w-10 h-10 rounded-full flex items-center justify-center ${editMember.source === 'line' ? 'bg-green-100' : 'bg-stone-200'}`}><span className={`font-bold ${editMember.source === 'line' ? 'text-green-600' : 'text-stone-500'}`}>{editMember.display_name?.[0]}</span></div>}
                 <div>
                   <p className="font-semibold text-stone-800 text-sm">{editMember.display_name}</p>
-                  <p className="text-stone-400 text-xs">{editMember.line_user_id}</p>
+                  <p className="text-stone-400 text-xs">{editMember.source === 'line' ? editMember.line_user_id : '未綁定 LINE'}</p>
                 </div>
               </div>
-              <div>
-                <label className="block text-stone-600 text-sm font-medium mb-2">居住資訊</label>
-                <div className="grid grid-cols-3 gap-2">
+
+              {editMember.source === 'unbound' ? (
+                <div>
+                  <label className="block text-stone-600 text-sm font-medium mb-1.5">房號</label>
+                  <input value={editForm.room_number} onChange={e => setEditForm({ ...editForm, room_number: e.target.value })} placeholder="例：A棟 400-5F-2，或「非社宅居民」"
+                    className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                </div>
+              ) : (
+                <>
                   <div>
-                    <label className="block text-xs text-stone-400 mb-1">棟別</label>
-                    <div className="relative">
-                      <select value={editForm.building} onChange={e => setEditForm({...editForm, building: e.target.value})}
-                        className="w-full appearance-none border border-stone-300 rounded-xl pl-3 pr-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-                        <option value="">未填</option>
-                        {BUILDINGS.map(b => <option key={b} value={b}>{b}</option>)}
-                      </select>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
+                    <label className="block text-stone-600 text-sm font-medium mb-2">居住資訊</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-xs text-stone-400 mb-1">棟別</label>
+                        <div className="relative">
+                          <select value={editForm.building} onChange={e => setEditForm({ ...editForm, building: e.target.value })}
+                            className="w-full appearance-none border border-stone-300 rounded-xl pl-3 pr-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
+                            <option value="">未填</option>
+                            {BUILDINGS.map(b => <option key={b} value={b}>{b}</option>)}
+                          </select>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9" /></svg>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-stone-400 mb-1">戶號</label>
+                        <input value={editForm.unit_number} onChange={e => setEditForm({ ...editForm, unit_number: e.target.value })} placeholder="例：400"
+                          className="w-full border border-stone-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-stone-400 mb-1">樓層</label>
+                        <input value={editForm.floor_number} onChange={e => setEditForm({ ...editForm, floor_number: e.target.value })} placeholder="例：5"
+                          className="w-full border border-stone-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                      </div>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs text-stone-400 mb-1">戶號</label>
-                    <input value={editForm.unit_number} onChange={e => setEditForm({...editForm, unit_number: e.target.value})} placeholder="例：400"
-                      className="w-full border border-stone-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                    <label className="block text-stone-600 text-sm font-medium mb-1.5">其他備註</label>
+                    <textarea value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })}
+                      placeholder="例：上課習慣、特殊需求..." rows={3}
+                      className="w-full border border-stone-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none" />
                   </div>
-                  <div>
-                    <label className="block text-xs text-stone-400 mb-1">樓層</label>
-                    <input value={editForm.floor_number} onChange={e => setEditForm({...editForm, floor_number: e.target.value})} placeholder="例：5"
-                      className="w-full border border-stone-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-                  </div>
-                </div>
-              </div>
-              <div>
-                <label className="block text-stone-600 text-sm font-medium mb-1.5">其他備註</label>
-                <textarea value={editForm.notes} onChange={e => setEditForm({...editForm, notes: e.target.value})}
-                  placeholder="例：上課習慣、特殊需求..." rows={3}
-                  className="w-full border border-stone-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none" />
-              </div>
+                </>
+              )}
+
               <div className="flex gap-3">
                 <button onClick={handleSave} disabled={saving}
                   className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
