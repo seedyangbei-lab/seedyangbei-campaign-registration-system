@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+const siteUrl = "https://yangbei-campaign.vercel.app";
+const shareBanner = "/illustrations/share-link-banner.png";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "央北社宅活動報名",
   description: "央北社宅活動課程報名平台",
   icons: {
@@ -12,6 +16,21 @@ export const metadata: Metadata = {
     ],
     shortcut: "/favicons/front-32.png",
     apple: "/favicons/front-64.png",
+  },
+  openGraph: {
+    title: "央北社宅活動報名",
+    description: "央北社宅活動課程報名平台",
+    url: siteUrl,
+    siteName: "央北社宅活動報名",
+    images: [{ url: shareBanner, width: 1200, height: 630 }],
+    locale: "zh_TW",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "央北社宅活動報名",
+    description: "央北社宅活動課程報名平台",
+    images: [shareBanner],
   },
 };
 
