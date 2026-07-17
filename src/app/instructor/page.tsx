@@ -168,7 +168,9 @@ function InstructorPortal() {
       list.forEach((c: any) => {
         if (submittedIds.has(c.id)) { statuses[c.id] = 'submitted'; return }
         const end = new Date(`${c.date}T${c.time_end}`)
-        const deadline = new Date(end.getTime() + deadlineDays * 24 * 60 * 60 * 1000)
+        const deadline = c.report_deadline_extended_to
+          ? new Date(`${c.report_deadline_extended_to}T23:59:59`)
+          : new Date(end.getTime() + deadlineDays * 24 * 60 * 60 * 1000)
         statuses[c.id] = new Date() > deadline ? 'overdue' : 'due'
       })
       setReportStatuses(statuses)

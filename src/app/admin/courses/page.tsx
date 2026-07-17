@@ -44,6 +44,10 @@ export default function CoursesPage() {
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const [walkInModalOpen, setWalkInModalOpen] = useState(false)
   const [reportViewCourse, setReportViewCourse] = useState<any>(null)
+  const [deadlineModalCourse, setDeadlineModalCourse] = useState<any>(null)
+  const [deadlineInput, setDeadlineInput] = useState('')
+  const [deadlineSaving, setDeadlineSaving] = useState(false)
+  const [reportDeadlineDays, setReportDeadlineDays] = useState(7)
   const supabase = createClient()
   const router = useRouter()
 
@@ -59,11 +63,14 @@ export default function CoursesPage() {
     const coursesData = (c as any) || []
     const reportsData = reports || []
     const deadlineDays = parseInt((siteSettings || []).find((s: any) => s.key === 'report_deadline_days')?.value || '7') || 7
+    setReportDeadlineDays(deadlineDays)
     const reportByCourseId = Object.fromEntries(reportsData.map((r: any) => [r.course_id, r]))
     const enriched = coursesData.map((course: any) => {
       const report = reportByCourseId[course.id]
       const end = new Date(`${course.date}T${course.time_end}`)
-      const deadline = new Date(end.getTime() + deadlineDays * 24 * 60 * 60 * 1000)
+      const deadline = course.report_deadline_extended_to
+        ? new Date(`${course.report_deadline_extended_to}T23:59:59`)
+        : new Date(end.getTime() + deadlineDays * 24 * 60 * 60 * 1000)
       const reportStatus = report ? 'submitted' : (end < new Date() && new Date() > deadline ? 'overdue' : 'due')
       return {
         ...course,
@@ -72,6 +79,7 @@ export default function CoursesPage() {
           .filter(Boolean),
         report,
         report_status: reportStatus,
+        report_deadline: deadline,
       }
     })
     setCourses(enriched)
@@ -126,6 +134,29 @@ export default function CoursesPage() {
       custom_age: agePreset === '其他' ? (course.suitable_age || '') : '',
     })
     setShowModal(true)
+  }
+
+  const openDeadlineModal = (course: any) => {
+    setDeadlineModalCourse(course)
+    setDeadlineInput(course.report_deadline_extended_to || '')
+  }
+
+  const saveDeadline = async () => {
+    if (!deadlineModalCourse || !deadlineInput) return
+    setDeadlineSaving(true)
+    await supabase.from('courses').update({ report_deadline_extended_to: deadlineInput }).eq('id', deadlineModalCourse.id)
+    setDeadlineSaving(false)
+    setDeadlineModalCourse(null)
+    fetchAll()
+  }
+
+  const clearDeadline = async () => {
+    if (!deadlineModalCourse) return
+    setDeadlineSaving(true)
+    await supabase.from('courses').update({ report_deadline_extended_to: null }).eq('id', deadlineModalCourse.id)
+    setDeadlineSaving(false)
+    setDeadlineModalCourse(null)
+    fetchAll()
   }
 
   const uploadCoursePhoto = async (blob: Blob): Promise<string | null> => {
@@ -388,13 +419,13 @@ export default function CoursesPage() {
                         )}
                       </div>
                       {expired && (
-                        <button onClick={() => course.report && setReportViewCourse(course)} disabled={!course.report}
+                        <button onClick={() => course.report_status === 'submitted' ? setReportViewCourse(course) : openDeadlineModal(course)}
                           className={`w-full flex items-center justify-center gap-1.5 text-xs px-3 py-2 rounded-lg transition-colors font-medium ${
                             course.report_status === 'submitted' ? 'bg-white hover:bg-stone-50 border border-stone-300 text-stone-600'
                               : course.report_status === 'overdue' ? 'bg-red-50 border border-red-300 text-red-600'
-                              : 'bg-stone-50 border border-stone-200 text-stone-400'
+                              : 'bg-stone-50 border border-stone-200 text-stone-500 hover:border-orange-300 hover:text-orange-600'
                           }`}>
-                          {course.report_status === 'submitted' ? '查看成果報告' : course.report_status === 'overdue' ? '成果報告：已逾期未交' : '成果報告：尚未提交'}
+                          {course.report_status === 'submitted' ? '查看成果報告' : course.report_status === 'overdue' ? '成果報告：已逾期未交（點此調整期限）' : '成果報告：尚未提交'}
                         </button>
                       )}
                     </div>
@@ -451,11 +482,11 @@ export default function CoursesPage() {
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                             複製課程
                           </button>
-                          <button onClick={() => course.report && setReportViewCourse(course)} disabled={!course.report}
+                          <button onClick={() => course.report_status === 'submitted' ? setReportViewCourse(course) : openDeadlineModal(course)}
                             className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors font-medium whitespace-nowrap ${
                               course.report_status === 'submitted' ? 'bg-white hover:bg-stone-50 border border-stone-300 text-stone-600'
                                 : course.report_status === 'overdue' ? 'bg-red-50 border border-red-300 text-red-600'
-                                : 'bg-stone-50 border border-stone-200 text-stone-400'
+                                : 'bg-stone-50 border border-stone-200 text-stone-500 hover:border-orange-300 hover:text-orange-600'
                             }`}>
                             {course.report_status === 'submitted' ? '查看成果報告' : course.report_status === 'overdue' ? '成果報告：已逾期' : '成果報告：未提交'}
                           </button>
@@ -740,6 +771,47 @@ export default function CoursesPage() {
                   {reportViewCourse.report_status === 'overdue' ? '講師尚未提交成果報告，已逾期' : '講師尚未提交成果報告'}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deadlineModalCourse && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+          onClick={e => { if (e.target === e.currentTarget) setDeadlineModalCourse(null) }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="flex items-center justify-between p-6 border-b border-stone-200">
+              <div>
+                <h3 className="font-bold text-stone-800">調整成果報告期限</h3>
+                <p className="text-stone-400 text-xs mt-0.5">{deadlineModalCourse.title}</p>
+              </div>
+              <button onClick={() => setDeadlineModalCourse(null)} className="p-2 hover:bg-stone-100 rounded-xl">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-stone-400">
+                預設期限為課程結束後 {reportDeadlineDays} 天{deadlineModalCourse.report_deadline instanceof Date && !isNaN(deadlineModalCourse.report_deadline.getTime())
+                  ? `（目前期限：${deadlineModalCourse.report_deadline.toISOString().slice(0, 10)}）` : ''}
+                。設定下方日期可覆蓋單一課程的期限。
+              </p>
+              <div>
+                <label className="text-xs font-medium text-stone-500 mb-1 block">新的繳交期限</label>
+                <input type="date" value={deadlineInput} onChange={e => setDeadlineInput(e.target.value)}
+                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400" />
+              </div>
+              <div className="flex gap-2 pt-1">
+                {deadlineModalCourse.report_deadline_extended_to && (
+                  <button onClick={clearDeadline} disabled={deadlineSaving}
+                    className="flex-1 text-xs bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-500 px-3 py-2 rounded-lg transition-colors font-medium disabled:opacity-50">
+                    清除延長，恢復預設
+                  </button>
+                )}
+                <button onClick={saveDeadline} disabled={deadlineSaving || !deadlineInput}
+                  className="flex-1 text-xs bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg transition-colors font-medium disabled:opacity-50">
+                  {deadlineSaving ? '儲存中...' : '儲存新期限'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -49,15 +49,20 @@ function PhotoUploadBlock({
     if (room <= 0 || files.length === 0) return
     const toUpload = files.slice(0, room)
     setUploading(true)
+    // 累積在區域變數裡，迴圈結束才一次呼叫 onChange——
+    // 如果每次上傳完就用 [...photos, url] 呼叫，photos 是這次 function call 當下就固定的舊值（stale closure），
+    // 選很多張時每一輪都用同一份舊陣列去拼，結果只有最後一張真的被存下來
+    const uploaded: string[] = []
     for (const file of toUpload) {
       const ext = file.name.split('.').pop() || 'jpg'
       const filename = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
       const { data, error } = await supabase.storage.from('images').upload(filename, file, { upsert: true, contentType: file.type || undefined })
       if (!error && data) {
         const { data: urlData } = supabase.storage.from('images').getPublicUrl(filename)
-        onChange([...photos, urlData.publicUrl].slice(0, max))
+        uploaded.push(urlData.publicUrl)
       }
     }
+    if (uploaded.length > 0) onChange([...photos, ...uploaded].slice(0, max))
     setUploading(false)
   }
 
@@ -168,10 +173,12 @@ function ReportPageInner() {
   const deadlineInfo = (() => {
     if (!course?.date) return null
     const end = new Date(`${course.date}T${(course.time_end || '23:59').slice(0, 5)}:00`)
-    const deadline = new Date(end.getTime() + deadlineDays * 24 * 60 * 60 * 1000)
+    const deadline = course.report_deadline_extended_to
+      ? new Date(`${course.report_deadline_extended_to}T23:59:59`)
+      : new Date(end.getTime() + deadlineDays * 24 * 60 * 60 * 1000)
     const now = new Date()
     const daysLeft = Math.ceil((deadline.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
-    return { deadline, overdue: daysLeft < 0, daysLeft }
+    return { deadline, overdue: daysLeft < 0, daysLeft, extended: !!course.report_deadline_extended_to }
   })()
 
   const canSubmit = reflection.trim().length > 0
@@ -231,7 +238,9 @@ function ReportPageInner() {
           )}
           {deadlineInfo && (
             <p className={`text-xs font-medium mt-1 ${deadlineInfo.overdue ? 'text-red-500' : 'text-orange-500'}`}>
-              {deadlineInfo.overdue ? `已逾期，請盡快補件（原期限 ${deadlineDays} 天內）` : `請於 ${deadlineInfo.daysLeft} 天內完成填寫（期限 ${deadlineDays} 天）`}
+              {deadlineInfo.extended
+                ? (deadlineInfo.overdue ? `已逾期，請盡快補件（延長期限至 ${course.report_deadline_extended_to}）` : `請於 ${deadlineInfo.daysLeft} 天內完成填寫（延長期限至 ${course.report_deadline_extended_to}）`)
+                : (deadlineInfo.overdue ? `已逾期，請盡快補件（原期限 ${deadlineDays} 天內）` : `請於 ${deadlineInfo.daysLeft} 天內完成填寫（期限 ${deadlineDays} 天）`)}
             </p>
           )}
         </div>
