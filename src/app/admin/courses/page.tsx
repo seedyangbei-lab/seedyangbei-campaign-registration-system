@@ -10,6 +10,7 @@ import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import AdminCourseEditFormFields, {
   LOCATIONS, emptyAdminCourseForm, type AdminCourseForm, type AdminCategory,
 } from '@/components/AdminCourseEditFormFields'
+import type { ExportableReport } from '@/lib/exportCourseReport'
 
 interface Instructor { id: string; name: string }
 interface Category { id: string; name: string; color: string }
@@ -48,6 +49,8 @@ export default function CoursesPage() {
   const [deadlineInput, setDeadlineInput] = useState('')
   const [deadlineSaving, setDeadlineSaving] = useState(false)
   const [reportDeadlineDays, setReportDeadlineDays] = useState(7)
+  const [exportingReportId, setExportingReportId] = useState<string | null>(null)
+  const [batchExporting, setBatchExporting] = useState(false)
   const supabase = createClient()
   const router = useRouter()
 
@@ -157,6 +160,51 @@ export default function CoursesPage() {
     setDeadlineSaving(false)
     setDeadlineModalCourse(null)
     fetchAll()
+  }
+
+  const buildExportableReport = (course: any): ExportableReport | null => {
+    if (!course.report) return null
+    const instructorName = instructors.find((i: any) => i.id === course.report.instructor_id)?.name || '（講師資料已異動）'
+    const coInstructorNames = (course.instructor_names || []).filter((name: string) => name !== instructorName)
+    return {
+      title: course.title, date: course.date, time_start: course.time_start, time_end: course.time_end, location: course.location,
+      instructorName, coInstructorNames,
+      summary: course.report.summary || '', participant_count: course.report.participant_count ?? '（未填寫）',
+      reflection: course.report.reflection || '', submitted_at: (course.report.submitted_at || '').slice(0, 16).replace('T', ' '),
+      signin_photo_urls: course.report.signin_photo_urls || [], photo_urls: course.report.photo_urls || [],
+    }
+  }
+
+  const handleExportSingleReport = async (course: any) => {
+    const exportable = buildExportableReport(course)
+    if (!exportable) return
+    setExportingReportId(course.id)
+    try {
+      const { exportSingleCourseReport } = await import('@/lib/exportCourseReport')
+      const { failedPhotoCount } = await exportSingleCourseReport(exportable)
+      if (failedPhotoCount > 0) alert(`匯出完成，但有 ${failedPhotoCount} 張照片下載失敗（可能是網路問題），可以到成果報告內容裡確認原始連結。`)
+    } catch (e: any) {
+      alert('匯出失敗：' + (e?.message || '請稍後再試'))
+    } finally {
+      setExportingReportId(null)
+    }
+  }
+
+  const handleBatchExportReports = async () => {
+    const target = endedCourses.filter((c: any) => (filterMonth ? c.date?.startsWith(filterMonth) : true) && c.report_status === 'submitted')
+    if (target.length === 0) { alert('目前篩選範圍內沒有已提交的成果報告可以匯出'); return }
+    setBatchExporting(true)
+    try {
+      const { exportBatchCourseReports } = await import('@/lib/exportCourseReport')
+      const exportables = target.map(buildExportableReport).filter(Boolean) as ExportableReport[]
+      const zipName = filterMonth ? `${filterMonth}成果報告` : '全部成果報告'
+      const { failedPhotoCount } = await exportBatchCourseReports(exportables, zipName)
+      alert(`已匯出 ${exportables.length} 堂課的成果報告${failedPhotoCount > 0 ? `，其中 ${failedPhotoCount} 張照片下載失敗（可能是網路問題）` : ''}`)
+    } catch (e: any) {
+      alert('匯出失敗：' + (e?.message || '請稍後再試'))
+    } finally {
+      setBatchExporting(false)
+    }
   }
 
   const uploadCoursePhoto = async (blob: Blob): Promise<string | null> => {
@@ -296,25 +344,32 @@ export default function CoursesPage() {
 
           {courseTab === 'ended' && availableMonths.length > 0 && (
             <>
-              {/* 桌機：月份篩選用按鈕列 */}
-              <div className="hidden md:flex items-center gap-2 mb-4 flex-wrap">
-                <span className="text-xs text-stone-400 font-medium">篩選月份</span>
-                <button onClick={() => setFilterMonth('')}
-                  className={`px-3 py-2 rounded-md text-xs font-medium leading-4 transition-colors ${filterMonth === '' ? 'bg-orange-500 text-white' : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-50'}`}>
-                  全部
+              {/* 桌機：月份篩選用按鈕列 + 批次匯出 */}
+              <div className="hidden md:flex items-center justify-between gap-2 mb-4 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-stone-400 font-medium">篩選月份</span>
+                  <button onClick={() => setFilterMonth('')}
+                    className={`px-3 py-2 rounded-md text-xs font-medium leading-4 transition-colors ${filterMonth === '' ? 'bg-orange-500 text-white' : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-50'}`}>
+                    全部
+                  </button>
+                  {availableMonths.map(m => {
+                    const [y, mo] = m.split('-')
+                    return (
+                      <button key={m} onClick={() => setFilterMonth(m)}
+                        className={`px-3 py-2 rounded-md text-xs font-medium leading-4 transition-colors ${filterMonth === m ? 'bg-orange-500 text-white' : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-50'}`}>
+                        {y}/{parseInt(mo)}月
+                      </button>
+                    )
+                  })}
+                </div>
+                <button onClick={handleBatchExportReports} disabled={batchExporting}
+                  className="flex items-center gap-1.5 text-xs bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 px-3 py-2 rounded-md font-medium transition-colors disabled:opacity-50 whitespace-nowrap">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  {batchExporting ? '匯出中...' : `批次匯出${filterMonth ? '（此月份）' : '（全部）'}`}
                 </button>
-                {availableMonths.map(m => {
-                  const [y, mo] = m.split('-')
-                  return (
-                    <button key={m} onClick={() => setFilterMonth(m)}
-                      className={`px-3 py-2 rounded-md text-xs font-medium leading-4 transition-colors ${filterMonth === m ? 'bg-orange-500 text-white' : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-50'}`}>
-                      {y}/{parseInt(mo)}月
-                    </button>
-                  )
-                })}
               </div>
               {/* 手機：月份篩選改用 Dropdown */}
-              <div className="md:hidden relative mb-4">
+              <div className="md:hidden relative mb-3">
                 <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
                   className="w-full appearance-none border border-stone-300 rounded-lg pl-4 pr-10 py-2.5 text-sm font-medium text-stone-800 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300">
                   <option value="">全部</option>
@@ -325,6 +380,11 @@ export default function CoursesPage() {
                 </select>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
+              <button onClick={handleBatchExportReports} disabled={batchExporting}
+                className="md:hidden w-full flex items-center justify-center gap-1.5 text-xs bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 px-3 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 mb-4">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                {batchExporting ? '匯出中...' : `批次匯出成果報告${filterMonth ? '（此月份）' : '（全部）'}`}
+              </button>
             </>
           )}
 
@@ -711,9 +771,18 @@ export default function CoursesPage() {
                 <h3 className="font-bold text-stone-800">{reportViewCourse.title}</h3>
                 <p className="text-stone-400 text-xs mt-0.5">{reportViewCourse.date} · 成果報告</p>
               </div>
-              <button onClick={() => setReportViewCourse(null)} className="p-2 hover:bg-stone-100 rounded-xl">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-              </button>
+              <div className="flex items-center gap-1">
+                {reportViewCourse.report_status === 'submitted' && (
+                  <button onClick={() => handleExportSingleReport(reportViewCourse)} disabled={exportingReportId === reportViewCourse.id}
+                    className="flex items-center gap-1.5 text-xs bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 px-3 py-1.5 rounded-lg transition-colors font-medium disabled:opacity-50 whitespace-nowrap">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    {exportingReportId === reportViewCourse.id ? '匯出中...' : '匯出'}
+                  </button>
+                )}
+                <button onClick={() => setReportViewCourse(null)} className="p-2 hover:bg-stone-100 rounded-xl">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                </button>
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
               {reportViewCourse.report_status === 'submitted' && reportViewCourse.report ? (
