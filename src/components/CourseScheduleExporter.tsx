@@ -1024,6 +1024,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
   const [editor, setEditor] = useState<EditorState>(DEFAULT_EDITOR)
   const [showMobilePanel, setShowMobilePanel] = useState(false)
   const [activePanelTab, setActivePanelTab] = useState<PanelTab>('文字')
+  const [exportScale, setExportScale] = useState<2 | 3>(3)
   const previewRef = useRef<HTMLDivElement>(null)
 
   // 外部（後台頁面頂部的「匯出」選單）觸發：signal 每變一次就跳去月份選擇畫面，
@@ -1220,13 +1221,14 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
     rocMonth: number,
     pageIdx: number,
     totalPgs: number,
-    e: EditorState
+    e: EditorState,
+    exportScale: number = 3
   ) => {
     await document.fonts.ready
 
     const W = isLandscape ? A4L_W : A4P_W
     const H = isLandscape ? A4L_H : A4P_H
-    const SCALE = 2.5
+    const SCALE = exportScale
     canvas.width = W * SCALE
     canvas.height = H * SCALE
     canvas.style.width = W + 'px'
@@ -1651,7 +1653,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
     }
   }
 
-  const downloadVariant = async (orient: Orientation) => {
+  const downloadVariant = async (orient: Orientation, scale: number) => {
     const { year, month } = toROC(selectedMonth + '-01')
     const label = orient === 'landscape' ? '橫式' : '直式'
     const isL = orient === 'landscape'
@@ -1659,12 +1661,12 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
 
     for (let pg = 0; pg < totalPages; pg++) {
       const pageCourses = monthCourses.slice(pg * rowsPerPage, (pg + 1) * rowsPerPage)
-      await drawScheduleCanvas(canvas, pageCourses, isL, year, month, pg, totalPages, editor)
+      await drawScheduleCanvas(canvas, pageCourses, isL, year, month, pg, totalPages, editor, scale)
       const dataUrl = canvas.toDataURL('image/png')
       const link = document.createElement('a')
       link.download = totalPages > 1
-        ? `央北社宅_${year}年${month}月活動表_${label}_第${pg+1}頁.png`
-        : `央北社宅_${year}年${month}月活動表_${label}.png`
+        ? `央北社宅_${year}年${month}月活動表_${label}_${scale}x_第${pg+1}頁.png`
+        : `央北社宅_${year}年${month}月活動表_${label}_${scale}x.png`
       link.href = dataUrl
       link.click()
       await new Promise(r => setTimeout(r, 200))
@@ -1674,8 +1676,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
 
   const handleDownload = async (mode: 'landscape'|'portrait'|'both') => {
     setShowDownloadModal(false); setDownloading(true)
-    if (mode === 'both') { await downloadVariant('landscape'); await new Promise(r => setTimeout(r, 400)); await downloadVariant('portrait') }
-    else await downloadVariant(mode)
+    if (mode === 'both') { await downloadVariant('landscape', exportScale); await new Promise(r => setTimeout(r, 400)); await downloadVariant('portrait', exportScale) }
+    else await downloadVariant(mode, exportScale)
     setDownloading(false)
   }
 
@@ -1839,6 +1841,18 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
           onClick={e => { if (e.target === e.currentTarget) setShowDownloadModal(false) }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
             <h3 className="font-bold text-stone-800 text-lg">選擇下載格式</h3>
+            <div>
+              <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">解析度</p>
+              <div className="flex gap-2 p-1 bg-stone-100 rounded-xl">
+                {([[2,'標準 2x','螢幕瀏覽、電子佈告欄'],[3,'高解析度 3x','列印張貼（推薦）']] as const).map(([v,label,desc]) => (
+                  <button key={v} onClick={() => setExportScale(v)}
+                    className={`flex-1 rounded-lg py-2 px-2 text-center transition-colors ${exportScale===v?'bg-orange-500 text-white shadow-sm':'text-stone-500 hover:bg-white'}`}>
+                    <p className="text-xs font-bold">{label}</p>
+                    <p className={`text-[10px] mt-0.5 ${exportScale===v?'text-orange-100':'text-stone-400'}`}>{desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="space-y-2">
               {[
                 { mode:'landscape' as const, label:'橫式（A4 橫向）', desc:'適合簡報、電子佈告欄' },
