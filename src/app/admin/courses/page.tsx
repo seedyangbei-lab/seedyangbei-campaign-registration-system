@@ -301,8 +301,8 @@ export default function CoursesPage() {
     ? courses.filter((c: any) => c.is_active && !isExpired(c))
     : endedCourses.filter((c: any) => filterMonth ? c.date?.startsWith(filterMonth) : true)
 
-  const primaryBtnCls = "bg-orange-500 hover:bg-orange-600 text-white p-2 rounded-md text-xs font-medium transition-colors whitespace-nowrap"
-  const secondaryBtnCls = "bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 p-2 rounded-md text-xs font-medium transition-colors whitespace-nowrap"
+  const primaryBtnCls = "bg-orange-500 hover:bg-orange-600 text-white p-2 md:px-4 md:py-2 rounded-md md:rounded-lg text-xs md:text-sm font-medium transition-colors whitespace-nowrap"
+  const secondaryBtnCls = "bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 p-2 md:px-4 md:py-2 rounded-md md:rounded-lg text-xs md:text-sm font-medium transition-colors whitespace-nowrap"
   const openAddCat = () => { setEditCat(null); setCatForm({ name: '', color: '#e11d48' }); setShowCatModal(true) }
   const headerActions = mainTab === 'courses' ? (
     <button onClick={openAdd} className={primaryBtnCls}>新增課程</button>
