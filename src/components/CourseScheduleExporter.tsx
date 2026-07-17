@@ -37,22 +37,64 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r},${g},${b},${alpha})`
 }
 
-// 依背景色亮度自動決定可視文字色（黑或白系），讓可調整的底色不會把固定色文字吃掉
-function isLightColor(hex: string): boolean {
-  const h = (hex || '').replace('#', '')
-  if (h.length !== 6) return true
-  const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16)
-  if ([r,g,b].some(n => Number.isNaN(n))) return true
-  return (r*299 + g*587 + b*114) / 1000 >= 140
+// 依背景色自動決定可視文字色 —— 不是單純黑白二選一，而是保留底色的色相（hue），
+// 只把明度（lightness）翻到對比的一端，讓文字看起來像「同一色系的深/淺版本」，
+// 而不是跟底色完全無關的死板黑/白。
+function hexToHsl(hex: string): { h: number; s: number; l: number } {
+  const h6 = (hex || '').replace('#', '')
+  if (h6.length !== 6 || /[^0-9a-fA-F]/.test(h6)) return { h: 0, s: 0, l: 100 }
+  const r = parseInt(h6.slice(0,2),16) / 255
+  const g = parseInt(h6.slice(2,4),16) / 255
+  const b = parseInt(h6.slice(4,6),16) / 255
+  const max = Math.max(r,g,b), min = Math.min(r,g,b)
+  const l = (max + min) / 2
+  let h = 0, s = 0
+  const d = max - min
+  if (d !== 0) {
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    if (max === r) h = ((g - b) / d) % 6
+    else if (max === g) h = (b - r) / d + 2
+    else h = (r - g) / d + 4
+    h *= 60
+    if (h < 0) h += 360
+  }
+  return { h, s: s * 100, l: l * 100 }
+}
+function hslToHex(h: number, s: number, l: number): string {
+  s = Math.max(0, Math.min(100, s)) / 100
+  l = Math.max(0, Math.min(100, l)) / 100
+  const c = (1 - Math.abs(2*l - 1)) * s
+  const x = c * (1 - Math.abs(((h/60) % 2) - 1))
+  const m = l - c/2
+  let r=0, g=0, b=0
+  if (h < 60)       { r=c; g=x; b=0 }
+  else if (h < 120) { r=x; g=c; b=0 }
+  else if (h < 180) { r=0; g=c; b=x }
+  else if (h < 240) { r=0; g=x; b=c }
+  else if (h < 300) { r=x; g=0; b=c }
+  else              { r=c; g=0; b=x }
+  const toHex = (v: number) => Math.round((v+m)*255).toString(16).padStart(2,'0')
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`
+}
+// level 越高（primary）對比越強、飽和度上限越高；tertiary 較柔和、接近底色一點
+function tonalContrast(bgHex: string, level: 'primary' | 'secondary' | 'tertiary'): string {
+  const { h, s: bgS, l: bgL } = hexToHsl(bgHex)
+  const light = bgL >= 55
+  const targetL = light
+    ? ({ primary: 12, secondary: 32, tertiary: 50 } as const)[level]
+    : ({ primary: 96, secondary: 82, tertiary: 65 } as const)[level]
+  const capS = ({ primary: 38, secondary: 30, tertiary: 22 } as const)[level]
+  const targetS = Math.min(bgS, capS)
+  return hslToHex(h, targetS, targetL)
 }
 function contrastPrimary(bgHex: string): string {
-  return isLightColor(bgHex) ? '#18120a' : '#ffffff'
+  return tonalContrast(bgHex, 'primary')
 }
 function contrastSecondary(bgHex: string): string {
-  return isLightColor(bgHex) ? '#57534e' : 'rgba(255,255,255,0.78)'
+  return tonalContrast(bgHex, 'secondary')
 }
 function contrastTertiary(bgHex: string): string {
-  return isLightColor(bgHex) ? '#9ca3af' : 'rgba(255,255,255,0.55)'
+  return tonalContrast(bgHex, 'tertiary')
 }
 
 type Orientation = 'landscape'|'portrait'
