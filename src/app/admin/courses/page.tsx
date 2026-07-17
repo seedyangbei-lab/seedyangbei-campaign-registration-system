@@ -316,7 +316,7 @@ export default function CoursesPage() {
     <div className="flex gap-1 p-1 bg-stone-50 border border-stone-200 rounded-lg w-fit">
       {([['active', '開放中'], ['ended', '已結束']] as const).map(([t, label]) => (
         <button key={t} onClick={() => { setCourseTab(t); setFilterMonth('') }}
-          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${courseTab === t ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400 hover:text-stone-600'}`}>
+          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${courseTab === t ? 'bg-white text-stone-800 border-stone-200/70 shadow-[0_1px_2px_rgba(0,0,0,0.08)]' : 'text-stone-400 hover:text-stone-600 border-transparent'}`}>
           {label}
           <span className={`ml-1 text-xs px-1 py-0.5 rounded-full ${courseTab === t ? 'bg-stone-100 text-stone-500' : 'bg-stone-100 text-stone-400'}`}>
             {t === 'active' ? courses.filter((c: any) => c.is_active && !isExpired(c)).length : endedCourses.length}
