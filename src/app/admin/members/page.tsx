@@ -195,12 +195,13 @@ export default function MembersPage() {
   }
 
   // 搜尋是獨立於 chip 篩選的第二條路徑：不分身份，全部人都能被搜到
+  // 英文姓名要忽略大小寫比對，不然打小寫「joe」比對不到存的是「Joe」的資料，會誤以為搜尋「變慢／沒反應」
   useEffect(() => {
-    const q = searchQuery.trim()
+    const q = searchQuery.trim().toLowerCase()
     if (!q) { setSearchSuggestions([]); return }
     const matches = members.filter(m => {
       const loc = m.source === 'line' ? `${m.building || ''}${m.unit_number || ''}` : (m.room_number || '')
-      return m.display_name?.includes(q) || loc.includes(q)
+      return m.display_name?.toLowerCase().includes(q) || loc.toLowerCase().includes(q)
     }).slice(0, 8)
     setSearchSuggestions(matches)
   }, [searchQuery, members])
