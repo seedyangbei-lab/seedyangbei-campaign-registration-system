@@ -53,6 +53,8 @@ function InstructorPortal() {
   const [courses, setCourses] = useState<any[]>([])
   const [regCounts, setRegCounts] = useState<Record<string, number>>({})
   const [coursesLoading, setCoursesLoading] = useState(true)
+  const [reportStatuses, setReportStatuses] = useState<Record<string, 'due' | 'submitted' | 'overdue'>>({})
+  const [reportDeadlineDays, setReportDeadlineDays] = useState(7)
 
   const [courseTab, setCourseTab] = useState<'active' | 'ended'>('active')
   const [filterMonth, setFilterMonth] = useState('')
@@ -154,8 +156,25 @@ function InstructorPortal() {
       const counts: Record<string, number> = {}
       ;(regs || []).forEach((r: any) => { counts[r.course_id] = (counts[r.course_id] || 0) + 1 })
       setRegCounts(counts)
+
+      // 成果報告狀態：已提交／未提交待補（依期限判斷是否已逾期）
+      const { data: settingRow } = await supabase.from('site_settings').select('value').eq('key', 'report_deadline_days').maybeSingle()
+      const deadlineDays = parseInt(settingRow?.value || '7') || 7
+      setReportDeadlineDays(deadlineDays)
+
+      const { data: reports } = await supabase.from('course_reports').select('course_id').in('course_id', ids)
+      const submittedIds = new Set((reports || []).map((r: any) => r.course_id))
+      const statuses: Record<string, 'due' | 'submitted' | 'overdue'> = {}
+      list.forEach((c: any) => {
+        if (submittedIds.has(c.id)) { statuses[c.id] = 'submitted'; return }
+        const end = new Date(`${c.date}T${c.time_end}`)
+        const deadline = new Date(end.getTime() + deadlineDays * 24 * 60 * 60 * 1000)
+        statuses[c.id] = new Date() > deadline ? 'overdue' : 'due'
+      })
+      setReportStatuses(statuses)
     } else {
       setRegCounts({})
+      setReportStatuses({})
     }
     setCoursesLoading(false)
   }
@@ -491,6 +510,8 @@ function InstructorPortal() {
                 onPoster={() => openPosterFromCard(c)}
                 onAttendance={() => openAttendance(c)}
                 onCopy={() => openCopy(c)}
+                onReport={isExpired(c) ? () => router.push(`/instructor/report?courseId=${c.id}`) : undefined}
+                reportStatus={reportStatuses[c.id]}
               />
             ))}
           </div>

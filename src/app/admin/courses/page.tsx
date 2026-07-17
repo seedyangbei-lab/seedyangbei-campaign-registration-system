@@ -43,24 +43,37 @@ export default function CoursesPage() {
   const [attendanceSaving, setAttendanceSaving] = useState(false)
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const [walkInModalOpen, setWalkInModalOpen] = useState(false)
+  const [reportViewCourse, setReportViewCourse] = useState<any>(null)
   const supabase = createClient()
   const router = useRouter()
 
   const fetchAll = async () => {
-    const [{ data: c }, { data: i }, { data: cat }, { data: siteSettings }] = await Promise.all([
+    const [{ data: c }, { data: i }, { data: cat }, { data: siteSettings }, { data: reports }] = await Promise.all([
       supabase.from('courses').select('*, course_categories(name, color), instructor_ids').order('date', { ascending: false }),
       supabase.from('instructors').select('id, name').eq('is_active', true).order('created_at'),
       supabase.from('course_categories').select('*').order('created_at'),
       supabase.from('site_settings').select('key, value'),
+      supabase.from('course_reports').select('*'),
     ])
     const instructorsData = i || []
     const coursesData = (c as any) || []
-    const enriched = coursesData.map((course: any) => ({
-      ...course,
-      instructor_names: (course.instructor_ids || [])
-        .map((id: string) => instructorsData.find((inst: any) => inst.id === id)?.name)
-        .filter(Boolean),
-    }))
+    const reportsData = reports || []
+    const deadlineDays = parseInt((siteSettings || []).find((s: any) => s.key === 'report_deadline_days')?.value || '7') || 7
+    const reportByCourseId = Object.fromEntries(reportsData.map((r: any) => [r.course_id, r]))
+    const enriched = coursesData.map((course: any) => {
+      const report = reportByCourseId[course.id]
+      const end = new Date(`${course.date}T${course.time_end}`)
+      const deadline = new Date(end.getTime() + deadlineDays * 24 * 60 * 60 * 1000)
+      const reportStatus = report ? 'submitted' : (end < new Date() && new Date() > deadline ? 'overdue' : 'due')
+      return {
+        ...course,
+        instructor_names: (course.instructor_ids || [])
+          .map((id: string) => instructorsData.find((inst: any) => inst.id === id)?.name)
+          .filter(Boolean),
+        report,
+        report_status: reportStatus,
+      }
+    })
     setCourses(enriched)
     setInstructors(instructorsData)
     setCategories(cat || [])
@@ -344,33 +357,45 @@ export default function CoursesPage() {
 
                     <div className="h-px bg-stone-200 mb-3" />
 
-                    <div className="flex items-center gap-2">
-                      {!expired ? (
-                        <>
-                          <button onClick={() => openEdit(course)}
-                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 transition-colors font-medium">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                            編輯課程
-                          </button>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        {!expired ? (
+                          <>
+                            <button onClick={() => openEdit(course)}
+                              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 transition-colors font-medium">
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                              編輯課程
+                            </button>
 
-                          <button onClick={() => toggleActive(course.id, course.is_active)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ml-auto ${course.is_active ? 'bg-orange-500' : 'bg-stone-200'}`}
-                            title={course.is_active ? '關閉報名' : '開放報名'}>
-                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${course.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button onClick={() => openAttendance(course)}
-                            className="flex-1 flex items-center justify-center gap-1.5 text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-3 py-2 rounded-lg transition-colors font-medium">
-                            出席紀錄
-                          </button>
-                          <button onClick={() => openCopy(course)}
-                            className="flex-1 flex items-center justify-center gap-1.5 text-xs bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 px-3 py-2 rounded-lg transition-colors font-medium">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                            複製課程
-                          </button>
-                        </>
+                            <button onClick={() => toggleActive(course.id, course.is_active)}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ml-auto ${course.is_active ? 'bg-orange-500' : 'bg-stone-200'}`}
+                              title={course.is_active ? '關閉報名' : '開放報名'}>
+                              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${course.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={() => openAttendance(course)}
+                              className="flex-1 flex items-center justify-center gap-1.5 text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-3 py-2 rounded-lg transition-colors font-medium">
+                              出席紀錄
+                            </button>
+                            <button onClick={() => openCopy(course)}
+                              className="flex-1 flex items-center justify-center gap-1.5 text-xs bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 px-3 py-2 rounded-lg transition-colors font-medium">
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                              複製課程
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      {expired && (
+                        <button onClick={() => course.report && setReportViewCourse(course)} disabled={!course.report}
+                          className={`w-full flex items-center justify-center gap-1.5 text-xs px-3 py-2 rounded-lg transition-colors font-medium ${
+                            course.report_status === 'submitted' ? 'bg-white hover:bg-stone-50 border border-stone-300 text-stone-600'
+                              : course.report_status === 'overdue' ? 'bg-red-50 border border-red-300 text-red-600'
+                              : 'bg-stone-50 border border-stone-200 text-stone-400'
+                          }`}>
+                          {course.report_status === 'submitted' ? '查看成果報告' : course.report_status === 'overdue' ? '成果報告：已逾期未交' : '成果報告：尚未提交'}
+                        </button>
                       )}
                     </div>
                   </div>
@@ -425,6 +450,14 @@ export default function CoursesPage() {
                             className="flex items-center gap-1.5 text-xs bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                             複製課程
+                          </button>
+                          <button onClick={() => course.report && setReportViewCourse(course)} disabled={!course.report}
+                            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors font-medium whitespace-nowrap ${
+                              course.report_status === 'submitted' ? 'bg-white hover:bg-stone-50 border border-stone-300 text-stone-600'
+                                : course.report_status === 'overdue' ? 'bg-red-50 border border-red-300 text-red-600'
+                                : 'bg-stone-50 border border-stone-200 text-stone-400'
+                            }`}>
+                            {course.report_status === 'submitted' ? '查看成果報告' : course.report_status === 'overdue' ? '成果報告：已逾期' : '成果報告：未提交'}
                           </button>
                         </>
                       )}
@@ -633,6 +666,81 @@ export default function CoursesPage() {
                 )}
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 成果報告查看彈窗（接案團隊用，唯讀） */}
+      {reportViewCourse && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+          onClick={e => { if (e.target === e.currentTarget) setReportViewCourse(null) }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-stone-200">
+              <div>
+                <h3 className="font-bold text-stone-800">{reportViewCourse.title}</h3>
+                <p className="text-stone-400 text-xs mt-0.5">{reportViewCourse.date} · 成果報告</p>
+              </div>
+              <button onClick={() => setReportViewCourse(null)} className="p-2 hover:bg-stone-100 rounded-xl">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+              {reportViewCourse.report_status === 'submitted' && reportViewCourse.report ? (
+                <>
+                  <div>
+                    <p className="text-xs font-medium text-stone-400 mb-1">提交講師</p>
+                    <p className="text-sm text-stone-700">
+                      {instructors.find(i => i.id === reportViewCourse.report.instructor_id)?.name || '（講師資料已異動）'}
+                    </p>
+                  </div>
+                  {reportViewCourse.instructor_names?.length > 1 && (
+                    <div>
+                      <p className="text-xs font-medium text-stone-400 mb-1">合作講師</p>
+                      <p className="text-sm text-stone-700">{reportViewCourse.instructor_names.join('、')}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs font-medium text-stone-400 mb-1">活動簡介</p>
+                    <p className="text-sm text-stone-700 whitespace-pre-wrap">{reportViewCourse.report.summary || '（未填寫）'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-stone-400 mb-1">活動參與人數</p>
+                    <p className="text-sm text-stone-700">{reportViewCourse.report.participant_count ?? '（未填寫）'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-stone-400 mb-1">簽到表照片</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(reportViewCourse.report.signin_photo_urls || []).map((url: string, i: number) => (
+                        <a key={i} href={url} target="_blank" rel="noreferrer" className="aspect-square rounded-lg overflow-hidden border border-stone-200 block">
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-stone-400 mb-1">心得感想</p>
+                    <p className="text-sm text-stone-700 whitespace-pre-wrap">{reportViewCourse.report.reflection}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-stone-400 mb-1">活動紀錄照片</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(reportViewCourse.report.photo_urls || []).map((url: string, i: number) => (
+                        <a key={i} href={url} target="_blank" rel="noreferrer" className="aspect-square rounded-lg overflow-hidden border border-stone-200 block">
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-xs text-stone-300">
+                    提交時間：{reportViewCourse.report.submitted_at?.slice(0, 16).replace('T', ' ')}
+                  </p>
+                </>
+              ) : (
+                <div className="text-center py-8 text-stone-400 text-sm">
+                  {reportViewCourse.report_status === 'overdue' ? '講師尚未提交成果報告，已逾期' : '講師尚未提交成果報告'}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
