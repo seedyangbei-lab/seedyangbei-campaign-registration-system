@@ -424,8 +424,8 @@ function PreviewPage({
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 6px' }}>
                       {(course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name) && <span style={{ color: e.accentColor, fontWeight: 700, fontSize: fsInstructor, lineHeight: 1 }}>{course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name}</span>}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 6px', textAlign: 'center' }}><span style={{ fontSize: fsLocation, color: '#374151', lineHeight: 1.4 }}>{course.location}</span></div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', textAlign: 'center' }}><span style={{ fontSize: Math.max(9, fsLocation - 1), color: '#374151', lineHeight: 1.4 }}>{course.suitable_age||'全年齡'}</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 6px', textAlign: 'center' }}><span style={{ fontSize: fsLocation, fontWeight: 700, color: '#18120a', lineHeight: 1.4 }}>{course.location}</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', textAlign: 'center' }}><span style={{ fontSize: Math.max(9, fsLocation - 1), fontWeight: 700, color: '#18120a', lineHeight: 1.4 }}>{course.suitable_age||'全年齡'}</span></div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px' }}><span style={{ fontSize: fsFee, fontWeight: 800, color: e.accentColor, lineHeight: 1 }}>免費</span></div>
                   </div>
                 )
@@ -1491,7 +1491,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
             ctx.fillText(instructorText, col.x + col.w/2, cy + 5)
           }
         } else if (ci === 4) {
-          ctx.font = font(fsLocation, 400); ctx.fillStyle = '#374151'
+          ctx.font = font(fsLocation, 700); ctx.fillStyle = '#18120a'
           const lines = wrapText(ctx, course.location, col.w - 8)
           const lineH = Math.round(fsLocation * 1.33)
           const startY = cy - ((lines.length - 1) * lineH) / 2
@@ -1499,7 +1499,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
             ctx.fillText(line, col.x + col.w/2, startY + 5 + li * lineH)
           })
         } else if (ci === 5) {
-          ctx.font = font(fsAge, 400); ctx.fillStyle = '#374151'
+          ctx.font = font(fsAge, 700); ctx.fillStyle = '#18120a'
           ctx.fillText(course.suitable_age || '全年齡', col.x + col.w/2, cy + 5)
         } else if (ci === 6) {
           ctx.font = font(fsFee, 800); ctx.fillStyle = e.accentColor
