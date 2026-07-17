@@ -138,7 +138,7 @@ async function addPhotosToFolder(folder: JSZip, urls: string[], prefix: string):
 }
 
 async function addCourseReportToZip(zip: JSZip, r: ExportableReport): Promise<number> {
-  const root = zip.folder(safeFolderName(`${r.title}_${r.date}`))!
+  const root = zip.folder(safeFolderName(`${r.date}_${r.title}`))!
   const pdfBlob = await buildReportPdfBlob(r)
   root.file('成果報告.pdf', pdfBlob)
   let failed = 0
@@ -162,7 +162,7 @@ export async function exportSingleCourseReport(r: ExportableReport): Promise<Exp
   const zip = new JSZip()
   const failedPhotoCount = await addCourseReportToZip(zip, r)
   const blob = await zip.generateAsync({ type: 'blob' })
-  downloadBlob(blob, `${safeFolderName(`${r.title}_${r.date}`)}.zip`)
+  downloadBlob(blob, `${safeFolderName(`${r.date}_${r.title}`)}.zip`)
   return { failedPhotoCount }
 }
 

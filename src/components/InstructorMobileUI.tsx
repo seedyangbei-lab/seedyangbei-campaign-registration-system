@@ -309,22 +309,18 @@ export function InstructorCourseCard({
           </button>
         </div>
       ) : (
-        <div className="flex flex-col gap-2 w-full">
-          <div className="flex gap-4 w-full">
-            <button onClick={onAttendance} className="flex-1 flex items-center justify-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium py-2 rounded-md transition-colors">
-              <CheckSquareIcon className="text-white" />出席紀錄
-            </button>
-            <button onClick={onCopy} className="flex-1 flex items-center justify-center gap-1.5 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 text-xs font-medium py-2 rounded-md transition-colors">
-              <CopyIcon />複製課程
-            </button>
-          </div>
+        <div className="flex gap-2 w-full">
+          <button onClick={onAttendance} className="flex-1 flex items-center justify-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium py-2 rounded-md transition-colors">
+            <CheckSquareIcon className="text-white" />出席紀錄
+          </button>
+          <button onClick={onCopy} className="flex-1 flex items-center justify-center gap-1.5 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 text-xs font-medium py-2 rounded-md transition-colors">
+            <CopyIcon />複製課程
+          </button>
           {onReport && (
-            <button onClick={onReport} className={`flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-md transition-colors w-full ${
+            <button onClick={onReport} className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-md transition-colors ${
               reportStatus === 'overdue'
                 ? 'bg-red-50 hover:bg-red-100 border border-red-300 text-red-600'
-                : reportStatus === 'submitted'
-                  ? 'bg-white hover:bg-stone-50 border border-stone-300 text-stone-600'
-                  : 'bg-white hover:bg-stone-50 border border-stone-300 text-stone-600'
+                : 'bg-white hover:bg-stone-50 border border-stone-300 text-stone-600'
             }`}>
               <ReportIcon />
               {reportStatus === 'submitted' ? '查看成果報告' : reportStatus === 'overdue' ? '成果報告（已逾期）' : '填寫成果報告'}
