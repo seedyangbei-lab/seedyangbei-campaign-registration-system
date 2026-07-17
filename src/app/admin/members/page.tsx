@@ -77,6 +77,7 @@ export default function MembersPage() {
   const [addPointModal, setAddPointModal] = useState<Member | null>(null)
   const [addPointForm, setAddPointForm] = useState({ delta: 1, reason: '' })
   const [addPointSaving, setAddPointSaving] = useState(false)
+  const [showLegend, setShowLegend] = useState(false)
   const supabase = createClient()
 
   // 手機版：走勢圖 Y 軸/月份細項改用更適合窄螢幕的呈現方式（依 Figma node 504:29567）
@@ -534,17 +535,31 @@ export default function MembersPage() {
 
       {!selectedMemberForChart && (
       <>
-      <div className="flex flex-wrap gap-3 mb-6">
-        {tagLegend.map(t => (
-          <div key={t.label} className="flex items-center gap-1.5 text-xs">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: t.color }} />
-            <span className="font-medium" style={{ color: t.color }}>{t.label}</span>
-            <span className="text-stone-400">（{t.desc}）</span>
-          </div>
-        ))}
+      <div className="relative flex items-center gap-2 mb-3">
+        <h3 className="text-stone-800 font-bold text-base">會員列表 ({visibleMembers.length})</h3>
+        <button
+          type="button"
+          onClick={() => setShowLegend(v => !v)}
+          aria-label="參與標籤說明"
+          className="flex items-center justify-center size-5 rounded-full bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold transition-colors"
+        >
+          ?
+        </button>
+        {showLegend && (
+          <>
+            <div className="fixed inset-0 z-30" onClick={() => setShowLegend(false)} />
+            <div className="absolute z-40 top-full left-0 mt-2 bg-white border border-stone-200 rounded-xl shadow-lg p-4 flex flex-col gap-2 w-max">
+              {tagLegend.map(t => (
+                <div key={t.label} className="flex items-center gap-1.5 text-xs whitespace-nowrap">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
+                  <span className="font-medium" style={{ color: t.color }}>{t.label}</span>
+                  <span className="text-stone-400">（{t.desc}）</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
-
-      <h3 className="text-stone-800 font-bold text-base mb-3">會員列表 ({visibleMembers.length})</h3>
       <div className="space-y-3">
         {visibleMembers.length === 0 && (
           <div className="bg-white border border-stone-200 rounded-2xl p-12 text-center text-stone-400"><p>找不到符合的居民</p></div>
