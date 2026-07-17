@@ -399,11 +399,11 @@ function PreviewPage({
                 <div style={{ display: 'inline-flex', alignItems: 'center', marginBottom: 8, alignSelf: 'flex-start' }}>
                   <span style={{ color: e.accentColor, fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', lineHeight: 1 }}>{year} 年活動</span>
                 </div>
-                <p style={{ margin: '0 0 2px', fontSize: e.titleFontSize, fontWeight: 900, color: e.leftTextColor, lineHeight: 1.25 }}>{e.titleLine1}</p>
-                <p style={{ margin: '4px 0 8px', fontSize: e.subtitleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.25 }}>{e.titleLine2}</p>
+                <p style={{ margin: '0 0 2px', fontSize: e.titleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.25 }}>{e.titleLine1}</p>
+                <p style={{ margin: '4px 0 8px', fontSize: e.subtitleFontSize, fontWeight: 900, color: e.leftTextColor, lineHeight: 1.25 }}>{e.titleLine2}</p>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
-                  <span style={{ fontSize: e.monthFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
-                  <span style={{ fontSize: 18, fontWeight: 700, color: e.leftTextColor }}>月份活動表</span>
+                  <span style={{ fontSize: e.monthFontSize, fontWeight: 900, color: e.leftTextColor, lineHeight: 1 }}>{rocMonth}</span>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: e.accentColor }}>月份活動表</span>
                 </div>
                 <p style={{ margin: '0 0 2px', fontSize: 12, color: e.leftTextColor, lineHeight: 1.5 }}>各項活動皆歡迎居民們踴躍報名！</p>
                 <p style={{ margin: 0, fontSize: 11, color: e.leftTextColor }}>（數量有限，額滿為止）</p>
@@ -426,11 +426,11 @@ function PreviewPage({
                   <div style={{ display: 'inline-block', marginBottom: 6 }}>
                     <span style={{ color: e.accentColor, fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', lineHeight: 1.4 }}>{year} 年活動</span>
                   </div>
-                  <p style={{ margin: '0 0 1px', fontSize: e.pTitleFontSize, fontWeight: 900, color: e.leftTextColor, lineHeight: 1.2 }}>{e.titleLine1}</p>
-                  <p style={{ margin: '0 0 4px', fontSize: e.pSubtitleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.2 }}>{e.titleLine2}</p>
+                  <p style={{ margin: '0 0 1px', fontSize: e.pTitleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.2 }}>{e.titleLine1}</p>
+                  <p style={{ margin: '0 0 4px', fontSize: e.pSubtitleFontSize, fontWeight: 900, color: e.leftTextColor, lineHeight: 1.2 }}>{e.titleLine2}</p>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginBottom: e.pGapMonth }}>
-                    <span style={{ fontSize: e.pMonthFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: e.leftTextColor }}>月份活動表</span>
+                    <span style={{ fontSize: e.pMonthFontSize, fontWeight: 900, color: e.leftTextColor, lineHeight: 1 }}>{rocMonth}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: e.accentColor }}>月份活動表</span>
                   </div>
                   {contactItems.map((item,i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginBottom: 2 }}>
@@ -1344,25 +1344,25 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         ctx.font = font(10, 800); ctx.fillStyle = e.accentColor
         ctx.fillText(`${rocYear} 年活動`, PAD_X, cy + 10); cy += 24
 
-        ctx.font = font(e.titleFontSize, 900); ctx.fillStyle = e.leftTextColor
+        ctx.font = font(e.titleFontSize, 900); ctx.fillStyle = e.accentColor
         const title1Lines = wrapText(ctx, e.titleLine1, LEFT_W - PAD_X * 2)
         title1Lines.forEach((line, li) => {
           ctx.fillText(line, PAD_X, cy + e.titleFontSize + li * e.titleFontSize * 1.2)
         })
         cy += e.titleFontSize * 1.2 * title1Lines.length + 4
 
-        ctx.font = font(e.subtitleFontSize, 900); ctx.fillStyle = e.accentColor
+        ctx.font = font(e.subtitleFontSize, 900); ctx.fillStyle = e.leftTextColor
         const title2Lines = wrapText(ctx, e.titleLine2, LEFT_W - PAD_X * 2)
         title2Lines.forEach((line, li) => {
           ctx.fillText(line, PAD_X, cy + e.subtitleFontSize + li * e.subtitleFontSize * 1.2)
         })
         cy += e.subtitleFontSize * 1.2 * title2Lines.length + 6
         // 月份大字
-        ctx.font = font(e.monthFontSize, 900); ctx.fillStyle = e.accentColor
+        ctx.font = font(e.monthFontSize, 900); ctx.fillStyle = e.leftTextColor
         const monthStr = String(rocMonth)
         const monthW = ctx.measureText(monthStr).width
         ctx.fillText(monthStr, PAD_X, cy + e.monthFontSize)
-        ctx.font = font(18, 700); ctx.fillStyle = e.leftTextColor
+        ctx.font = font(18, 700); ctx.fillStyle = e.accentColor
         ctx.fillText('月份活動表', PAD_X + monthW + 6, cy + e.monthFontSize)
         cy += e.monthFontSize * 1.2
 
@@ -1423,18 +1423,18 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         ctx.font = font(9, 800); ctx.fillStyle = e.accentColor
         ctx.fillText(`${rocYear} 年活動`, PAD_X, cy + 9); cy += 20
 
-        ctx.font = font(e.pTitleFontSize, 900); ctx.fillStyle = e.leftTextColor
+        ctx.font = font(e.pTitleFontSize, 900); ctx.fillStyle = e.accentColor
         ctx.fillText(e.titleLine1, PAD_X, cy + e.pTitleFontSize); cy += e.pTitleFontSize * 1.3
 
-        ctx.font = font(e.pSubtitleFontSize, 900); ctx.fillStyle = e.accentColor
+        ctx.font = font(e.pSubtitleFontSize, 900); ctx.fillStyle = e.leftTextColor
         ctx.fillText(e.titleLine2, PAD_X, cy + e.pSubtitleFontSize); cy += e.pSubtitleFontSize * 1.3
 
         // 月份大字
-        ctx.font = font(e.pMonthFontSize, 900); ctx.fillStyle = e.accentColor
+        ctx.font = font(e.pMonthFontSize, 900); ctx.fillStyle = e.leftTextColor
         const monthStr = String(rocMonth)
         const monthW = ctx.measureText(monthStr).width
         ctx.fillText(monthStr, PAD_X, cy + e.pMonthFontSize)
-        ctx.font = font(12, 700); ctx.fillStyle = e.leftTextColor
+        ctx.font = font(12, 700); ctx.fillStyle = e.accentColor
         ctx.fillText('月份活動表', PAD_X + monthW + 4, cy + e.pMonthFontSize)
         cy += e.pMonthFontSize * 1.2 + e.pGapMonth
 
