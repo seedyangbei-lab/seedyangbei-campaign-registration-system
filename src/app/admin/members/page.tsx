@@ -21,7 +21,7 @@ type Member = {
 
 function getTag(count: number) {
   if (count === 0) return { label: '尚未參與', color: '#9ca3af', bg: '#f3f4f6' }
-  if (count === 1) return { label: '初次體驗', color: '#3b82f6', bg: '#eff6ff' }
+  if (count === 1) return { label: '初次體驗', color: '#2663eb', bg: '#f0f5ff' }
   if (count <= 4) return { label: '偶爾參與', color: '#d97706', bg: '#fffbeb' }
   if (count <= 9) return { label: '常常參與', color: '#f97316', bg: '#fff7ed' }
   return { label: '積極參與', color: '#16a34a', bg: '#f0fdf4' }
@@ -328,7 +328,7 @@ export default function MembersPage() {
 
   const tagLegend = [
     { label: '尚未參與', desc: '0 次', color: '#9ca3af' },
-    { label: '初次體驗', desc: '1 次', color: '#3b82f6' },
+    { label: '初次體驗', desc: '1 次', color: '#2663eb' },
     { label: '偶爾參與', desc: '2–4 次', color: '#d97706' },
     { label: '常常參與', desc: '5–9 次', color: '#f97316' },
     { label: '積極參與', desc: '10 次以上', color: '#16a34a' },
@@ -350,18 +350,18 @@ export default function MembersPage() {
   const chipLabel = (scope: 'all' | 'line' | 'unbound') => scope === 'all' ? '全部會員' : scope === 'line' ? 'LINE會員' : '未綁定會員'
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="px-4 pt-5 pb-6 md:p-8">
       <div className="mb-6 pb-4 border-b border-stone-200">
-        <h2 className="text-stone-800 text-2xl font-bold">用戶查詢</h2>
-        <p className="text-stone-400 mt-1 text-sm">查詢所有曾報名或現場報到過的居民，不分是否綁定 LINE</p>
+        <h2 className="text-stone-600 text-xl font-bold">用戶查詢</h2>
+        <p className="text-stone-500 mt-1 text-sm">查詢所有曾報名或現場報到過的居民，不分是否綁定 LINE</p>
       </div>
 
       {/* 篩選 chip + 搜尋（手機版：全寬直排，不顯示「或是」；電腦版：同一列） */}
-      <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-3 mb-6">
+      <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3 mb-6">
         <div className="flex w-full md:w-auto gap-1 p-1 bg-white/60 border border-stone-300 rounded-lg">
           {(['all', 'line', 'unbound'] as const).map(scope => (
             <button key={scope} onClick={() => handleChipClick(scope)}
-              className={`flex-1 md:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${groupFilter === scope ? 'bg-orange-500 text-white' : 'text-stone-500 hover:text-stone-700'}`}>
+              className={`flex-1 md:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${groupFilter === scope ? 'bg-orange-500 text-white' : 'bg-stone-100/55 text-stone-400 hover:text-stone-600'}`}>
               {chipLabel(scope)}
             </button>
           ))}
@@ -392,9 +392,9 @@ export default function MembersPage() {
         </div>
       </div>
 
-      {/* 走勢圖區塊（預設展開，無收合） */}
+      {/* 走勢圖區塊（預設展開，無收合；手機版依 Figma node 504:29567 改為單一 16px padding 卡片，不分隔標題列） */}
       <div className="bg-white border border-stone-200 rounded-2xl shadow-sm mb-6 overflow-hidden">
-        <div className="flex items-center justify-between gap-2 px-6 py-4 border-b border-stone-100">
+        <div className="flex items-center justify-between gap-2 px-4 py-4 md:px-6 md:border-b md:border-stone-100">
           <div className="flex items-center gap-2">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
             <span className="font-semibold text-stone-700 text-sm">
@@ -413,11 +413,11 @@ export default function MembersPage() {
         </div>
 
         {selectedMemberForChart ? (
-          <div className="px-6 py-4">
+          <div className="px-4 pb-4 pt-0 md:px-6 md:py-4">
             {personalChartData.length === 0 ? (
               <div className="text-center py-8 text-stone-400 text-sm">此會員尚無參與記錄</div>
             ) : (
-              <ResponsiveContainer width="100%" height={200}>
+              <ResponsiveContainer width="100%" height={isMobile === true ? 150 : 200}>
                 <LineChart data={personalChartData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f4" />
                   <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#78716c' }} />
@@ -432,13 +432,13 @@ export default function MembersPage() {
             )}
           </div>
         ) : (
-          <div className="px-6 py-4 space-y-6">
+          <div className="px-4 pb-4 pt-0 md:px-6 md:py-4 space-y-6">
             <div>
               <p className="hidden md:block text-xs text-stone-400 mb-4">每月課程報名總次數（點擊圓點查看當月課程細項）</p>
               {chartData.length === 0 ? (
                 <div className="text-center py-8 text-stone-400 text-sm">尚無資料</div>
               ) : (
-                <ResponsiveContainer width="100%" height={200}>
+                <ResponsiveContainer width="100%" height={isMobile === true ? 150 : 200}>
                   <LineChart
                     data={chartData}
                     margin={{ top: 5, right: 20, left: -20, bottom: 5 }}
@@ -473,7 +473,7 @@ export default function MembersPage() {
 
       {/* 月份細項報名人數：獨立卡片（依 Figma node 504:29567 / 504:29658），手機版改條列式進度條，電腦版維持柱狀圖 */}
       {!selectedMemberForChart && selectedMonth && (
-        <div className="bg-white border border-stone-200 rounded-2xl shadow-sm mb-6 p-6">
+        <div className="bg-white border border-stone-200 rounded-2xl shadow-sm mb-6 p-4 md:p-6">
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm font-semibold text-stone-700">
               {parseInt(selectedMonth.split('-')[1])}月 各課程報名人數
@@ -498,7 +498,7 @@ export default function MembersPage() {
                       <span className="text-stone-600 truncate pr-2">{c.title}</span>
                       <span className="text-stone-700 font-semibold flex-shrink-0">{c.count} 人</span>
                     </div>
-                    <div className="h-2 bg-stone-100 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-stone-200 rounded-full overflow-hidden">
                       <div className="h-full bg-orange-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
                     </div>
                   </div>
@@ -544,7 +544,7 @@ export default function MembersPage() {
         ))}
       </div>
 
-      <h3 className="text-stone-700 font-bold text-base mb-3">會員列表 ({visibleMembers.length})</h3>
+      <h3 className="text-stone-800 font-bold text-base mb-3">會員列表 ({visibleMembers.length})</h3>
       <div className="space-y-3">
         {visibleMembers.length === 0 && (
           <div className="bg-white border border-stone-200 rounded-2xl p-12 text-center text-stone-400"><p>找不到符合的居民</p></div>
