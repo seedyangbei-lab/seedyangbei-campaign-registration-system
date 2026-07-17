@@ -13,11 +13,15 @@ export async function POST(req: NextRequest) {
   }
   const body = await req.json()
   const updates: { key: string; value: string }[] = body.settings || []
-  for (const { key, value } of updates) {
-    await supabase.from('site_settings').upsert(
-      { key, value, updated_at: new Date().toISOString() },
-      { onConflict: 'key' }
-    )
+  if (updates.length === 0) {
+    return NextResponse.json({ ok: true })
+  }
+  const now = new Date().toISOString()
+  const rows = updates.map(({ key, value }) => ({ key, value, updated_at: now }))
+  // 原本是逐筆 await upsert（設定越多次數越多），改成一次陣列 upsert，只跑一次來回
+  const { error } = await supabase.from('site_settings').upsert(rows, { onConflict: 'key' })
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
   return NextResponse.json({ ok: true })
 }

@@ -286,6 +286,14 @@ const GRADIENT_CSS: Record<GradientDir, string> = {
   'to-b': 'to bottom', 'to-r': 'to right', 'to-br': 'to bottom right',
 }
 
+// 合作夥伴沒上傳 Logo 時，自動取代表字（含「種」字優先，其餘取名稱第一個字）
+function partnerGlyph(name: string): string {
+  const n = (name || '').trim()
+  if (!n) return ''
+  if (n.includes('種')) return '種'
+  return n.charAt(0)
+}
+
 function FooterSeparator({ color = 'rgba(255,255,255,0.35)' }: { color?: string }) {
   return (
     <svg width="6" height="28" viewBox="0 0 6 28" fill="none" style={{ flexShrink: 0 }}>
@@ -486,7 +494,12 @@ function PreviewPage({
           {partners.map((p,i) => (
             <React.Fragment key={i}>
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: '100%' }}>
-                {p.img && <img src={p.img} alt="" crossOrigin="anonymous" style={{ height: 24, width: 'auto', objectFit: 'contain' }} />}
+                {p.img
+                  ? <img src={p.img} alt="" crossOrigin="anonymous" style={{ height: 24, width: 'auto', objectFit: 'contain' }} />
+                  : <div style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: contrastPrimary(e.footerBgColor) }}>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: e.footerBgColor, lineHeight: 1 }}>{partnerGlyph(p.name)}</span>
+                    </div>
+                }
                 <span style={{ color: e.footerTextColor, fontSize: 13, fontWeight: 500 }}>{p.name}</span>
               </div>
               {i < partners.length-1 && <FooterSeparator />}
@@ -1599,9 +1612,19 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
           ctx.fillText(p.name, px + partW/2, midY + 5)
         }
       } else {
+        const badgeD = 22
+        ctx.font = font(13, 500)
+        const nameW = ctx.measureText(p.name).width
+        const totalW = badgeD + 8 + nameW
+        const startX = px + (partW - totalW) / 2
+        ctx.fillStyle = contrastPrimary(e.footerBgColor)
+        ctx.beginPath(); ctx.arc(startX + badgeD/2, midY, badgeD/2, 0, Math.PI*2); ctx.fill()
+        ctx.font = font(11, 800); ctx.fillStyle = e.footerBgColor; ctx.textAlign = 'center'
+        ctx.fillText(partnerGlyph(p.name), startX + badgeD/2, midY + 4)
+        textX = startX + badgeD + 8
         ctx.font = font(13, 500); ctx.fillStyle = e.footerTextColor
-        ctx.textAlign = 'center'
-        ctx.fillText(p.name, px + partW/2, midY + 5)
+        ctx.textAlign = 'left'
+        ctx.fillText(p.name, textX, midY + 5)
       }
       ctx.textAlign = 'left'
       if (pi < partners.length - 1) {
