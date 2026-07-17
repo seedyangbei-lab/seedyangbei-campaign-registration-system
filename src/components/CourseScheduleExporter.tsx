@@ -73,6 +73,18 @@ interface EditorState {
   pQrSize: number
   pLeftWidth: number
   pGapMonth: number
+  courseDateFontSize: number
+  courseTimeFontSize: number
+  courseTitleFontSize: number
+  courseInstructorFontSize: number
+  courseLocationFontSize: number
+  courseFeeFontSize: number
+  pCourseDateFontSize: number
+  pCourseTimeFontSize: number
+  pCourseTitleFontSize: number
+  pCourseInstructorFontSize: number
+  pCourseLocationFontSize: number
+  pCourseFeeFontSize: number
 }
 
 const DEFAULT_EDITOR: EditorState = {
@@ -108,6 +120,18 @@ const DEFAULT_EDITOR: EditorState = {
   pQrSize: 80,
   pLeftWidth: 52,
   pGapMonth: 8,
+  courseDateFontSize: 16,
+  courseTimeFontSize: 13,
+  courseTitleFontSize: 14,
+  courseInstructorFontSize: 12,
+  courseLocationFontSize: 12,
+  courseFeeFontSize: 13,
+  pCourseDateFontSize: 14,
+  pCourseTimeFontSize: 12,
+  pCourseTitleFontSize: 13,
+  pCourseInstructorFontSize: 11,
+  pCourseLocationFontSize: 11,
+  pCourseFeeFontSize: 12,
 }
 
 // ── 色盤元件 ──────────────────────────────────────────────────────
@@ -208,213 +232,6 @@ function ContactLine({ item, dotSize = 6 }: { item: string; dotSize?: number }) 
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 4 }}>
       <div style={{ width: dotSize, height: dotSize, borderRadius: '50%', background: '#06C755', marginTop: 5, flexShrink: 0 }} />
       <span style={{ fontSize: 11, color: '#374151', lineHeight: 1.6 }}>{item}</span>
-    </div>
-  )
-}
-
-interface PageData {
-  pageCourses: Course[]; rowsPerPage: number; isLandscape: boolean
-  year: number; rocMonth: number; pageIdx: number; totalPages: number; editor: EditorState
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// 下載專用版
-// ═══════════════════════════════════════════════════════════════════
-function DownloadPage({ data }: { data: PageData }) {
-  const { pageCourses, rowsPerPage, isLandscape, year, rocMonth, pageIdx, totalPages, editor: e } = data
-  const W = isLandscape ? A4L_W : A4P_W
-  const H = isLandscape ? A4L_H : A4P_H
-  const BRAND_H = 44
-  const FOOTER_H = 52
-  const LEFT_W = isLandscape ? 290 : W
-  const LEFT_H = isLandscape ? H - BRAND_H - FOOTER_H : 240
-  const TABLE_TOP = isLandscape ? BRAND_H : BRAND_H + LEFT_H
-  const TABLE_W = isLandscape ? W - LEFT_W : W
-  const TABLE_H = H - TABLE_TOP - FOOTER_H
-  const TABLE_HEADER_H = 44
-  const ROW_H = Math.floor((TABLE_H - TABLE_HEADER_H) / rowsPerPage)
-  const emptyRows = Math.max(0, rowsPerPage - pageCourses.length)
-
-  const leftBg = hexToRgba(e.leftBgColor, e.leftBgOpacity)
-  const rightBg = hexToRgba(e.rightBgColor, e.rightBgOpacity)
-  const patternBg = getSvgPattern(e.patternType, e.accentColor, e.patternOpacity)
-  const gradBg = e.gradientEnabled ? `linear-gradient(${GRADIENT_CSS[e.gradientDir]}, ${hexToRgba(e.gradientFrom, e.gradientOpacity)}, ${hexToRgba(e.gradientTo, e.gradientOpacity)})` : ''
-
-  const colDefs = isLandscape
-    ? [{ label:'日期', w:88 },{ label:'時間', w:104 },{ label:'活動名稱', w:240 },{ label:'授課講師', w:140 },{ label:'地點', w:130 },{ label:'對象', w:96 },{ label:'費用', w:68 }]
-    : [{ label:'日期', w:78 },{ label:'時間', w:90 },{ label:'活動名稱', w:196 },{ label:'授課講師', w:130 },{ label:'地點', w:120 },{ label:'對象', w:90 },{ label:'費用', w:90 }]
-  const totalColW = colDefs.reduce((s,c) => s + c.w, 0)
-  colDefs[2].w += TABLE_W - totalColW - 12
-
-  let colX = 6
-  const colsWithX = colDefs.map(col => { const x = colX; colX += col.w; return { ...col, x } })
-
-  const contactItems = [
-    e.phone ? `如有任何問題，請撥打洽詢專線：${e.phone}` : '',
-    e.contact || '', e.hours ? `時間：${e.hours}` : '',
-  ].filter(Boolean)
-
-  const partners = [
-    { img: e.logo1, name: e.logo1Name },
-    { img: e.logo2, name: e.logo2Name },
-    { img: e.logo3, name: e.logo3Name },
-  ]
-
-  const qrSize = isLandscape ? 88 : 60
-
-  return (
-    <div style={{ position: 'relative', width: W, height: H, overflow: 'hidden', fontFamily: '"Noto Sans TC","GenSenRounded2TW",sans-serif' }}>
-      <div style={{ position: 'absolute', inset: 0, background: '#fdf4ea' }} />
-      {e.bgImage && (
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundImage: `url(${e.bgImage})`, backgroundSize: 'cover',  backgroundPosition: isLandscape ? `${e.bgPositionX}% ${e.bgPositionY}%` : `${e.bgPositionXP}% ${e.bgPositionYP}%`, opacity: e.bgOpacity }} />
-      )}
-
-      {/* 品牌列 */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: BRAND_H, background: e.brandBgColor, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 22px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 3, height: 14, background: e.accentColor, borderRadius: 2 }} />
-          <span style={{ color: 'white', fontWeight: 800, fontSize: 13, letterSpacing: '0.1em' }}>XINDIAN · YANGBEI SOCIAL HOUSING</span>
-        </div>
-        {totalPages > 1 && <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>{pageIdx+1} / {totalPages}</span>}
-      </div>
-
-      {/* 左欄背景 */}
-      <div style={{ position: 'absolute', top: BRAND_H, left: 0, width: LEFT_W, height: LEFT_H, background: leftBg }}>
-        {gradBg && <div style={{ position: 'absolute', inset: 0, background: gradBg }} />}
-        {patternBg && <div style={{ position: 'absolute', inset: 0, backgroundImage: patternBg, backgroundRepeat: 'repeat' }} />}
-        {isLandscape
-          ? <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 3, background: `linear-gradient(to bottom,${e.accentColor}00,${e.accentColor}60,${e.accentColor}00)` }} />
-          : <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: `linear-gradient(to right,${e.accentColor}00,${e.accentColor}60,${e.accentColor}00)` }} />
-        }
-      </div>
-
-      {/* 左欄內容 - 橫式 */}
-      {isLandscape && (
-        <div style={{ position: 'absolute', top: BRAND_H, left: 0, width: LEFT_W, height: LEFT_H, display: 'flex', flexDirection: 'column', padding: '18px 22px 16px' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', marginBottom: 8, alignSelf: 'flex-start' }}>
-            <span style={{ color: e.accentColor, fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', lineHeight: 1 }}>{year} 年活動</span>
-          </div>
-          <p style={{ margin: 0, fontSize: e.titleFontSize, fontWeight: 900, color: '#18120a', lineHeight: 1.25 }}>{e.titleLine1}</p>
-          <p style={{ margin: '4px 0 8px', fontSize: e.subtitleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.25 }}>{e.titleLine2}</p>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
-            <span style={{ fontSize: e.monthFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
-            <span style={{ fontSize: 18, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
-          </div>
-          <p style={{ margin: '0 0 2px', fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>各項活動皆歡迎居民們踴躍報名！</p>
-          <p style={{ margin: 0, fontSize: 11, color: '#9ca3af' }}>（數量有限，額滿為止）</p>
-          <div style={{ height: e.gapTitleToQr }} />
-          <div style={{ display: 'flex', gap: 8 }}>
-            {[
-              { label:'活動報名', color: e.accentColor, img: e.registrationQrMode === 'upload' && e.registrationQrUpload ? e.registrationQrUpload : QR_API(SITE_URL,200), sub:'線上報名' },
-              { label:'種子社區大學', color:'#06C755', img: e.communityQr, sub:'加入社群' },
-            ].map((qr,qi) => (
-              <div key={qi} style={{ flex: 1,background: '#ffffff', borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                <span style={{ color: qr.color, fontSize: 9, fontWeight: 800, lineHeight: 1.4, display: 'block', textAlign: 'center' }}>{qr.label}</span>
-                {qr.img
-                  ? <img src={qr.img} alt="" crossOrigin="anonymous" style={{ width: qrSize, height: qrSize, objectFit: 'contain' }} />
-                  : <div style={{ width: qrSize, height: qrSize, background: '#f3f4f6', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 9, color: '#9ca3af' }}>未上傳</span></div>
-                }
-                <span style={{ fontSize: 9, color: '#6b7280', textAlign: 'center' }}>{qr.sub}</span>
-              </div>
-            ))}
-          </div>
-          <div style={{ height: e.gapQrToContact }} />
-          <div style={{ marginTop: 'auto' }}>
-            {contactItems.map((item, i) => <ContactLine key={i} item={item} />)}
-          </div>
-        </div>
-      )}
-
-      {/* 左欄內容 - 直式 */}
-      {!isLandscape && (
-        <div style={{ position: 'absolute', top: BRAND_H, left: 0, right: 0, height: 240, display: 'flex', alignItems: 'center', padding: '16px 28px', gap: 20 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'inline-block', marginBottom: 6 }}>
-              <span style={{ color: e.accentColor, fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', lineHeight: 1.4 }}>{year} 年活動</span>
-            </div>
-            <p style={{ margin: '0 0 1px', fontSize: e.pTitleFontSize, fontWeight: 900, color: '#18120a', lineHeight: 1.2 }}>{e.titleLine1}</p>
-            <p style={{ margin: '0 0 4px', fontSize: e.pSubtitleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.2 }}>{e.titleLine2}</p>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginBottom: e.pGapMonth }}>
-              <span style={{ fontSize: e.pMonthFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
-            </div>
-            {contactItems.map((item, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginBottom: 2 }}>
-                <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#06C755', marginTop: 5, flexShrink: 0 }} />
-                <span style={{ fontSize: 9, color: '#374151', lineHeight: 1.5 }}>{item}</span>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
-            {[
-             { label:'活動報名', color: e.accentColor, img: e.registrationQrMode === 'upload' && e.registrationQrUpload ? e.registrationQrUpload : QR_API(SITE_URL,200), sub:'線上報名' },
-              { label:'種子社區大學', color:'#06C755', img: e.communityQr, sub:'加入社群' },
-            ].map((qr,qi) => (
-              <div key={qi} style={{ background: '#ffffff', borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', padding: '10px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-                <span style={{ color: qr.color, fontSize: 9, fontWeight: 800, lineHeight: 1.4, textAlign: 'center' }}>{qr.label}</span>
-                {qr.img
-                  ? <img src={qr.img} alt="" crossOrigin="anonymous" style={{ width: e.pQrSize, height: e.pQrSize, objectFit: 'contain', display: 'block' }} />
-                  : <div style={{ width: e.pQrSize, height: e.pQrSize, background: '#f3f4f6', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 8, color: '#9ca3af' }}>未上傳</span></div>
-                }
-                <span style={{ fontSize: 9, color: '#6b7280', textAlign: 'center' }}>{qr.sub}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 表頭 */}
-      <div style={{ position: 'absolute', top: TABLE_TOP, left: isLandscape ? LEFT_W : 0, width: TABLE_W, height: TABLE_HEADER_H, background: e.accentColor, display: 'flex', alignItems: 'center' }}>
-        {colsWithX.map(col => (
-          <div key={col.label} style={{ position: 'absolute', left: col.x, width: col.w, height: TABLE_HEADER_H, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: 'white', fontWeight: 700, fontSize: 14, textAlign: 'center' }}>{col.label}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* 課程列 */}
-      {pageCourses.map((course, i) => {
-        const { month: cm, day, weekday } = toROC(course.date)
-        const rowY = TABLE_TOP + TABLE_HEADER_H + i * ROW_H
-        return (
-          <div key={course.id} style={{ position: 'absolute', top: rowY, left: isLandscape ? LEFT_W : 0, width: TABLE_W, height: ROW_H, background: i%2===0 ? '#ffffff' : '#fff7ed', borderBottom: `1px solid ${e.accentColor}18` }}>
-            {colsWithX.map((col, ci) => {
-              const padV = Math.floor((ROW_H - 26) / 2)
-              const cs: React.CSSProperties = { position: 'absolute', left: col.x, width: col.w, height: ROW_H, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: `${padV}px 4px`, boxSizing: 'border-box' }
-              if (ci === 0) return <div key={ci} style={cs}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}><span style={{ fontSize: 16, fontWeight: 800, color: '#18120a', lineHeight: 1 }}>{cm}/{day}</span><span style={{ fontWeight: 800, fontSize: 12, color: e.accentColor, lineHeight: 1 }}>{weekday}</span></div></div>
-              if (ci === 1) return <div key={ci} style={cs}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}><span style={{ fontSize: 13, fontWeight: 700, color: '#18120a', lineHeight: 1 }}>{course.time_start?.slice(0,5)}</span><span style={{ fontSize: 10, color: `${e.accentColor}80`, lineHeight: 1.2 }}>|</span><span style={{ fontSize: 13, fontWeight: 700, color: '#18120a', lineHeight: 1 }}>{course.time_end?.slice(0,5)}</span></div></div>
-              if (ci === 2) return <div key={ci} style={{ ...cs, justifyContent: 'center' }}><span style={{ fontSize: 14, fontWeight: 700, color: '#18120a', lineHeight: 1.4, textAlign: 'center', wordBreak: 'break-word' }}>{course.title}</span></div>
-              if (ci === 3) return <div key={ci} style={cs}>{(course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name) && <span style={{ color: e.accentColor, fontWeight: 700, fontSize: 12, lineHeight: 1 }}>{course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name}</span>}</div>
-              if (ci === 4) return <div key={ci} style={{ ...cs, padding: '0 6px' }}><span style={{ fontSize: 12, color: '#374151', lineHeight: 1.4, textAlign: 'center', wordBreak: 'break-word' }}>{course.location}</span></div>
-              if (ci === 5) return <div key={ci} style={cs}><span style={{ fontSize: 11, color: '#374151', lineHeight: 1.4, textAlign: 'center' }}>{course.suitable_age||'全年齡'}</span></div>
-              if (ci === 6) return <div key={ci} style={cs}><span style={{ fontSize: 13, fontWeight: 800, color: e.accentColor, lineHeight: 1 }}>免費</span></div>
-              return <div key={ci} style={cs} />
-            })}
-          </div>
-        )
-      })}
-
-      {/* 空列 */}
-      {Array.from({ length: emptyRows }).map((_, i) => {
-        const rowY = TABLE_TOP + TABLE_HEADER_H + (pageCourses.length + i) * ROW_H
-        return <div key={`e${i}`} style={{ position: 'absolute', top: rowY, left: isLandscape ? LEFT_W : 0, width: TABLE_W, height: ROW_H, background: (pageCourses.length+i)%2===0 ? '#ffffff' : '#fff7ed', borderBottom: `1px solid ${e.accentColor}18` }} />
-      })}
-
-      {/* 右欄底色 */}
-      <div style={{ position: 'absolute', top: TABLE_TOP, left: isLandscape ? LEFT_W : 0, width: TABLE_W, height: TABLE_H, background: rightBg }} />
-
-      {/* 底部 */}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: FOOTER_H, background: e.footerBgColor, display: 'flex', alignItems: 'center' }}>
-        {partners.map((p, i) => (
-          <React.Fragment key={i}>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: '100%' }}>
-              {p.img && <img src={p.img} alt="" crossOrigin="anonymous" style={{ height: 24, width: 'auto', objectFit: 'contain' }} />}
-              <span style={{ color: e.footerTextColor, fontSize: 13, fontWeight: 500 }}>{p.name}</span>
-            </div>
-            {i < partners.length-1 && <FooterSeparator />}
-          </React.Fragment>
-        ))}
-      </div>
     </div>
   )
 }
@@ -559,24 +376,30 @@ function PreviewPage({
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
               {pageCourses.map((course,i) => {
                 const { month:cm, day, weekday } = toROC(course.date)
+                const fsDate = isL ? e.courseDateFontSize : e.pCourseDateFontSize
+                const fsTime = isL ? e.courseTimeFontSize : e.pCourseTimeFontSize
+                const fsTitle = isL ? e.courseTitleFontSize : e.pCourseTitleFontSize
+                const fsInstructor = isL ? e.courseInstructorFontSize : e.pCourseInstructorFontSize
+                const fsLocation = isL ? e.courseLocationFontSize : e.pCourseLocationFontSize
+                const fsFee = isL ? e.courseFeeFontSize : e.pCourseFeeFontSize
                 return (
                   <div key={course.id} style={{ display: 'grid', gridTemplateColumns: gridCols, flex: 1, minHeight: 0, background: i%2===0 ? '#ffffff' : '#fff7ed', borderBottom: `1px solid ${e.accentColor}18`, alignItems: 'center' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', gap: 4 }}>
-                      <span style={{ fontSize: 15, fontWeight: 800, color: '#18120a', lineHeight: 1 }}>{cm}/{day}</span>
-                      <span style={{ fontWeight: 800, fontSize: 12, color: e.accentColor, lineHeight: 1 }}>{weekday}</span>
+                      <span style={{ fontSize: fsDate, fontWeight: 800, color: '#18120a', lineHeight: 1 }}>{cm}/{day}</span>
+                      <span style={{ fontWeight: 800, fontSize: Math.max(9, fsDate - 3), color: e.accentColor, lineHeight: 1 }}>{weekday}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', gap: 1 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#18120a', lineHeight: 1 }}>{course.time_start?.slice(0,5)}</span>
-                      <span style={{ fontSize: 10, color: `${e.accentColor}80`, lineHeight: 1.2 }}>|</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#18120a', lineHeight: 1 }}>{course.time_end?.slice(0,5)}</span>
+                      <span style={{ fontSize: fsTime, fontWeight: 700, color: '#18120a', lineHeight: 1 }}>{course.time_start?.slice(0,5)}</span>
+                      <span style={{ fontSize: Math.max(8, fsTime - 3), color: `${e.accentColor}80`, lineHeight: 1.2 }}>|</span>
+                      <span style={{ fontSize: fsTime, fontWeight: 700, color: '#18120a', lineHeight: 1 }}>{course.time_end?.slice(0,5)}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 10px', textAlign: 'center' }}><span style={{ fontSize: 14, fontWeight: 700, color: '#18120a', lineHeight: 1.4 }}>{course.title}</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 10px', textAlign: 'center' }}><span style={{ fontSize: fsTitle, fontWeight: 700, color: '#18120a', lineHeight: 1.4 }}>{course.title}</span></div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 6px' }}>
-                      {(course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name) && <span style={{ color: e.accentColor, fontWeight: 700, fontSize: 12, lineHeight: 1 }}>{course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name}</span>}
+                      {(course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name) && <span style={{ color: e.accentColor, fontWeight: 700, fontSize: fsInstructor, lineHeight: 1 }}>{course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name}</span>}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 6px', textAlign: 'center' }}><span style={{ fontSize: 12, color: '#374151', lineHeight: 1.4 }}>{course.location}</span></div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', textAlign: 'center' }}><span style={{ fontSize: 11, color: '#374151', lineHeight: 1.4 }}>{course.suitable_age||'全年齡'}</span></div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px' }}><span style={{ fontSize: 13, fontWeight: 800, color: e.accentColor, lineHeight: 1 }}>免費</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 6px', textAlign: 'center' }}><span style={{ fontSize: fsLocation, color: '#374151', lineHeight: 1.4 }}>{course.location}</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', textAlign: 'center' }}><span style={{ fontSize: Math.max(9, fsLocation - 1), color: '#374151', lineHeight: 1.4 }}>{course.suitable_age||'全年齡'}</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px' }}><span style={{ fontSize: fsFee, fontWeight: 800, color: e.accentColor, lineHeight: 1 }}>免費</span></div>
                   </div>
                 )
               })}
@@ -609,11 +432,82 @@ function PreviewPage({
 // ═══════════════════════════════════════════════════════════════════
 // Panel 面板（獨立元件，避免主元件 re-render 時重建）
 // ═══════════════════════════════════════════════════════════════════
+type PanelTab = '文字' | '色彩' | '圖片' | '資訊'
+const PANEL_TABS: PanelTab[] = ['文字', '色彩', '圖片', '資訊']
+
 interface PanelProps {
   editor: EditorState
   set: (key: keyof EditorState, val: any) => void
   setEditor: React.Dispatch<React.SetStateAction<EditorState>>
   handleImgUpload: (key: keyof EditorState) => (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
+  activeTab: PanelTab
+  setActiveTab: (t: PanelTab) => void
+}
+
+// 分頁列（桌機側欄 / 手機底部抽屜共用）
+function PanelTabBar({ activeTab, setActiveTab }: { activeTab: PanelTab; setActiveTab: (t: PanelTab) => void }) {
+  return (
+    <div className="flex border-b border-stone-200 px-1">
+      {PANEL_TABS.map(tab => (
+        <button key={tab} onClick={() => setActiveTab(tab)}
+          className={`flex-1 md:flex-none px-3 py-2.5 text-xs font-medium transition-colors border-b-2 ${
+            activeTab === tab ? 'text-orange-500 font-bold border-orange-500 bg-stone-50' : 'text-stone-500 border-transparent hover:text-stone-700'
+          }`}>
+          {tab}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// 密度預設按鈕組（緊湊／標準／寬鬆）
+function DensityPresets({ active, onPick }: { active: 'tight'|'standard'|'loose'; onPick: (p: 'tight'|'standard'|'loose') => void }) {
+  return (
+    <div className="flex gap-2 mb-3">
+      {([['tight','緊湊'],['standard','標準'],['loose','寬鬆']] as const).map(([v, label]) => (
+        <button key={v} onClick={() => onPick(v)}
+          className={`flex-1 h-8 rounded-lg text-xs transition-colors ${
+            active === v ? 'bg-orange-500 text-white font-bold' : 'bg-stone-100 border border-stone-200 text-stone-600 font-medium hover:border-orange-300'
+          }`}>
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+const PRESET_MAIN_L = {
+  tight:    { titleFontSize: 24, subtitleFontSize: 20, monthFontSize: 52 },
+  standard: { titleFontSize: 30, subtitleFontSize: 26, monthFontSize: 64 },
+  loose:    { titleFontSize: 38, subtitleFontSize: 32, monthFontSize: 80 },
+} as const
+const PRESET_MAIN_P = {
+  tight:    { pTitleFontSize: 18, pSubtitleFontSize: 14, pMonthFontSize: 28 },
+  standard: { pTitleFontSize: 22, pSubtitleFontSize: 18, pMonthFontSize: 36 },
+  loose:    { pTitleFontSize: 28, pSubtitleFontSize: 22, pMonthFontSize: 46 },
+} as const
+const PRESET_COURSE_L = {
+  tight:    { courseDateFontSize: 14, courseTimeFontSize: 11, courseTitleFontSize: 12, courseInstructorFontSize: 10, courseLocationFontSize: 10, courseFeeFontSize: 11 },
+  standard: { courseDateFontSize: 16, courseTimeFontSize: 13, courseTitleFontSize: 14, courseInstructorFontSize: 12, courseLocationFontSize: 12, courseFeeFontSize: 13 },
+  loose:    { courseDateFontSize: 18, courseTimeFontSize: 15, courseTitleFontSize: 16, courseInstructorFontSize: 14, courseLocationFontSize: 14, courseFeeFontSize: 15 },
+} as const
+const PRESET_COURSE_P = {
+  tight:    { pCourseDateFontSize: 12, pCourseTimeFontSize: 10, pCourseTitleFontSize: 11, pCourseInstructorFontSize: 9,  pCourseLocationFontSize: 9,  pCourseFeeFontSize: 10 },
+  standard: { pCourseDateFontSize: 14, pCourseTimeFontSize: 12, pCourseTitleFontSize: 13, pCourseInstructorFontSize: 11, pCourseLocationFontSize: 11, pCourseFeeFontSize: 12 },
+  loose:    { pCourseDateFontSize: 16, pCourseTimeFontSize: 14, pCourseTitleFontSize: 15, pCourseInstructorFontSize: 13, pCourseLocationFontSize: 13, pCourseFeeFontSize: 14 },
+} as const
+
+function FontSlider({ label, val, min, max, onChange }: { label: string; val: number; min: number; max: number; onChange: (v: number) => void }) {
+  return (
+    <div className="mb-3">
+      <div className="flex items-center justify-between mb-1">
+        <label className="text-xs text-stone-400">{label}</label>
+        <span className="text-xs font-bold text-stone-700">{val}px</span>
+      </div>
+      <input type="range" min={min} max={max} step="1" value={val}
+        onChange={ev => onChange(parseInt(ev.target.value))} className="w-full accent-orange-500" />
+    </div>
+  )
 }
   function BgCropPicker({ imgSrc, posX, posY, isLandscape, onChange }: {
   imgSrc: string; posX: number; posY: number; isLandscape: boolean
@@ -698,285 +592,329 @@ interface PanelProps {
   )
 }
 
-function PanelContent({ editor, set, setEditor, handleImgUpload }: PanelProps): React.ReactElement {
-const e = editor
+function PanelContent({ editor, set, setEditor, handleImgUpload, activeTab, setActiveTab }: PanelProps): React.ReactElement {
+  const e = editor
+  const layoutTab: 0 | 1 = ((e as any)._layoutTab ?? 0) as 0 | 1 // 0=橫式 1=直式（主視覺字級用）
+  const courseLayoutTab: 0 | 1 = ((e as any)._courseLayoutTab ?? 0) as 0 | 1 // 0=橫式 1=直式（課程資訊字級用）
+  const mainPreset = (e as any)._mainPreset ?? 'standard'
+  const coursePreset = (e as any)._coursePreset ?? 'standard'
+
+  const pickMainPreset = (p: 'tight'|'standard'|'loose') => {
+    const vals = layoutTab === 0 ? PRESET_MAIN_L[p] : PRESET_MAIN_P[p]
+    setEditor(prev => ({ ...prev, ...vals, _mainPreset: p } as any))
+  }
+  const pickCoursePreset = (p: 'tight'|'standard'|'loose') => {
+    const vals = courseLayoutTab === 0 ? PRESET_COURSE_L[p] : PRESET_COURSE_P[p]
+    setEditor(prev => ({ ...prev, ...vals, _coursePreset: p } as any))
+  }
+
   return (
-    <div className="p-4 space-y-5" onWheel={ev => ev.stopPropagation()}>
-      {/* 標題文字 */}
-      <div>
-        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">標題文字</p>
-        <div className="space-y-2">
-          {(['titleLine1','titleLine2'] as const).map((key, i) => (
-            <div key={key}>
-              <label className="block text-xs text-stone-400 mb-1">第 {i+1} 行</label>
-              <input value={e[key]} onChange={ev => set(key, ev.target.value)}
-                className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300" />
-            </div>
-          ))}
-        </div>
-      </div>
+    <div className="flex flex-col flex-1 min-h-0">
+      <PanelTabBar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <div className="p-4 space-y-5 overflow-y-auto flex-1" onWheel={ev => ev.stopPropagation()}>
 
-      {/* 字級控制 */}
-      <div>
-        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">字級大小</p>
-        <div className="flex gap-1 p-1 bg-stone-100 rounded-lg mb-3">
-          {(['橫式','直式'] as const).map((t, ti) => (
-            <button key={t} onClick={() => set('_layoutTab' as any, ti)}
-              className={`flex-1 py-1 rounded-md text-xs font-medium transition-colors ${(e as any)._layoutTab === ti || (!('_layoutTab' in e) && ti === 0) ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400'}`}>
-              {t}
-            </button>
-          ))}
-        </div>
-        {((e as any)._layoutTab ?? 0) === 0 ? (
-          <>
-            {[
-              { key:'titleFontSize' as const, label:'主標題', val:e.titleFontSize, min:16, max:48 },
-              { key:'subtitleFontSize' as const, label:'副標題', val:e.subtitleFontSize, min:14, max:40 },
-              { key:'monthFontSize' as const, label:'月份數字', val:e.monthFontSize, min:32, max:96 },
-            ].map(f => (
-              <div key={f.key} className="mb-3">
-                <label className="text-xs text-stone-400">{f.label} {f.val}px</label>
-                <input type="range" min={f.min} max={f.max} step="1" value={f.val}
-                  onChange={ev => set(f.key, parseInt(ev.target.value))} className="w-full accent-orange-500" />
+      {/* ══════════ 文字 Tab ══════════ */}
+      {activeTab === '文字' && (<>
+        <div>
+          <p className="text-[13px] font-bold text-stone-400 mb-3">1. 標題文字</p>
+          <div className="space-y-2">
+            {(['titleLine1','titleLine2'] as const).map((key, i) => (
+              <div key={key}>
+                <label className="block text-xs text-stone-400 mb-1">第 {i+1} 行</label>
+                <input value={e[key]} onChange={ev => set(key, ev.target.value)}
+                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300" />
               </div>
             ))}
-          </>
-        ) : (
-          <>
-            {[
-              { key:'pTitleFontSize' as const, label:'主標題', val:e.pTitleFontSize, min:12, max:36 },
-              { key:'pSubtitleFontSize' as const, label:'副標題', val:e.pSubtitleFontSize, min:10, max:30 },
-              { key:'pMonthFontSize' as const, label:'月份數字', val:e.pMonthFontSize, min:20, max:60 },
-              { key:'pQrSize' as const, label:'QR 大小', val:e.pQrSize, min:50, max:120 },
-              { key:'pLeftWidth' as const, label:'左欄高度 %', val:e.pLeftWidth, min:20, max:60 },
-              { key:'pGapMonth' as const, label:'月份→文案間距', val:e.pGapMonth, min:0, max:40 },
-            ].map(f => (
-              <div key={f.key} className="mb-3">
-                <label className="text-xs text-stone-400">{f.label} {f.val}px</label>
-                <input type="range" min={f.min} max={f.max} step="1" value={f.val}
-                  onChange={ev => set(f.key, parseInt(ev.target.value))} className="w-full accent-orange-500" />
-              </div>
-            ))}
-          </>
-        )}
-      </div>
-
-      {/* 間距控制 */}
-      <div>
-        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">間距</p>
-        {[
-          { key:'gapTitleToQr' as const, label:'標題 → QR Code', val:e.gapTitleToQr, min:0, max:60 },
-          { key:'gapQrToContact' as const, label:'QR Code → 聯繫資訊', val:e.gapQrToContact, min:0, max:40 },
-        ].map(f => (
-          <div key={f.key} className="mb-3">
-            <label className="text-xs text-stone-400">{f.label} {f.val}px</label>
-            <input type="range" min={f.min} max={f.max} step="2" value={f.val}
-              onChange={ev => set(f.key, parseInt(ev.target.value))} className="w-full accent-orange-500" />
-          </div>
-        ))}
-      </div>
-
-      {/* 顏色 */}
-      <div>
-        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">顏色</p>
-        <div className="space-y-2.5">
-          {[
-            { key:'accentColor', label:'主題色' }, { key:'brandBgColor', label:'頂部品牌列底色' },
-            { key:'leftBgColor', label:'左欄底色' }, { key:'rightBgColor', label:'右欄底色' },
-            { key:'footerBgColor', label:'底部背景' }, { key:'footerTextColor', label:'底部文字' },
-          ].map(f => (
-            <ColorPicker key={f.key} label={f.label} value={(e as any)[f.key]}
-              onChange={v => set(f.key as keyof EditorState, v)} />
-          ))}
-        </div>
-      </div>
-
-      {/* 透明度 */}
-      <div>
-        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">欄位透明度</p>
-        {[
-          { key:'leftBgOpacity' as const, label:'左欄', val:e.leftBgOpacity },
-          { key:'rightBgOpacity' as const, label:'右欄', val:e.rightBgOpacity },
-        ].map(f => (
-          <div key={f.key} className="mb-3">
-            <label className="text-xs text-stone-400">{f.label} {Math.round(f.val*100)}%</label>
-            <input type="range" min="0" max="1" step="0.05" value={f.val}
-              onChange={ev => set(f.key, parseFloat(ev.target.value))} className="w-full accent-orange-500" />
-          </div>
-        ))}
-      </div>
-
-      {/* Pattern */}
-      <div>
-        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">左欄 Pattern</p>
-        <div className="relative mb-3">
-          <select value={e.patternType} onChange={ev => set('patternType', ev.target.value as PatternType)}
-            className="w-full appearance-none border border-stone-200 rounded-lg pl-3 pr-9 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300">
-            <option value="none">無</option><option value="dots">圓點</option><option value="lines">斜線</option>
-            <option value="grid">網格</option><option value="waves">波浪</option><option value="diamonds">菱形</option>
-          </select>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
-        </div>
-        {e.patternType !== 'none' && (
-          <div>
-            <label className="text-xs text-stone-400">濃度 {Math.round(e.patternOpacity*100)}%</label>
-            <input type="range" min="0.02" max="0.5" step="0.02" value={e.patternOpacity}
-              onChange={ev => set('patternOpacity', parseFloat(ev.target.value))} className="w-full accent-orange-500" />
-          </div>
-        )}
-      </div>
-
-      {/* 漸層 */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">左欄漸層</p>
-          <button onClick={() => set('gradientEnabled', !e.gradientEnabled)}
-            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${e.gradientEnabled?'bg-orange-500':'bg-stone-200'}`}>
-            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${e.gradientEnabled?'translate-x-5':'translate-x-0.5'}`} />
-          </button>
-        </div>
-        {e.gradientEnabled && (
-          <div className="space-y-2.5">
-            <div className="flex gap-2">
-              {([['to-b','上到下'],['to-r','左到右'],['to-br','斜角']] as const).map(([v,label]) => (
-                <button key={v} onClick={() => set('gradientDir', v)}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${e.gradientDir===v?'bg-orange-500 text-white border-orange-500':'text-stone-600 border-stone-200 hover:border-orange-300'}`}>{label}</button>
-              ))}
-            </div>
-            <ColorPicker label="起始色" value={e.gradientFrom} onChange={v => set('gradientFrom', v)} />
-            <ColorPicker label="結束色" value={e.gradientTo} onChange={v => set('gradientTo', v)} />
-            <div>
-              <label className="text-xs text-stone-400">強度 {Math.round(e.gradientOpacity*100)}%</label>
-              <input type="range" min="0.1" max="1" step="0.05" value={e.gradientOpacity}
-                onChange={ev => set('gradientOpacity', parseFloat(ev.target.value))} className="w-full accent-orange-500" />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 底圖 */}
-      <div>
-        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">底圖</p>
-        <label className="flex items-center gap-2 w-full border border-dashed border-stone-300 hover:border-orange-300 rounded-lg py-2.5 px-3 cursor-pointer transition-colors text-sm text-stone-500">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          {e.bgImage ? '已上傳，點擊替換' : '上傳底圖'}
-          <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload('bgImage')} />
-        </label>
-        {e.bgImage && <img src={e.bgImage} alt="" className="mt-2 w-full h-14 object-cover rounded-lg border border-stone-200" />}
-        <div className="mt-2.5">
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-xs text-stone-400">透明度 {Math.round(e.bgOpacity*100)}%</label>
-            {e.bgImage && <button onClick={() => set('bgImage','')} className="text-xs text-red-400 hover:text-red-600">移除</button>}
-          </div>
-          <input type="range" min="0" max="1" step="0.05" value={e.bgOpacity}
-            onChange={ev => set('bgOpacity', parseFloat(ev.target.value))} className="w-full accent-orange-500" />
-        </div>
-        <div className="mt-3 space-y-3">
-          <div>
-            <p className="text-xs text-stone-500 font-medium mb-1.5">橫式位置</p>
-            <BgCropPicker imgSrc={e.bgImage} posX={e.bgPositionX} posY={e.bgPositionY} isLandscape={true}
-              onChange={(x, y) => { setEditor(prev => ({ ...prev, bgPositionX: x, bgPositionY: y })) }} />
-          </div>
-          <div>
-            <p className="text-xs text-stone-500 font-medium mb-1.5">直式位置</p>
-            <BgCropPicker imgSrc={e.bgImage} posX={e.bgPositionXP} posY={e.bgPositionYP} isLandscape={false}
-              onChange={(x, y) => { setEditor(prev => ({ ...prev, bgPositionXP: x, bgPositionYP: y })) }} />
           </div>
         </div>
-      </div>
 
-      {/* QR */}
-      <div>
-        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">QR Code</p>
-        <div className="space-y-3">
-          <div>
-          <p className="text-xs text-stone-500 font-medium mb-2">報名 QR</p>
-          <div className="flex gap-1 p-0.5 bg-stone-100 rounded-lg mb-2.5">
-            {([['auto','自動生成'] as const, ['upload','手動上傳'] as const]).map(([v, label]) => (
-              <button key={v} onClick={() => set('registrationQrMode', v)}
-                className={`flex-1 py-1 rounded-md text-xs font-medium transition-colors ${e.registrationQrMode === v ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400'}`}>
-                {label}
+        <div>
+          <p className="text-[13px] font-bold text-stone-400 mb-1">2. 主視覺字級</p>
+          <p className="text-[11px] text-stone-400 mb-2">左欄標題與月份資訊</p>
+          <div className="flex gap-1 p-1 bg-stone-100 rounded-lg mb-3">
+            {(['橫式','直式'] as const).map((t, ti) => (
+              <button key={t} onClick={() => set('_layoutTab' as any, ti)}
+                className={`flex-1 py-1 rounded-md text-xs font-medium transition-colors ${layoutTab === ti ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400'}`}>
+                {t}
               </button>
             ))}
           </div>
-          {e.registrationQrMode === 'auto' ? (
-            <div className="flex items-center gap-2">
-              <img src={QR_API(SITE_URL, 80)} alt="" className="w-14 h-14 rounded-lg border border-stone-200" />
-              <span className="text-xs text-stone-400 leading-relaxed">自動依平台網址<br/>生成 QR Code</span>
-            </div>
+          <DensityPresets active={mainPreset} onPick={pickMainPreset} />
+          {layoutTab === 0 ? (
+            <>
+              <FontSlider label="主標題" val={e.titleFontSize} min={16} max={48} onChange={v => set('titleFontSize', v)} />
+              <FontSlider label="副標題" val={e.subtitleFontSize} min={14} max={40} onChange={v => set('subtitleFontSize', v)} />
+              <FontSlider label="月份數字" val={e.monthFontSize} min={32} max={96} onChange={v => set('monthFontSize', v)} />
+            </>
           ) : (
             <>
-              <label className="flex items-center gap-2 border border-dashed border-stone-300 hover:border-orange-300 rounded-lg py-2 px-3 cursor-pointer transition-colors text-xs text-stone-500">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                {e.registrationQrUpload ? '已上傳，點擊替換' : '上傳報名 QR'}
-                <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload('registrationQrUpload')} />
-              </label>
-              {e.registrationQrUpload && (
-                <div className="mt-2 flex items-center gap-2">
-                  <img src={e.registrationQrUpload} alt="" className="w-14 h-14 object-contain rounded-lg border border-stone-200" />
-                  <button onClick={() => set('registrationQrUpload', '')} className="text-xs text-red-400 hover:text-red-600">移除</button>
-                </div>
-              )}
+              <FontSlider label="主標題" val={e.pTitleFontSize} min={12} max={36} onChange={v => set('pTitleFontSize', v)} />
+              <FontSlider label="副標題" val={e.pSubtitleFontSize} min={10} max={30} onChange={v => set('pSubtitleFontSize', v)} />
+              <FontSlider label="月份數字" val={e.pMonthFontSize} min={20} max={60} onChange={v => set('pMonthFontSize', v)} />
+              <FontSlider label="QR 大小" val={e.pQrSize} min={50} max={120} onChange={v => set('pQrSize', v)} />
+              <FontSlider label="左欄高度 %" val={e.pLeftWidth} min={20} max={60} onChange={v => set('pLeftWidth', v)} />
+              <FontSlider label="月份→文案間距" val={e.pGapMonth} min={0} max={40} onChange={v => set('pGapMonth', v)} />
             </>
           )}
         </div>
-          <div>
-            <p className="text-xs text-stone-400 mb-1.5">社群 QR Code</p>
-            <label className="flex items-center gap-2 border border-dashed border-stone-300 hover:border-orange-300 rounded-lg py-2 px-3 cursor-pointer transition-colors text-xs text-stone-500">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              {e.communityQr ? '已上傳，點擊替換' : '上傳社群QR'}
-              <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload('communityQr')} />
-            </label>
-            {e.communityQr && <img src={e.communityQr} alt="" className="mt-2 w-14 h-14 object-contain rounded-lg border border-stone-200" />}
+
+        <div>
+          <p className="text-[13px] font-bold text-stone-400 mb-1">3. 課程資訊字級</p>
+          <p className="text-[11px] text-stone-400 mb-2">表格內各欄位文字</p>
+          <div className="flex gap-1 p-1 bg-stone-100 rounded-lg mb-3">
+            {(['橫式','直式'] as const).map((t, ti) => (
+              <button key={t} onClick={() => set('_courseLayoutTab' as any, ti)}
+                className={`flex-1 py-1 rounded-md text-xs font-medium transition-colors ${courseLayoutTab === ti ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400'}`}>
+                {t}
+              </button>
+            ))}
+          </div>
+          <DensityPresets active={coursePreset} onPick={pickCoursePreset} />
+          {courseLayoutTab === 0 ? (
+            <>
+              <FontSlider label="日期" val={e.courseDateFontSize} min={10} max={24} onChange={v => set('courseDateFontSize', v)} />
+              <FontSlider label="時間" val={e.courseTimeFontSize} min={9} max={20} onChange={v => set('courseTimeFontSize', v)} />
+              <FontSlider label="活動名稱" val={e.courseTitleFontSize} min={10} max={22} onChange={v => set('courseTitleFontSize', v)} />
+              <FontSlider label="授課講師" val={e.courseInstructorFontSize} min={8} max={18} onChange={v => set('courseInstructorFontSize', v)} />
+              <FontSlider label="地點" val={e.courseLocationFontSize} min={8} max={18} onChange={v => set('courseLocationFontSize', v)} />
+              <FontSlider label="費用" val={e.courseFeeFontSize} min={9} max={20} onChange={v => set('courseFeeFontSize', v)} />
+            </>
+          ) : (
+            <>
+              <FontSlider label="日期" val={e.pCourseDateFontSize} min={9} max={20} onChange={v => set('pCourseDateFontSize', v)} />
+              <FontSlider label="時間" val={e.pCourseTimeFontSize} min={8} max={18} onChange={v => set('pCourseTimeFontSize', v)} />
+              <FontSlider label="活動名稱" val={e.pCourseTitleFontSize} min={9} max={20} onChange={v => set('pCourseTitleFontSize', v)} />
+              <FontSlider label="授課講師" val={e.pCourseInstructorFontSize} min={7} max={16} onChange={v => set('pCourseInstructorFontSize', v)} />
+              <FontSlider label="地點" val={e.pCourseLocationFontSize} min={7} max={16} onChange={v => set('pCourseLocationFontSize', v)} />
+              <FontSlider label="費用" val={e.pCourseFeeFontSize} min={8} max={18} onChange={v => set('pCourseFeeFontSize', v)} />
+            </>
+          )}
+        </div>
+
+        <div>
+          <p className="text-[13px] font-bold text-stone-400 mb-3">4. 間距</p>
+          {[
+            { key:'gapTitleToQr' as const, label:'標題 → QR Code', val:e.gapTitleToQr, min:0, max:60 },
+            { key:'gapQrToContact' as const, label:'QR Code → 聯繫資訊', val:e.gapQrToContact, min:0, max:40 },
+          ].map(f => (
+            <div key={f.key} className="mb-3">
+              <label className="text-xs text-stone-400">{f.label} {f.val}px</label>
+              <input type="range" min={f.min} max={f.max} step="2" value={f.val}
+                onChange={ev => set(f.key, parseInt(ev.target.value))} className="w-full accent-orange-500" />
+            </div>
+          ))}
+        </div>
+      </>)}
+
+      {/* ══════════ 色彩 Tab ══════════ */}
+      {activeTab === '色彩' && (<>
+        <div>
+          <p className="text-[13px] font-bold text-stone-400 mb-3">1. 顏色</p>
+          <div className="space-y-2.5">
+            {[
+              { key:'accentColor', label:'主題色' }, { key:'brandBgColor', label:'頂部品牌列底色' },
+              { key:'leftBgColor', label:'左欄底色' }, { key:'rightBgColor', label:'右欄底色' },
+              { key:'footerBgColor', label:'底部背景' }, { key:'footerTextColor', label:'底部文字' },
+            ].map(f => (
+              <ColorPicker key={f.key} label={f.label} value={(e as any)[f.key]}
+                onChange={v => set(f.key as keyof EditorState, v)} />
+            ))}
           </div>
         </div>
-      </div>
 
-      {/* 夥伴 */}
-      <div>
-        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">合作夥伴</p>
-        <div className="space-y-4">
-          {([
-            { logoKey:'logo1' as const, nameKey:'logo1Name' as const, label:'1' },
-            { logoKey:'logo2' as const, nameKey:'logo2Name' as const, label:'2' },
-            { logoKey:'logo3' as const, nameKey:'logo3Name' as const, label:'3' },
-          ]).map(f => (
-            <div key={f.logoKey}>
-              <label className="block text-xs text-stone-400 mb-1">夥伴 {f.label}</label>
-              <input value={e[f.nameKey]} onChange={ev => set(f.nameKey, ev.target.value)}
-                className="w-full border border-stone-200 rounded-lg px-3 py-1.5 text-xs text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300 mb-1.5" />
-              <label className="flex items-center gap-1.5 border border-dashed border-stone-300 hover:border-orange-300 rounded-lg py-1.5 px-3 cursor-pointer transition-colors text-xs text-stone-500">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                {e[f.logoKey] ? '已上傳' : '上傳 Logo'}
-                <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload(f.logoKey)} />
-              </label>
-              {e[f.logoKey] && (
-                <div className="mt-1.5 flex items-center gap-2">
-                  <img src={e[f.logoKey]} alt="" className="h-7 w-auto object-contain rounded border border-stone-200" />
-                  <button onClick={() => set(f.logoKey,'')} className="text-xs text-red-400 hover:text-red-600">移除</button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 聯繫 */}
-      <div>
-        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">聯繫資訊</p>
-        <div className="space-y-2">
+        <div>
+          <p className="text-[13px] font-bold text-stone-400 mb-3">2. 欄位透明度</p>
           {[
-            { key:'phone' as const, label:'電話' },
-            { key:'contact' as const, label:'聯絡窗口' },
-            { key:'hours' as const, label:'服務時間' },
+            { key:'leftBgOpacity' as const, label:'左欄', val:e.leftBgOpacity },
+            { key:'rightBgOpacity' as const, label:'右欄', val:e.rightBgOpacity },
           ].map(f => (
-            <div key={f.key}>
-              <label className="block text-xs text-stone-400 mb-1">{f.label}</label>
-              <input value={e[f.key]} onChange={ev => set(f.key, ev.target.value)}
-                className="w-full border border-stone-200 rounded-lg px-3 py-1.5 text-xs text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300" />
+            <div key={f.key} className="mb-3">
+              <label className="text-xs text-stone-400">{f.label} {Math.round(f.val*100)}%</label>
+              <input type="range" min="0" max="1" step="0.05" value={f.val}
+                onChange={ev => set(f.key, parseFloat(ev.target.value))} className="w-full accent-orange-500" />
             </div>
           ))}
         </div>
+
+        <div>
+          <p className="text-[13px] font-bold text-stone-400 mb-3">3. 左欄 Pattern</p>
+          <div className="relative mb-3">
+            <select value={e.patternType} onChange={ev => set('patternType', ev.target.value as PatternType)}
+              className="w-full appearance-none border border-stone-200 rounded-lg pl-3 pr-9 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300">
+              <option value="none">無</option><option value="dots">圓點</option><option value="lines">斜線</option>
+              <option value="grid">網格</option><option value="waves">波浪</option><option value="diamonds">菱形</option>
+            </select>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          {e.patternType !== 'none' && (
+            <div>
+              <label className="text-xs text-stone-400">濃度 {Math.round(e.patternOpacity*100)}%</label>
+              <input type="range" min="0.02" max="0.5" step="0.02" value={e.patternOpacity}
+                onChange={ev => set('patternOpacity', parseFloat(ev.target.value))} className="w-full accent-orange-500" />
+            </div>
+          )}
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[13px] font-bold text-stone-400">4. 左欄漸層</p>
+            <button onClick={() => set('gradientEnabled', !e.gradientEnabled)}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${e.gradientEnabled?'bg-orange-500':'bg-stone-200'}`}>
+              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${e.gradientEnabled?'translate-x-5':'translate-x-0.5'}`} />
+            </button>
+          </div>
+          {e.gradientEnabled && (
+            <div className="space-y-2.5">
+              <div className="flex gap-2">
+                {([['to-b','上到下'],['to-r','左到右'],['to-br','斜角']] as const).map(([v,label]) => (
+                  <button key={v} onClick={() => set('gradientDir', v)}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${e.gradientDir===v?'bg-orange-500 text-white border-orange-500':'text-stone-600 border-stone-200 hover:border-orange-300'}`}>{label}</button>
+                ))}
+              </div>
+              <ColorPicker label="起始色" value={e.gradientFrom} onChange={v => set('gradientFrom', v)} />
+              <ColorPicker label="結束色" value={e.gradientTo} onChange={v => set('gradientTo', v)} />
+              <div>
+                <label className="text-xs text-stone-400">強度 {Math.round(e.gradientOpacity*100)}%</label>
+                <input type="range" min="0.1" max="1" step="0.05" value={e.gradientOpacity}
+                  onChange={ev => set('gradientOpacity', parseFloat(ev.target.value))} className="w-full accent-orange-500" />
+              </div>
+            </div>
+          )}
+        </div>
+      </>)}
+
+      {/* ══════════ 圖片 Tab ══════════ */}
+      {activeTab === '圖片' && (<>
+        <div>
+          <p className="text-[13px] font-bold text-stone-400 mb-3">1. 底圖</p>
+          <label className="flex items-center gap-2 w-full border border-dashed border-stone-300 hover:border-orange-300 rounded-lg py-2.5 px-3 cursor-pointer transition-colors text-sm text-stone-500">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            {e.bgImage ? '已上傳，點擊替換' : '上傳底圖'}
+            <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload('bgImage')} />
+          </label>
+          {e.bgImage && <img src={e.bgImage} alt="" className="mt-2 w-full h-14 object-cover rounded-lg border border-stone-200" />}
+          <div className="mt-2.5">
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs text-stone-400">透明度 {Math.round(e.bgOpacity*100)}%</label>
+              {e.bgImage && <button onClick={() => set('bgImage','')} className="text-xs text-red-400 hover:text-red-600">移除</button>}
+            </div>
+            <input type="range" min="0" max="1" step="0.05" value={e.bgOpacity}
+              onChange={ev => set('bgOpacity', parseFloat(ev.target.value))} className="w-full accent-orange-500" />
+          </div>
+          <div className="mt-3 space-y-3">
+            <div>
+              <p className="text-xs text-stone-500 font-medium mb-1.5">橫式位置</p>
+              <BgCropPicker imgSrc={e.bgImage} posX={e.bgPositionX} posY={e.bgPositionY} isLandscape={true}
+                onChange={(x, y) => { setEditor(prev => ({ ...prev, bgPositionX: x, bgPositionY: y })) }} />
+            </div>
+            <div>
+              <p className="text-xs text-stone-500 font-medium mb-1.5">直式位置</p>
+              <BgCropPicker imgSrc={e.bgImage} posX={e.bgPositionXP} posY={e.bgPositionYP} isLandscape={false}
+                onChange={(x, y) => { setEditor(prev => ({ ...prev, bgPositionXP: x, bgPositionYP: y })) }} />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[13px] font-bold text-stone-400 mb-3">2. QR Code</p>
+          <div className="space-y-3">
+            <div>
+            <p className="text-xs text-stone-500 font-medium mb-2">報名 QR</p>
+            <div className="flex gap-1 p-0.5 bg-stone-100 rounded-lg mb-2.5">
+              {([['auto','自動生成'] as const, ['upload','手動上傳'] as const]).map(([v, label]) => (
+                <button key={v} onClick={() => set('registrationQrMode', v)}
+                  className={`flex-1 py-1 rounded-md text-xs font-medium transition-colors ${e.registrationQrMode === v ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {e.registrationQrMode === 'auto' ? (
+              <div className="flex items-center gap-2">
+                <img src={QR_API(SITE_URL, 80)} alt="" className="w-14 h-14 rounded-lg border border-stone-200" />
+                <span className="text-xs text-stone-400 leading-relaxed">自動依平台網址<br/>生成 QR Code</span>
+              </div>
+            ) : (
+              <>
+                <label className="flex items-center gap-2 border border-dashed border-stone-300 hover:border-orange-300 rounded-lg py-2 px-3 cursor-pointer transition-colors text-xs text-stone-500">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  {e.registrationQrUpload ? '已上傳，點擊替換' : '上傳報名 QR'}
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload('registrationQrUpload')} />
+                </label>
+                {e.registrationQrUpload && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <img src={e.registrationQrUpload} alt="" className="w-14 h-14 object-contain rounded-lg border border-stone-200" />
+                    <button onClick={() => set('registrationQrUpload', '')} className="text-xs text-red-400 hover:text-red-600">移除</button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+            <div>
+              <p className="text-xs text-stone-400 mb-1.5">社群 QR Code</p>
+              <label className="flex items-center gap-2 border border-dashed border-stone-300 hover:border-orange-300 rounded-lg py-2 px-3 cursor-pointer transition-colors text-xs text-stone-500">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                {e.communityQr ? '已上傳，點擊替換' : '上傳社群QR'}
+                <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload('communityQr')} />
+              </label>
+              {e.communityQr && <img src={e.communityQr} alt="" className="mt-2 w-14 h-14 object-contain rounded-lg border border-stone-200" />}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[13px] font-bold text-stone-400 mb-3">3. 合作夥伴</p>
+          <div className="space-y-4">
+            {([
+              { logoKey:'logo1' as const, nameKey:'logo1Name' as const, label:'1' },
+              { logoKey:'logo2' as const, nameKey:'logo2Name' as const, label:'2' },
+              { logoKey:'logo3' as const, nameKey:'logo3Name' as const, label:'3' },
+            ]).map(f => (
+              <div key={f.logoKey}>
+                <label className="block text-xs text-stone-400 mb-1">夥伴 {f.label}</label>
+                <input value={e[f.nameKey]} onChange={ev => set(f.nameKey, ev.target.value)}
+                  className="w-full border border-stone-200 rounded-lg px-3 py-1.5 text-xs text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300 mb-1.5" />
+                <label className="flex items-center gap-1.5 border border-dashed border-stone-300 hover:border-orange-300 rounded-lg py-1.5 px-3 cursor-pointer transition-colors text-xs text-stone-500">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  {e[f.logoKey] ? '已上傳' : '上傳 Logo'}
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload(f.logoKey)} />
+                </label>
+                {e[f.logoKey] && (
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <img src={e[f.logoKey]} alt="" className="h-7 w-auto object-contain rounded border border-stone-200" />
+                    <button onClick={() => set(f.logoKey,'')} className="text-xs text-red-400 hover:text-red-600">移除</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </>)}
+
+      {/* ══════════ 資訊 Tab ══════════ */}
+      {activeTab === '資訊' && (<>
+        <div>
+          <p className="text-[13px] font-bold text-stone-400 mb-3">1. 聯繫資訊</p>
+          <div className="space-y-2">
+            {[
+              { key:'phone' as const, label:'電話' },
+              { key:'contact' as const, label:'聯絡窗口' },
+              { key:'hours' as const, label:'服務時間' },
+            ].map(f => (
+              <div key={f.key}>
+                <label className="block text-xs text-stone-400 mb-1">{f.label}</label>
+                <input value={e[f.key]} onChange={ev => set(f.key, ev.target.value)}
+                  className="w-full border border-stone-200 rounded-lg px-3 py-1.5 text-xs text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="border-t border-stone-200 pt-4">
+          <p className="text-xs text-stone-400 leading-relaxed">
+            * 聯繫資訊將會自動呈現在直式及橫式海報的最底部區塊。您可以隨時返回此分頁進行文字調整。
+          </p>
+        </div>
+      </>)}
+
       </div>
     </div>
   )
@@ -997,8 +935,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
   const [savedOk, setSavedOk] = useState(false)
   const [editor, setEditor] = useState<EditorState>(DEFAULT_EDITOR)
   const [showMobilePanel, setShowMobilePanel] = useState(false)
-  const downloadRefL = useRef<HTMLDivElement>(null)
-  const downloadRefP = useRef<HTMLDivElement>(null)
+  const [activePanelTab, setActivePanelTab] = useState<PanelTab>('文字')
   const previewRef = useRef<HTMLDivElement>(null)
 
   // 外部（後台頁面頂部的「匯出」選單）觸發：signal 每變一次就跳去月份選擇畫面，
@@ -1066,6 +1003,18 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
       pQrSize: parseInt(ss.schedule_p_qr_size||'') || 80,
       pLeftWidth: parseInt(ss.schedule_p_left_width||'') || 52,
       pGapMonth: parseInt(ss.schedule_p_gap_month||'') || 8,
+      courseDateFontSize: parseInt(ss.schedule_course_date_fs||'') || 16,
+      courseTimeFontSize: parseInt(ss.schedule_course_time_fs||'') || 13,
+      courseTitleFontSize: parseInt(ss.schedule_course_title_fs||'') || 14,
+      courseInstructorFontSize: parseInt(ss.schedule_course_instructor_fs||'') || 12,
+      courseLocationFontSize: parseInt(ss.schedule_course_location_fs||'') || 12,
+      courseFeeFontSize: parseInt(ss.schedule_course_fee_fs||'') || 13,
+      pCourseDateFontSize: parseInt(ss.schedule_p_course_date_fs||'') || 14,
+      pCourseTimeFontSize: parseInt(ss.schedule_p_course_time_fs||'') || 12,
+      pCourseTitleFontSize: parseInt(ss.schedule_p_course_title_fs||'') || 13,
+      pCourseInstructorFontSize: parseInt(ss.schedule_p_course_instructor_fs||'') || 11,
+      pCourseLocationFontSize: parseInt(ss.schedule_p_course_location_fs||'') || 11,
+      pCourseFeeFontSize: parseInt(ss.schedule_p_course_fee_fs||'') || 12,
     }))
   }
 
@@ -1119,6 +1068,18 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
       schedule_p_qr_size: String(editor.pQrSize),
       schedule_p_left_width: String(editor.pLeftWidth),
       schedule_p_gap_month: String(editor.pGapMonth),
+      schedule_course_date_fs: String(editor.courseDateFontSize),
+      schedule_course_time_fs: String(editor.courseTimeFontSize),
+      schedule_course_title_fs: String(editor.courseTitleFontSize),
+      schedule_course_instructor_fs: String(editor.courseInstructorFontSize),
+      schedule_course_location_fs: String(editor.courseLocationFontSize),
+      schedule_course_fee_fs: String(editor.courseFeeFontSize),
+      schedule_p_course_date_fs: String(editor.pCourseDateFontSize),
+      schedule_p_course_time_fs: String(editor.pCourseTimeFontSize),
+      schedule_p_course_title_fs: String(editor.pCourseTitleFontSize),
+      schedule_p_course_instructor_fs: String(editor.pCourseInstructorFontSize),
+      schedule_p_course_location_fs: String(editor.pCourseLocationFontSize),
+      schedule_p_course_fee_fs: String(editor.pCourseFeeFontSize),
     }
 
     const raw = localStorage.getItem('admin_auth')
@@ -1463,28 +1424,35 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
       const course = pageCourses[i]
       const { month: cm, day, weekday } = toROC(course.date)
       const cy = rowY + ROW_H / 2
+      const fsDate = isLandscape ? e.courseDateFontSize : e.pCourseDateFontSize
+      const fsTime = isLandscape ? e.courseTimeFontSize : e.pCourseTimeFontSize
+      const fsTitle = isLandscape ? e.courseTitleFontSize : e.pCourseTitleFontSize
+      const fsInstructor = isLandscape ? e.courseInstructorFontSize : e.pCourseInstructorFontSize
+      const fsLocation = isLandscape ? e.courseLocationFontSize : e.pCourseLocationFontSize
+      const fsFee = isLandscape ? e.courseFeeFontSize : e.pCourseFeeFontSize
+      const fsAge = Math.max(9, fsLocation - 1)
 
       for (let ci = 0; ci < colsWithX.length; ci++) {
         const col = colsWithX[ci]
         ctx.textAlign = 'center'
 
         if (ci === 0) {
-          ctx.font = font(16, 800); ctx.fillStyle = '#18120a'
+          ctx.font = font(fsDate, 800); ctx.fillStyle = '#18120a'
           ctx.fillText(`${cm}/${day}`, col.x + col.w/2, cy - 2)
-          ctx.font = font(12, 800); ctx.fillStyle = e.accentColor
+          ctx.font = font(Math.max(9, fsDate - 4), 800); ctx.fillStyle = e.accentColor
           ctx.fillText(weekday, col.x + col.w/2, cy + 14)
         } else if (ci === 1) {
-          ctx.font = font(13, 700); ctx.fillStyle = '#18120a'
+          ctx.font = font(fsTime, 700); ctx.fillStyle = '#18120a'
           ctx.fillText(course.time_start?.slice(0,5) || '', col.x + col.w/2, cy - 4)
-          ctx.font = font(10, 400); ctx.fillStyle = hexToRgba(e.accentColor, 0.5)
+          ctx.font = font(Math.max(8, fsTime - 3), 400); ctx.fillStyle = hexToRgba(e.accentColor, 0.5)
           ctx.fillText('|', col.x + col.w/2, cy + 6)
-          ctx.font = font(13, 700); ctx.fillStyle = '#18120a'
+          ctx.font = font(fsTime, 700); ctx.fillStyle = '#18120a'
           ctx.fillText(course.time_end?.slice(0,5) || '', col.x + col.w/2, cy + 17)
         } else if (ci === 2) {
-          ctx.font = font(14, 700); ctx.fillStyle = '#18120a'
+          ctx.font = font(fsTitle, 700); ctx.fillStyle = '#18120a'
           ctx.textAlign = 'center'
           const lines = wrapText(ctx, course.title, col.w - 12)
-          const lineH = 18
+          const lineH = Math.round(fsTitle * 1.28)
           const startY = cy - ((lines.length - 1) * lineH) / 2
           lines.slice(0, 2).forEach((line, li) => {
             ctx.fillText(line, col.x + col.w/2, startY + li * lineH)
@@ -1492,22 +1460,22 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         } else if (ci === 3) {
           const instructorText = course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name || ''
           if (instructorText) {
-            ctx.font = font(12, 700); ctx.fillStyle = e.accentColor
+            ctx.font = font(fsInstructor, 700); ctx.fillStyle = e.accentColor
             ctx.fillText(instructorText, col.x + col.w/2, cy + 5)
           }
         } else if (ci === 4) {
-          ctx.font = font(12, 400); ctx.fillStyle = '#374151'
+          ctx.font = font(fsLocation, 400); ctx.fillStyle = '#374151'
           const lines = wrapText(ctx, course.location, col.w - 8)
-          const lineH = 16
+          const lineH = Math.round(fsLocation * 1.33)
           const startY = cy - ((lines.length - 1) * lineH) / 2
           lines.slice(0, 2).forEach((line, li) => {
             ctx.fillText(line, col.x + col.w/2, startY + 5 + li * lineH)
           })
         } else if (ci === 5) {
-          ctx.font = font(11, 400); ctx.fillStyle = '#374151'
+          ctx.font = font(fsAge, 400); ctx.fillStyle = '#374151'
           ctx.fillText(course.suitable_age || '全年齡', col.x + col.w/2, cy + 5)
         } else if (ci === 6) {
-          ctx.font = font(13, 800); ctx.fillStyle = e.accentColor
+          ctx.font = font(fsFee, 800); ctx.fillStyle = e.accentColor
           ctx.fillText('免費', col.x + col.w/2, cy + 5)
         }
         ctx.textAlign = 'left'
@@ -1715,10 +1683,10 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
 
       <div className="flex flex-1" style={{ overflow: 'hidden', minHeight: 0 }}>
         <div
-          className="hidden md:block w-64 bg-white border-r border-stone-200"
-          style={{ overflowY: 'auto', flex: '0 0 256px', alignSelf: 'stretch' }}
+          className="hidden md:flex md:flex-col w-64 bg-white border-r border-stone-200"
+          style={{ flex: '0 0 256px', alignSelf: 'stretch', minHeight: 0 }}
         >
-          <PanelContent editor={editor} set={set} setEditor={setEditor} handleImgUpload={handleImgUpload} />
+          <PanelContent editor={editor} set={set} setEditor={setEditor} handleImgUpload={handleImgUpload} activeTab={activePanelTab} setActiveTab={setActivePanelTab} />
         </div>
         <div className="flex-1 overflow-auto p-4 md:p-6 flex items-start justify-center bg-stone-100">
           <div className="flex flex-col items-center gap-3">
@@ -1737,20 +1705,25 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         </div>
       </div>
 
-    
-
-      {/* 手機抽屜 */}
+      {/* 手機底部抽屜（Bottom Sheet） */}
       {showMobilePanel && (
-        <div className="fixed inset-0 z-[60] flex">
-          <div className="flex-1 bg-black/40" onClick={() => setShowMobilePanel(false)} />
-          <div className="w-80 bg-white overflow-y-auto flex flex-col shadow-2xl">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-stone-200 sticky top-0 bg-white z-10">
-              <span className="font-bold text-stone-700">編輯設定</span>
-              <button onClick={() => setShowMobilePanel(false)} className="p-2 hover:bg-stone-100 rounded-xl">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <div className="fixed inset-0 z-[60] flex flex-col justify-end md:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowMobilePanel(false)} />
+          <div className="relative bg-white rounded-t-3xl shadow-2xl flex flex-col overflow-hidden" style={{ maxHeight: '78vh' }}>
+            <div className="flex items-center justify-center pt-2 pb-1 shrink-0">
+              <div className="w-9 h-1 rounded-full bg-stone-200" />
+            </div>
+            <PanelContent editor={editor} set={set} setEditor={setEditor} handleImgUpload={handleImgUpload} activeTab={activePanelTab} setActiveTab={setActivePanelTab} />
+            <div className="flex gap-3 px-4 pt-3 pb-4 border-t border-stone-200 shrink-0">
+              <button onClick={saveSettings} disabled={saving}
+                className="flex-1 flex items-center justify-center gap-1.5 bg-orange-50 border-[1.5px] border-orange-500 text-orange-600 font-bold py-2.5 rounded-xl text-sm">
+                {saving ? <div className="w-3.5 h-3.5 border-2 border-orange-400/40 border-t-orange-600 rounded-full animate-spin" /> : (savedOk ? '已儲存' : '儲存設定')}
+              </button>
+              <button onClick={() => setShowDownloadModal(true)} disabled={downloading}
+                className="flex-1 flex items-center justify-center gap-1.5 bg-orange-500 text-white font-bold py-2.5 rounded-xl text-sm">
+                下載
               </button>
             </div>
-            <PanelContent editor={editor} set={set} setEditor={setEditor} handleImgUpload={handleImgUpload} />
           </div>
         </div>
       )}
