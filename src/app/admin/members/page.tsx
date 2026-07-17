@@ -501,6 +501,8 @@ export default function MembersPage() {
         )}
       </div>
 
+      {!selectedMemberForChart && (
+      <>
       <div className="flex flex-wrap gap-3 mb-6">
         {tagLegend.map(t => (
           <div key={t.label} className="flex items-center gap-1.5 text-xs">
@@ -565,6 +567,8 @@ export default function MembersPage() {
           )
         })}
       </div>
+      </>
+      )}
 
       {/* 課程記錄彈窗 */}
       {historyMember && (
