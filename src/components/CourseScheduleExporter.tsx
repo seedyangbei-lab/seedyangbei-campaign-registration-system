@@ -16,6 +16,8 @@ interface Course {
 interface Props {
   courses: Course[]
   scheduleSettings: Record<string, string>
+  hideTrigger?: boolean
+  openSignal?: number
 }
 
 const WEEKDAYS = ['日','一','二','三','四','五','六']
@@ -983,7 +985,7 @@ const e = editor
 // ═══════════════════════════════════════════════════════════════════
 // 主元件
 // ═══════════════════════════════════════════════════════════════════
-export default function CourseScheduleExporter({ courses, scheduleSettings: ss }: Props) {
+export default function CourseScheduleExporter({ courses, scheduleSettings: ss, hideTrigger, openSignal }: Props) {
   const [step, setStep] = useState<'idle'|'config'|'editor'>('idle')
   const [selectedMonth, setSelectedMonth] = useState('')
   const [rowsPerPage, setRowsPerPage] = useState(4)
@@ -998,6 +1000,13 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
   const downloadRefL = useRef<HTMLDivElement>(null)
   const downloadRefP = useRef<HTMLDivElement>(null)
   const previewRef = useRef<HTMLDivElement>(null)
+
+  // 外部（後台頁面頂部的「匯出」選單）觸發：signal 每變一次就跳去月份選擇畫面，
+  // 不用在這個元件裡再顯示一顆自己的觸發按鈕
+  useEffect(() => {
+    if (openSignal) setStep('config')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openSignal])
   const supabase = createClient()
 
   const set = useCallback((key: keyof EditorState, val: any) =>
@@ -1599,7 +1608,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss }
 
   const reset = () => { setStep('idle'); setCurrentPage(0) }
 
-  if (step === 'idle') return (
+  if (step === 'idle') return hideTrigger ? null : (
     <button onClick={() => setStep('config')} className="flex items-center gap-2 bg-white border border-stone-200 hover:bg-stone-50 text-stone-700 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       匯出課表

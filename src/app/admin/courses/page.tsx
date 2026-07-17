@@ -51,6 +51,11 @@ export default function CoursesPage() {
   const [reportDeadlineDays, setReportDeadlineDays] = useState(7)
   const [exportingReportId, setExportingReportId] = useState<string | null>(null)
   const [batchExporting, setBatchExporting] = useState(false)
+  const [exportMenuOpen, setExportMenuOpen] = useState(false)
+  const [mobileActionsOpen, setMobileActionsOpen] = useState(false)
+  const [scheduleExportSignal, setScheduleExportSignal] = useState(0)
+  const [reportExportModalOpen, setReportExportModalOpen] = useState(false)
+  const [reportExportMonth, setReportExportMonth] = useState('')
   const supabase = createClient()
   const router = useRouter()
 
@@ -190,20 +195,21 @@ export default function CoursesPage() {
     }
   }
 
-  const handleBatchExportReports = async () => {
-    const target = endedCourses.filter((c: any) => (filterMonth ? c.date?.startsWith(filterMonth) : true) && c.report_status === 'submitted')
-    if (target.length === 0) { alert('目前篩選範圍內沒有已提交的成果報告可以匯出'); return }
+  const handleBatchExportReports = async (month: string) => {
+    const target = endedCourses.filter((c: any) => (month ? c.date?.startsWith(month) : true) && c.report_status === 'submitted')
+    if (target.length === 0) { alert('該範圍內沒有已提交的成果報告可以匯出'); return }
     setBatchExporting(true)
     try {
       const { exportBatchCourseReports } = await import('@/lib/exportCourseReport')
       const exportables = target.map(buildExportableReport).filter(Boolean) as ExportableReport[]
-      const zipName = filterMonth ? `${filterMonth}成果報告` : '全部成果報告'
+      const zipName = month ? `${month}成果報告` : '全部成果報告'
       const { failedPhotoCount } = await exportBatchCourseReports(exportables, zipName)
       alert(`已匯出 ${exportables.length} 堂課的成果報告${failedPhotoCount > 0 ? `，其中 ${failedPhotoCount} 張照片下載失敗（可能是網路問題）` : ''}`)
     } catch (e: any) {
       alert('匯出失敗：' + (e?.message || '請稍後再試'))
     } finally {
       setBatchExporting(false)
+      setReportExportModalOpen(false)
     }
   }
 
@@ -299,10 +305,7 @@ export default function CoursesPage() {
   const secondaryBtnCls = "bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 p-2 rounded-md text-xs font-medium transition-colors whitespace-nowrap"
   const openAddCat = () => { setEditCat(null); setCatForm({ name: '', color: '#e11d48' }); setShowCatModal(true) }
   const headerActions = mainTab === 'courses' ? (
-    <>
-      <button onClick={openAdd} className={primaryBtnCls}>新增課程</button>
-      <button onClick={() => setMainTab('categories')} className={secondaryBtnCls}>課程類別</button>
-    </>
+    <button onClick={openAdd} className={primaryBtnCls}>新增課程</button>
   ) : (
     <>
       <button onClick={() => setMainTab('courses')} className={secondaryBtnCls}>課程列表</button>
@@ -327,7 +330,7 @@ export default function CoursesPage() {
     <div className="p-6 md:p-8">
       {/* 標題 + 按鈕同一列，底部一條分隔線 */}
       <div className="flex items-center justify-between mb-4 pb-4 border-b border-stone-200 gap-2">
-        <h2 className="text-stone-600 text-[26px] leading-7 font-bold">課程管理</h2>
+        <h2 className="text-stone-600 text-xl md:text-[26px] leading-7 font-bold">課程管理</h2>
         <div className="flex items-center gap-2">
           {headerActions}
         </div>
@@ -336,40 +339,88 @@ export default function CoursesPage() {
       {/* 課程列表 */}
       {mainTab === 'courses' && (
         <>
-          {/* 開放中/已結束 Tab + 匯出課表 同一列 */}
+          {/* 開放中/已結束 Tab + 操作（桌機：課程類別 ghost 連結 + 匯出 dropdown；手機：⋮ 更多操作選單） */}
           <div className="flex items-center justify-between mb-4 gap-2">
             {courseTabBar}
-            <CourseScheduleExporter courses={courses} scheduleSettings={scheduleSettings} />
+            <div className="flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-2">
+                <button onClick={() => setMainTab('categories')}
+                  className="text-sm font-medium text-stone-600 hover:bg-stone-50 border border-stone-300 px-4 py-2 rounded-lg transition-colors whitespace-nowrap">
+                  編輯課程類別
+                </button>
+                <div className="relative">
+                  <button onClick={() => setExportMenuOpen(o => !o)}
+                    className="flex items-center gap-1.5 text-sm font-medium text-orange-600 bg-orange-50 border border-orange-200 hover:bg-orange-100 px-4 py-2 rounded-lg transition-colors whitespace-nowrap">
+                    匯出
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
+                  {exportMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setExportMenuOpen(false)} />
+                      <div className="absolute right-0 top-full mt-2 w-44 bg-white border border-stone-200 rounded-xl shadow-lg py-1.5 z-20">
+                        <button onClick={() => { setExportMenuOpen(false); setScheduleExportSignal(s => s + 1) }}
+                          className="w-full text-left px-4 py-2.5 text-sm text-stone-600 hover:bg-stone-50 transition-colors">
+                          匯出課表
+                        </button>
+                        <button onClick={() => { setExportMenuOpen(false); setReportExportMonth(''); setReportExportModalOpen(true) }}
+                          className="w-full text-left px-4 py-2.5 text-sm text-stone-600 hover:bg-stone-50 transition-colors">
+                          匯出成果報告
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="md:hidden relative">
+                <button onClick={() => setMobileActionsOpen(o => !o)}
+                  className="flex items-center justify-center bg-white border border-stone-200 rounded-lg p-2.5">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                </button>
+                {mobileActionsOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setMobileActionsOpen(false)} />
+                    <div className="absolute right-0 top-full mt-2 w-44 bg-white border border-stone-200 rounded-xl shadow-lg py-1.5 z-20">
+                      <button onClick={() => { setMobileActionsOpen(false); setScheduleExportSignal(s => s + 1) }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-stone-600 hover:bg-stone-50 transition-colors">
+                        匯出課表
+                      </button>
+                      <button onClick={() => { setMobileActionsOpen(false); setReportExportMonth(''); setReportExportModalOpen(true) }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-stone-600 hover:bg-stone-50 transition-colors">
+                        匯出成果報告
+                      </button>
+                      <button onClick={() => { setMobileActionsOpen(false); setMainTab('categories') }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-stone-600 hover:bg-stone-50 transition-colors">
+                        課程類別管理
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
+          <CourseScheduleExporter courses={courses} scheduleSettings={scheduleSettings} hideTrigger openSignal={scheduleExportSignal} />
 
           {courseTab === 'ended' && availableMonths.length > 0 && (
             <>
-              {/* 桌機：月份篩選用按鈕列 + 批次匯出 */}
-              <div className="hidden md:flex items-center justify-between gap-2 mb-4 flex-wrap">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs text-stone-400 font-medium">篩選月份</span>
-                  <button onClick={() => setFilterMonth('')}
-                    className={`px-3 py-2 rounded-md text-xs font-medium leading-4 transition-colors ${filterMonth === '' ? 'bg-orange-500 text-white' : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-50'}`}>
-                    全部
-                  </button>
-                  {availableMonths.map(m => {
-                    const [y, mo] = m.split('-')
-                    return (
-                      <button key={m} onClick={() => setFilterMonth(m)}
-                        className={`px-3 py-2 rounded-md text-xs font-medium leading-4 transition-colors ${filterMonth === m ? 'bg-orange-500 text-white' : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-50'}`}>
-                        {y}/{parseInt(mo)}月
-                      </button>
-                    )
-                  })}
-                </div>
-                <button onClick={handleBatchExportReports} disabled={batchExporting}
-                  className="flex items-center gap-1.5 text-xs bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 px-3 py-2 rounded-md font-medium transition-colors disabled:opacity-50 whitespace-nowrap">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  {batchExporting ? '匯出中...' : `批次匯出${filterMonth ? '（此月份）' : '（全部）'}`}
+              {/* 桌機：月份篩選用按鈕列 */}
+              <div className="hidden md:flex items-center gap-2 mb-4 flex-wrap">
+                <span className="text-xs text-stone-400 font-medium">篩選月份</span>
+                <button onClick={() => setFilterMonth('')}
+                  className={`px-3 py-2 rounded-md text-xs font-medium leading-4 transition-colors ${filterMonth === '' ? 'bg-orange-500 text-white' : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-50'}`}>
+                  全部
                 </button>
+                {availableMonths.map(m => {
+                  const [y, mo] = m.split('-')
+                  return (
+                    <button key={m} onClick={() => setFilterMonth(m)}
+                      className={`px-3 py-2 rounded-md text-xs font-medium leading-4 transition-colors ${filterMonth === m ? 'bg-orange-500 text-white' : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-50'}`}>
+                      {y}/{parseInt(mo)}月
+                    </button>
+                  )
+                })}
               </div>
               {/* 手機：月份篩選改用 Dropdown */}
-              <div className="md:hidden relative mb-3">
+              <div className="md:hidden relative mb-4">
                 <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
                   className="w-full appearance-none border border-stone-300 rounded-lg pl-4 pr-10 py-2.5 text-sm font-medium text-stone-800 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300">
                   <option value="">全部</option>
@@ -380,11 +431,6 @@ export default function CoursesPage() {
                 </select>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
-              <button onClick={handleBatchExportReports} disabled={batchExporting}
-                className="md:hidden w-full flex items-center justify-center gap-1.5 text-xs bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 px-3 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 mb-4">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                {batchExporting ? '匯出中...' : `批次匯出成果報告${filterMonth ? '（此月份）' : '（全部）'}`}
-              </button>
             </>
           )}
 
@@ -881,6 +927,47 @@ export default function CoursesPage() {
                   {deadlineSaving ? '儲存中...' : '儲存新期限'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reportExportModalOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+          onClick={e => { if (e.target === e.currentTarget && !batchExporting) setReportExportModalOpen(false) }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="flex items-center justify-between p-6 border-b border-stone-200">
+              <h3 className="font-bold text-stone-800">匯出成果報告</h3>
+              <button onClick={() => setReportExportModalOpen(false)} disabled={batchExporting} className="p-2 hover:bg-stone-100 rounded-xl disabled:opacity-40">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-stone-400">選擇月份，會把該月份內所有已提交報告的課程打包成一個 zip（每堂課一個子資料夾：成果報告.pdf＋簽到表照片＋花絮照片）。</p>
+              <div>
+                <label className="text-xs font-medium text-stone-500 mb-2 block">月份</label>
+                {availableMonths.length === 0 ? <p className="text-stone-400 text-sm">目前無已結束課程</p> : (
+                  <div className="grid grid-cols-3 gap-2">
+                    <button onClick={() => setReportExportMonth('')}
+                      className={`py-2.5 rounded-lg border text-xs font-medium transition-colors ${reportExportMonth === '' ? 'bg-orange-500 text-white border-orange-500' : 'text-stone-600 border-stone-200 hover:border-orange-300'}`}>
+                      全部
+                    </button>
+                    {availableMonths.map(m => {
+                      const [y, mo] = m.split('-')
+                      return (
+                        <button key={m} onClick={() => setReportExportMonth(m)}
+                          className={`py-2.5 rounded-lg border text-xs font-medium transition-colors ${reportExportMonth === m ? 'bg-orange-500 text-white border-orange-500' : 'text-stone-600 border-stone-200 hover:border-orange-300'}`}>
+                          {y}/{parseInt(mo)}月
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+              <button onClick={() => handleBatchExportReports(reportExportMonth)} disabled={batchExporting}
+                className="w-full flex items-center justify-center gap-1.5 text-sm bg-orange-500 hover:bg-orange-600 text-white px-3 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50">
+                {batchExporting ? '匯出中...' : '開始匯出'}
+              </button>
             </div>
           </div>
         </div>
