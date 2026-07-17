@@ -144,7 +144,16 @@ function ColorPicker({ value, onChange, label }: { value: string; onChange: (v: 
   const openPicker = () => {
     if (!btnRef.current) return
     const r = btnRef.current.getBoundingClientRect()
-    setPos({ top: r.bottom + 8, left: Math.max(8, r.right - 224) })
+    const POPOVER_H = 320
+    const POPOVER_W = 224
+    const spaceBelow = window.innerHeight - r.bottom
+    const spaceAbove = r.top
+    let top = spaceBelow >= POPOVER_H + 8
+      ? r.bottom + 8
+      : (spaceAbove >= POPOVER_H + 8 ? r.top - POPOVER_H - 8 : Math.max(8, window.innerHeight - POPOVER_H - 8))
+    top = Math.min(Math.max(8, top), window.innerHeight - 8)
+    const left = Math.min(Math.max(8, r.right - POPOVER_W), window.innerWidth - POPOVER_W - 8)
+    setPos({ top, left })
     setOpen(true)
   }
 
