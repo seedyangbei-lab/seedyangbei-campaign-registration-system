@@ -145,6 +145,8 @@ interface EditorState {
   pCourseInstructorFontSize: number
   pCourseLocationFontSize: number
   pCourseFeeFontSize: number
+  leftTextColor: string
+  courseTextColor: string
 }
 
 const DEFAULT_EDITOR: EditorState = {
@@ -192,6 +194,8 @@ const DEFAULT_EDITOR: EditorState = {
   pCourseInstructorFontSize: 11,
   pCourseLocationFontSize: 11,
   pCourseFeeFontSize: 12,
+  leftTextColor: '#18120a',
+  courseTextColor: '#18120a',
 }
 
 // ── 色盤元件 ──────────────────────────────────────────────────────
@@ -395,22 +399,22 @@ function PreviewPage({
                 <div style={{ display: 'inline-flex', alignItems: 'center', marginBottom: 8, alignSelf: 'flex-start' }}>
                   <span style={{ color: e.accentColor, fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', lineHeight: 1 }}>{year} 年活動</span>
                 </div>
-                <p style={{ margin: '0 0 2px', fontSize: e.titleFontSize, fontWeight: 900, color: contrastPrimary(e.leftBgColor), lineHeight: 1.25 }}>{e.titleLine1}</p>
+                <p style={{ margin: '0 0 2px', fontSize: e.titleFontSize, fontWeight: 900, color: e.leftTextColor, lineHeight: 1.25 }}>{e.titleLine1}</p>
                 <p style={{ margin: '4px 0 8px', fontSize: e.subtitleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.25 }}>{e.titleLine2}</p>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
                   <span style={{ fontSize: e.monthFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
-                  <span style={{ fontSize: 18, fontWeight: 700, color: contrastSecondary(e.leftBgColor) }}>月份活動表</span>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: e.leftTextColor }}>月份活動表</span>
                 </div>
-                <p style={{ margin: '0 0 2px', fontSize: 12, color: contrastSecondary(e.leftBgColor), lineHeight: 1.5 }}>各項活動皆歡迎居民們踴躍報名！</p>
-                <p style={{ margin: 0, fontSize: 11, color: contrastTertiary(e.leftBgColor) }}>（數量有限，額滿為止）</p>
+                <p style={{ margin: '0 0 2px', fontSize: 12, color: e.leftTextColor, lineHeight: 1.5 }}>各項活動皆歡迎居民們踴躍報名！</p>
+                <p style={{ margin: 0, fontSize: 11, color: e.leftTextColor }}>（數量有限，額滿為止）</p>
                 <div style={{ height: e.gapTitleToQr }} />
                 <div style={{ display: 'flex', gap: 8 }}>
                   <QrBox label="活動報名" color={e.accentColor} imgSrc={e.registrationQrMode === 'upload' && e.registrationQrUpload ? e.registrationQrUpload : QR_API(SITE_URL,200)} sub="線上報名" />
-                  <QrBox label="種子社區大學" color="#06C755" imgSrc={e.communityQr} sub="加入社群" />
+                  <QrBox label="種子社區大學" color={e.accentColor} imgSrc={e.communityQr} sub="加入社群" />
                 </div>
                 <div style={{ height: e.gapQrToContact }} />
                 <div style={{ marginTop: 'auto' }}>
-                  {contactItems.map((item,i) => <ContactLine key={i} item={item} dotSize={6} color={contrastSecondary(e.leftBgColor)} />)}
+                  {contactItems.map((item,i) => <ContactLine key={i} item={item} dotSize={6} color={e.leftTextColor} />)}
                 </div>
               </div>
             )}
@@ -422,22 +426,22 @@ function PreviewPage({
                   <div style={{ display: 'inline-block', marginBottom: 6 }}>
                     <span style={{ color: e.accentColor, fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', lineHeight: 1.4 }}>{year} 年活動</span>
                   </div>
-                  <p style={{ margin: '0 0 1px', fontSize: e.pTitleFontSize, fontWeight: 900, color: contrastPrimary(e.leftBgColor), lineHeight: 1.2 }}>{e.titleLine1}</p>
+                  <p style={{ margin: '0 0 1px', fontSize: e.pTitleFontSize, fontWeight: 900, color: e.leftTextColor, lineHeight: 1.2 }}>{e.titleLine1}</p>
                   <p style={{ margin: '0 0 4px', fontSize: e.pSubtitleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.2 }}>{e.titleLine2}</p>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginBottom: e.pGapMonth }}>
                     <span style={{ fontSize: e.pMonthFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: contrastSecondary(e.leftBgColor) }}>月份活動表</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: e.leftTextColor }}>月份活動表</span>
                   </div>
                   {contactItems.map((item,i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginBottom: 2 }}>
                       <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#06C755', marginTop: 5, flexShrink: 0 }} />
-                      <span style={{ fontSize: 9, color: contrastSecondary(e.leftBgColor), lineHeight: 1.5 }}>{item}</span>
+                      <span style={{ fontSize: 9, color: e.leftTextColor, lineHeight: 1.5 }}>{item}</span>
                     </div>
                   ))}
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                  <QrBox label="活動報名" color={e.accentColor} imgSrc={e.registrationQrMode === 'upload' && e.registrationQrUpload ? e.registrationQrUpload : QR_API(SITE_URL,200)} sub="線上報名" />
-                  <QrBox label="種子社區大學" color="#06C755" imgSrc={e.communityQr} sub="加入社群" />
+                  <QrBox label="種子社區大學" color={e.accentColor} imgSrc={e.communityQr} sub="加入社群" />
                 </div>
               </div>
             )}
@@ -462,21 +466,21 @@ function PreviewPage({
                 return (
                   <div key={course.id} style={{ display: 'grid', gridTemplateColumns: gridCols, flex: 1, minHeight: 0, background: hexToRgba(e.accentColor, i%2===0 ? 0.035 : 0.11), borderBottom: `1px solid ${e.accentColor}18`, alignItems: 'center' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', gap: 4 }}>
-                      <span style={{ fontSize: fsDate, fontWeight: 800, color: '#18120a', lineHeight: 1 }}>{cm}/{day}</span>
-                      <span style={{ fontWeight: 800, fontSize: Math.max(9, fsDate - 3), color: e.accentColor, lineHeight: 1 }}>{weekday}</span>
+                      <span style={{ fontSize: fsDate, fontWeight: 800, color: e.courseTextColor, lineHeight: 1 }}>{cm}/{day}</span>
+                      <span style={{ fontWeight: 800, fontSize: Math.max(9, fsDate - 3), color: e.courseTextColor, lineHeight: 1 }}>{weekday}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', gap: 1 }}>
-                      <span style={{ fontSize: fsTime, fontWeight: 700, color: '#18120a', lineHeight: 1 }}>{course.time_start?.slice(0,5)}</span>
-                      <span style={{ fontSize: Math.max(8, fsTime - 3), color: `${e.accentColor}80`, lineHeight: 1.2 }}>|</span>
-                      <span style={{ fontSize: fsTime, fontWeight: 700, color: '#18120a', lineHeight: 1 }}>{course.time_end?.slice(0,5)}</span>
+                      <span style={{ fontSize: fsTime, fontWeight: 700, color: e.courseTextColor, lineHeight: 1 }}>{course.time_start?.slice(0,5)}</span>
+                      <span style={{ fontSize: Math.max(8, fsTime - 3), color: hexToRgba(e.courseTextColor, 0.55), lineHeight: 1.2 }}>|</span>
+                      <span style={{ fontSize: fsTime, fontWeight: 700, color: e.courseTextColor, lineHeight: 1 }}>{course.time_end?.slice(0,5)}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 10px', textAlign: 'center' }}><span style={{ fontSize: fsTitle, fontWeight: 700, color: '#18120a', lineHeight: 1.4 }}>{course.title}</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 10px', textAlign: 'center' }}><span style={{ fontSize: fsTitle, fontWeight: 700, color: e.courseTextColor, lineHeight: 1.4 }}>{course.title}</span></div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 6px' }}>
-                      {(course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name) && <span style={{ color: e.accentColor, fontWeight: 700, fontSize: fsInstructor, lineHeight: 1 }}>{course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name}</span>}
+                      {(course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name) && <span style={{ color: e.courseTextColor, fontWeight: 700, fontSize: fsInstructor, lineHeight: 1 }}>{course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name}</span>}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 6px', textAlign: 'center' }}><span style={{ fontSize: fsLocation, fontWeight: 700, color: '#18120a', lineHeight: 1.4 }}>{course.location}</span></div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', textAlign: 'center' }}><span style={{ fontSize: Math.max(9, fsLocation - 1), fontWeight: 700, color: '#18120a', lineHeight: 1.4 }}>{course.suitable_age||'全年齡'}</span></div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px' }}><span style={{ fontSize: fsFee, fontWeight: 800, color: e.accentColor, lineHeight: 1 }}>免費</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 6px', textAlign: 'center' }}><span style={{ fontSize: fsLocation, fontWeight: 700, color: e.courseTextColor, lineHeight: 1.4 }}>{course.location}</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', textAlign: 'center' }}><span style={{ fontSize: Math.max(9, fsLocation - 1), fontWeight: 700, color: e.courseTextColor, lineHeight: 1.4 }}>{course.suitable_age||'全年齡'}</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px' }}><span style={{ fontSize: fsFee, fontWeight: 800, color: e.courseTextColor, lineHeight: 1 }}>免費</span></div>
                   </div>
                 )
               })}
@@ -791,11 +795,13 @@ function PanelContent({ editor, set, setEditor, handleImgUpload, activeTab, setA
       {/* ══════════ 色彩 Tab ══════════ */}
       {activeTab === '色彩' && (<>
         <div>
-          <p className="text-[13px] font-bold text-stone-400 mb-3">1. 顏色</p>
+          <p className="text-[13px] font-bold text-stone-400 mb-1">1. 顏色</p>
+          <p className="text-[11px] text-stone-400 mb-2">「左欄文字色」「課程列文字色」是各自區塊統一使用的單一文字顏色，換底色時記得一起調整</p>
           <div className="space-y-2.5">
             {[
               { key:'accentColor', label:'主題色' }, { key:'brandBgColor', label:'頂部品牌列底色' },
-              { key:'leftBgColor', label:'左欄底色' }, { key:'rightBgColor', label:'右欄底色' },
+              { key:'leftBgColor', label:'左欄底色' }, { key:'leftTextColor', label:'左欄文字色' },
+              { key:'rightBgColor', label:'右欄底色' }, { key:'courseTextColor', label:'課程列文字色' },
               { key:'footerBgColor', label:'底部背景' }, { key:'footerTextColor', label:'底部文字' },
             ].map(f => (
               <ColorPicker key={f.key} label={f.label} value={(e as any)[f.key]}
@@ -1042,14 +1048,19 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
   const totalPages = Math.ceil(monthCourses.length / rowsPerPage) || 1
 
   const initEditor = () => {
+    const initLeftBg = ss.schedule_left_bg_color || '#fff7ed'
+    const initRightBg = ss.schedule_right_bg_color || '#ffffff'
     setEditor(prev => ({
       ...prev,
       bgImage: ss.schedule_bg_image || '',
       bgOpacity: parseFloat(ss.schedule_bg_opacity||'') || 0.22,
       accentColor: ss.schedule_accent_color || '#f97316',
       brandBgColor: ss.schedule_brand_bg || '#1c1917',
-      leftBgColor: ss.schedule_left_bg_color || '#fff7ed',
+      leftBgColor: initLeftBg,
       leftBgOpacity: parseFloat(ss.schedule_left_bg_opacity||'') || 0.95,
+      // 群組文字色：若未儲存過，第一次進來時依當下的左欄/右欄底色自動算一個可視顏色當預設值
+      leftTextColor: ss.schedule_left_text_color || contrastPrimary(initLeftBg),
+      courseTextColor: ss.schedule_course_text_color || contrastPrimary(initRightBg),
       patternType: (ss.schedule_pattern_type as PatternType) || 'dots',
       patternOpacity: parseFloat(ss.schedule_pattern_opacity||'') || 0.12,
       gradientEnabled: ss.schedule_gradient_enabled !== 'false',
@@ -1057,7 +1068,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
       gradientFrom: ss.schedule_gradient_from || '#fed7aa',
       gradientTo: ss.schedule_gradient_to || '#fff7ed',
       gradientOpacity: parseFloat(ss.schedule_gradient_opacity||'') || 0.6,
-      rightBgColor: ss.schedule_right_bg_color || '#ffffff',
+      rightBgColor: initRightBg,
       rightBgOpacity: parseFloat(ss.schedule_right_bg_opacity||'') || 0.92,
       footerBgColor: ss.schedule_footer_bg || '#18120a',
       footerTextColor: ss.schedule_footer_text || '#ffffff',
@@ -1162,6 +1173,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
       schedule_p_course_instructor_fs: String(editor.pCourseInstructorFontSize),
       schedule_p_course_location_fs: String(editor.pCourseLocationFontSize),
       schedule_p_course_fee_fs: String(editor.pCourseFeeFontSize),
+      schedule_left_text_color: editor.leftTextColor,
+      schedule_course_text_color: editor.courseTextColor,
     }
 
     const raw = localStorage.getItem('admin_auth')
@@ -1321,7 +1334,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
       ].filter(Boolean)
       const qrItems = [
         { label: '活動報名', color: e.accentColor, src: e.registrationQrMode === 'upload' && e.registrationQrUpload ? e.registrationQrUpload : `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(SITE_URL)}`, sub: '線上報名' },
-        { label: '種子社區大學', color: '#06C755', src: e.communityQr, sub: '加入社群' },
+        { label: '種子社區大學', color: e.accentColor, src: e.communityQr, sub: '加入社群' },
       ]
 
       if (isLandscape) {
@@ -1331,7 +1344,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         ctx.font = font(10, 800); ctx.fillStyle = e.accentColor
         ctx.fillText(`${rocYear} 年活動`, PAD_X, cy + 10); cy += 24
 
-        ctx.font = font(e.titleFontSize, 900); ctx.fillStyle = contrastPrimary(e.leftBgColor)
+        ctx.font = font(e.titleFontSize, 900); ctx.fillStyle = e.leftTextColor
         const title1Lines = wrapText(ctx, e.titleLine1, LEFT_W - PAD_X * 2)
         title1Lines.forEach((line, li) => {
           ctx.fillText(line, PAD_X, cy + e.titleFontSize + li * e.titleFontSize * 1.2)
@@ -1349,13 +1362,13 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         const monthStr = String(rocMonth)
         const monthW = ctx.measureText(monthStr).width
         ctx.fillText(monthStr, PAD_X, cy + e.monthFontSize)
-        ctx.font = font(18, 700); ctx.fillStyle = contrastSecondary(e.leftBgColor)
+        ctx.font = font(18, 700); ctx.fillStyle = e.leftTextColor
         ctx.fillText('月份活動表', PAD_X + monthW + 6, cy + e.monthFontSize)
         cy += e.monthFontSize * 1.2
 
-        ctx.font = font(12, 400); ctx.fillStyle = contrastSecondary(e.leftBgColor)
+        ctx.font = font(12, 400); ctx.fillStyle = e.leftTextColor
         ctx.fillText('各項活動皆歡迎居民們踴躍報名！', PAD_X, cy + 14); cy += 20
-        ctx.font = font(11, 400); ctx.fillStyle = contrastTertiary(e.leftBgColor)
+        ctx.font = font(11, 400); ctx.fillStyle = e.leftTextColor
         ctx.fillText('（數量有限，額滿為止）', PAD_X, cy + 13); cy += 20
 
         cy += e.gapTitleToQr
@@ -1393,7 +1406,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         for (const item of contactItems) {
           ctx.fillStyle = '#06C755'
           ctx.beginPath(); ctx.arc(PAD_X + 3, cy + 5, 3, 0, Math.PI*2); ctx.fill()
-          ctx.font = font(11, 400); ctx.fillStyle = contrastSecondary(e.leftBgColor)
+          ctx.font = font(11, 400); ctx.fillStyle = e.leftTextColor
           const lines = wrapText(ctx, item, LEFT_W - PAD_X * 2 - 12)
           for (const line of lines) { ctx.fillText(line, PAD_X + 10, cy + 13); cy += 16 }
           cy += 2
@@ -1410,7 +1423,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         ctx.font = font(9, 800); ctx.fillStyle = e.accentColor
         ctx.fillText(`${rocYear} 年活動`, PAD_X, cy + 9); cy += 20
 
-        ctx.font = font(e.pTitleFontSize, 900); ctx.fillStyle = contrastPrimary(e.leftBgColor)
+        ctx.font = font(e.pTitleFontSize, 900); ctx.fillStyle = e.leftTextColor
         ctx.fillText(e.titleLine1, PAD_X, cy + e.pTitleFontSize); cy += e.pTitleFontSize * 1.3
 
         ctx.font = font(e.pSubtitleFontSize, 900); ctx.fillStyle = e.accentColor
@@ -1421,14 +1434,14 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         const monthStr = String(rocMonth)
         const monthW = ctx.measureText(monthStr).width
         ctx.fillText(monthStr, PAD_X, cy + e.pMonthFontSize)
-        ctx.font = font(12, 700); ctx.fillStyle = contrastSecondary(e.leftBgColor)
+        ctx.font = font(12, 700); ctx.fillStyle = e.leftTextColor
         ctx.fillText('月份活動表', PAD_X + monthW + 4, cy + e.pMonthFontSize)
         cy += e.pMonthFontSize * 1.2 + e.pGapMonth
 
         for (const item of contactItems) {
           ctx.fillStyle = '#06C755'
           ctx.beginPath(); ctx.arc(PAD_X + 2, cy + 4, 2, 0, Math.PI*2); ctx.fill()
-          ctx.font = font(9, 400); ctx.fillStyle = contrastSecondary(e.leftBgColor)
+          ctx.font = font(9, 400); ctx.fillStyle = e.leftTextColor
           const lines = wrapText(ctx, item, leftAreaW - PAD_X - 12)
           for (const line of lines) { ctx.fillText(line, PAD_X + 8, cy + 10); cy += 14 }
           cy += 2
@@ -1519,19 +1532,19 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         ctx.textAlign = 'center'
 
         if (ci === 0) {
-          ctx.font = font(fsDate, 800); ctx.fillStyle = '#18120a'
+          ctx.font = font(fsDate, 800); ctx.fillStyle = e.courseTextColor
           ctx.fillText(`${cm}/${day}`, col.x + col.w/2, cy - 2)
-          ctx.font = font(Math.max(9, fsDate - 4), 800); ctx.fillStyle = e.accentColor
+          ctx.font = font(Math.max(9, fsDate - 4), 800); ctx.fillStyle = e.courseTextColor
           ctx.fillText(weekday, col.x + col.w/2, cy + 14)
         } else if (ci === 1) {
-          ctx.font = font(fsTime, 700); ctx.fillStyle = '#18120a'
+          ctx.font = font(fsTime, 700); ctx.fillStyle = e.courseTextColor
           ctx.fillText(course.time_start?.slice(0,5) || '', col.x + col.w/2, cy - 4)
-          ctx.font = font(Math.max(8, fsTime - 3), 400); ctx.fillStyle = hexToRgba(e.accentColor, 0.5)
+          ctx.font = font(Math.max(8, fsTime - 3), 400); ctx.fillStyle = hexToRgba(e.courseTextColor, 0.55)
           ctx.fillText('|', col.x + col.w/2, cy + 6)
-          ctx.font = font(fsTime, 700); ctx.fillStyle = '#18120a'
+          ctx.font = font(fsTime, 700); ctx.fillStyle = e.courseTextColor
           ctx.fillText(course.time_end?.slice(0,5) || '', col.x + col.w/2, cy + 17)
         } else if (ci === 2) {
-          ctx.font = font(fsTitle, 700); ctx.fillStyle = '#18120a'
+          ctx.font = font(fsTitle, 700); ctx.fillStyle = e.courseTextColor
           ctx.textAlign = 'center'
           const lines = wrapText(ctx, course.title, col.w - 12)
           const lineH = Math.round(fsTitle * 1.28)
@@ -1542,11 +1555,11 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         } else if (ci === 3) {
           const instructorText = course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name || ''
           if (instructorText) {
-            ctx.font = font(fsInstructor, 700); ctx.fillStyle = e.accentColor
+            ctx.font = font(fsInstructor, 700); ctx.fillStyle = e.courseTextColor
             ctx.fillText(instructorText, col.x + col.w/2, cy + 5)
           }
         } else if (ci === 4) {
-          ctx.font = font(fsLocation, 700); ctx.fillStyle = '#18120a'
+          ctx.font = font(fsLocation, 700); ctx.fillStyle = e.courseTextColor
           const lines = wrapText(ctx, course.location, col.w - 8)
           const lineH = Math.round(fsLocation * 1.33)
           const startY = cy - ((lines.length - 1) * lineH) / 2
@@ -1554,10 +1567,10 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
             ctx.fillText(line, col.x + col.w/2, startY + 5 + li * lineH)
           })
         } else if (ci === 5) {
-          ctx.font = font(fsAge, 700); ctx.fillStyle = '#18120a'
+          ctx.font = font(fsAge, 700); ctx.fillStyle = e.courseTextColor
           ctx.fillText(course.suitable_age || '全年齡', col.x + col.w/2, cy + 5)
         } else if (ci === 6) {
-          ctx.font = font(fsFee, 800); ctx.fillStyle = e.accentColor
+          ctx.font = font(fsFee, 800); ctx.fillStyle = e.courseTextColor
           ctx.fillText('免費', col.x + col.w/2, cy + 5)
         }
         ctx.textAlign = 'left'
