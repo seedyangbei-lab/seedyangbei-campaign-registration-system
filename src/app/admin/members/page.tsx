@@ -79,6 +79,15 @@ export default function MembersPage() {
   const [addPointSaving, setAddPointSaving] = useState(false)
   const supabase = createClient()
 
+  // 手機版：走勢圖 Y 軸/月份細項改用更適合窄螢幕的呈現方式（依 Figma node 504:29567）
+  const [isMobile, setIsMobile] = useState<boolean | null>(null)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
   const fetchMembers = async () => {
     const res = await fetch('/api/admin/members')
     const data = await res.json()
@@ -346,18 +355,18 @@ export default function MembersPage() {
         <p className="text-stone-400 mt-1 text-sm">查詢所有曾報名或現場報到過的居民，不分是否綁定 LINE</p>
       </div>
 
-      {/* 篩選 chip + 搜尋 */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        <div className="flex gap-1 p-1 bg-white/60 border border-stone-300 rounded-lg">
+      {/* 篩選 chip + 搜尋（手機版：全寬直排，不顯示「或是」；電腦版：同一列） */}
+      <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-3 mb-6">
+        <div className="flex w-full md:w-auto gap-1 p-1 bg-white/60 border border-stone-300 rounded-lg">
           {(['all', 'line', 'unbound'] as const).map(scope => (
             <button key={scope} onClick={() => handleChipClick(scope)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${groupFilter === scope ? 'bg-orange-500 text-white' : 'text-stone-500 hover:text-stone-700'}`}>
+              className={`flex-1 md:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${groupFilter === scope ? 'bg-orange-500 text-white' : 'text-stone-500 hover:text-stone-700'}`}>
               {chipLabel(scope)}
             </button>
           ))}
         </div>
-        <span className="text-sm text-stone-400">或是</span>
-        <div className="relative w-full max-w-xs">
+        <span className="hidden md:inline text-sm text-stone-400">或是</span>
+        <div className="relative w-full md:max-w-xs">
           <input
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
@@ -391,12 +400,15 @@ export default function MembersPage() {
               {selectedMemberForChart ? `${selectedMemberForChart.display_name} 的參與走勢` : '參與走勢圖'}
             </span>
           </div>
-          {selectedMemberForChart && (
-            <button onClick={clearPersonalChart} className="flex items-center gap-1 text-xs text-stone-400 hover:text-stone-600 transition-colors">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-              返回全體走勢
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            <span className="md:hidden text-xs text-stone-400">報名次數 / 月</span>
+            {selectedMemberForChart && (
+              <button onClick={clearPersonalChart} className="flex items-center gap-1 text-xs text-stone-400 hover:text-stone-600 transition-colors">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                返回全體走勢
+              </button>
+            )}
+          </div>
         </div>
 
         {selectedMemberForChart ? (
@@ -408,7 +420,7 @@ export default function MembersPage() {
                 <LineChart data={personalChartData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f4" />
                   <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#78716c' }} />
-                  <YAxis tick={{ fontSize: 12, fill: '#78716c' }} allowDecimals={false} />
+                  {isMobile !== true && <YAxis tick={{ fontSize: 12, fill: '#78716c' }} allowDecimals={false} />}
                   <Tooltip
                     contentStyle={{ borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: 12 }}
                     formatter={(v: any) => [`${v} 次`, selectedMemberForChart.display_name]}
@@ -421,7 +433,7 @@ export default function MembersPage() {
         ) : (
           <div className="px-6 py-4 space-y-6">
             <div>
-              <p className="text-xs text-stone-400 mb-4">每月課程報名總次數（點擊圓點查看當月課程細項）</p>
+              <p className="hidden md:block text-xs text-stone-400 mb-4">每月課程報名總次數（點擊圓點查看當月課程細項）</p>
               {chartData.length === 0 ? (
                 <div className="text-center py-8 text-stone-400 text-sm">尚無資料</div>
               ) : (
@@ -440,7 +452,7 @@ export default function MembersPage() {
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f4" />
                     <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#78716c' }} />
-                    <YAxis tick={{ fontSize: 12, fill: '#78716c' }} allowDecimals={false} />
+                    {isMobile !== true && <YAxis tick={{ fontSize: 12, fill: '#78716c' }} allowDecimals={false} />}
                     <Tooltip content={<OverallTooltip />} />
                     <Line
                       type="monotone"
@@ -454,52 +466,70 @@ export default function MembersPage() {
                 </ResponsiveContainer>
               )}
             </div>
-
-            {/* 月份細項柱狀圖（直式） */}
-            {selectedMonth && (
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-stone-700">
-                    {parseInt(selectedMonth.split('-')[1])}月 各課程報名人數
-                  </p>
-                  <button
-                    onClick={() => { setSelectedMonth(''); setMonthBarData([]) }}
-                    className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
-                  >
-                    關閉
-                  </button>
-                </div>
-                {monthBarData.length === 0 ? (
-                  <div className="text-center py-6 text-stone-400 text-sm">此月無報名資料</div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <BarChart
-                      data={monthBarData}
-                      margin={{ top: 10, right: 10, left: -10, bottom: 80 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f4" vertical={false} />
-                      <XAxis
-                        dataKey="title"
-                        tick={{ fontSize: 11, fill: '#57534e' }}
-                        angle={-45}
-                        textAnchor="end"
-                        interval={0}
-                        dy={4}
-                      />
-                      <YAxis tick={{ fontSize: 11, fill: '#78716c' }} allowDecimals={false} />
-                      <Tooltip
-                        contentStyle={{ borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: 12 }}
-                        formatter={(v: any) => [`${v} 人`, '報名人數']}
-                      />
-                      <Bar dataKey="count" fill="#f97316" radius={[6, 6, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-            )}
           </div>
         )}
       </div>
+
+      {/* 月份細項報名人數：獨立卡片（依 Figma node 504:29567 / 504:29658），手機版改條列式進度條，電腦版維持柱狀圖 */}
+      {!selectedMemberForChart && selectedMonth && (
+        <div className="bg-white border border-stone-200 rounded-2xl shadow-sm mb-6 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-semibold text-stone-700">
+              {parseInt(selectedMonth.split('-')[1])}月 各課程報名人數
+            </p>
+            <button
+              onClick={() => { setSelectedMonth(''); setMonthBarData([]) }}
+              className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+            >
+              關閉
+            </button>
+          </div>
+          {monthBarData.length === 0 ? (
+            <div className="text-center py-6 text-stone-400 text-sm">此月無報名資料</div>
+          ) : isMobile === true ? (
+            <div className="space-y-4">
+              {monthBarData.map(c => {
+                const max = Math.max(...monthBarData.map(x => x.count), 1)
+                const pct = Math.round((c.count / max) * 100)
+                return (
+                  <div key={c.title}>
+                    <div className="flex items-center justify-between text-sm mb-1.5">
+                      <span className="text-stone-600 truncate pr-2">{c.title}</span>
+                      <span className="text-stone-700 font-semibold flex-shrink-0">{c.count} 人</span>
+                    </div>
+                    <div className="h-2 bg-stone-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-orange-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart
+                data={monthBarData}
+                margin={{ top: 10, right: 10, left: -10, bottom: 80 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f4" vertical={false} />
+                <XAxis
+                  dataKey="title"
+                  tick={{ fontSize: 11, fill: '#57534e' }}
+                  angle={-45}
+                  textAnchor="end"
+                  interval={0}
+                  dy={4}
+                />
+                <YAxis tick={{ fontSize: 11, fill: '#78716c' }} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: 12 }}
+                  formatter={(v: any) => [`${v} 人`, '報名人數']}
+                />
+                <Bar dataKey="count" fill="#f97316" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      )}
 
       {!selectedMemberForChart && (
       <>
@@ -513,6 +543,7 @@ export default function MembersPage() {
         ))}
       </div>
 
+      <h3 className="text-stone-700 font-bold text-base mb-3">會員列表 ({visibleMembers.length})</h3>
       <div className="space-y-3">
         {visibleMembers.length === 0 && (
           <div className="bg-white border border-stone-200 rounded-2xl p-12 text-center text-stone-400"><p>找不到符合的居民</p></div>
@@ -548,7 +579,7 @@ export default function MembersPage() {
                     <span className="px-3 py-1 rounded-md font-medium" style={{ color: tag.color, backgroundColor: tag.bg }}>{tag.label}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
+                <div className="hidden md:flex items-center gap-1.5 flex-shrink-0">
                   {member.source === 'line' && (
                     <button onClick={() => { setAddPointModal(member); setAddPointForm({ delta: 1, reason: '' }) }}
                       className="flex items-center gap-1 text-xs bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 px-2.5 py-1.5 rounded-lg transition-colors font-medium">
@@ -562,6 +593,22 @@ export default function MembersPage() {
                     <span className="bg-stone-100 text-stone-600 text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">{count}</span>
                   </button>
                 </div>
+              </div>
+
+              {/* 手機版：按鈕移到獨立整行（依 Figma node 504:29246 / 504:29287） */}
+              <div className="flex md:hidden items-center gap-2 mt-3">
+                {member.source === 'line' && (
+                  <button onClick={() => { setAddPointModal(member); setAddPointForm({ delta: 1, reason: '' }) }}
+                    className="flex-1 flex items-center justify-center gap-1 text-xs bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 px-2.5 py-2 rounded-lg transition-colors font-medium">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                    調整點數
+                  </button>
+                )}
+                <button onClick={() => openHistory(member)}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs bg-white hover:bg-stone-50 text-stone-600 border border-stone-300 px-3 py-2 rounded-lg transition-colors">
+                  上課記錄
+                  <span className="bg-stone-100 text-stone-600 text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">{count}</span>
+                </button>
               </div>
             </div>
           )
