@@ -37,6 +37,24 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r},${g},${b},${alpha})`
 }
 
+// 依背景色亮度自動決定可視文字色（黑或白系），讓可調整的底色不會把固定色文字吃掉
+function isLightColor(hex: string): boolean {
+  const h = (hex || '').replace('#', '')
+  if (h.length !== 6) return true
+  const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16)
+  if ([r,g,b].some(n => Number.isNaN(n))) return true
+  return (r*299 + g*587 + b*114) / 1000 >= 140
+}
+function contrastPrimary(bgHex: string): string {
+  return isLightColor(bgHex) ? '#18120a' : '#ffffff'
+}
+function contrastSecondary(bgHex: string): string {
+  return isLightColor(bgHex) ? '#57534e' : 'rgba(255,255,255,0.78)'
+}
+function contrastTertiary(bgHex: string): string {
+  return isLightColor(bgHex) ? '#9ca3af' : 'rgba(255,255,255,0.55)'
+}
+
 type Orientation = 'landscape'|'portrait'
 type PatternType = 'none'|'dots'|'lines'|'grid'|'waves'|'diamonds'
 type GradientDir = 'to-b'|'to-r'|'to-br'
@@ -236,11 +254,11 @@ function FooterSeparator({ color = 'rgba(255,255,255,0.35)' }: { color?: string 
   )
 }
 
-function ContactLine({ item, dotSize = 6 }: { item: string; dotSize?: number }) {
+function ContactLine({ item, dotSize = 6, color = '#374151' }: { item: string; dotSize?: number; color?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 4 }}>
       <div style={{ width: dotSize, height: dotSize, borderRadius: '50%', background: '#06C755', marginTop: 5, flexShrink: 0 }} />
-      <span style={{ fontSize: 11, color: '#374151', lineHeight: 1.6 }}>{item}</span>
+      <span style={{ fontSize: 11, color, lineHeight: 1.6 }}>{item}</span>
     </div>
   )
 }
@@ -307,9 +325,9 @@ function PreviewPage({
         <div style={{ background: e.brandBgColor, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 22px', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 3, height: 14, background: e.accentColor, borderRadius: 2 }} />
-            <span style={{ color: 'white', fontWeight: 800, fontSize: 13, letterSpacing: '0.1em' }}>XINDIAN · YANGBEI SOCIAL HOUSING</span>
+            <span style={{ color: contrastPrimary(e.brandBgColor), fontWeight: 800, fontSize: 13, letterSpacing: '0.1em' }}>XINDIAN · YANGBEI SOCIAL HOUSING</span>
           </div>
-          {totalPages > 1 && <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>{pageIdx+1} / {totalPages}</span>}
+          {totalPages > 1 && <span style={{ color: contrastTertiary(e.brandBgColor), fontSize: 12 }}>{pageIdx+1} / {totalPages}</span>}
         </div>
 
         {/* 主體 */}
@@ -327,14 +345,14 @@ function PreviewPage({
                 <div style={{ display: 'inline-flex', alignItems: 'center', marginBottom: 8, alignSelf: 'flex-start' }}>
                   <span style={{ color: e.accentColor, fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', lineHeight: 1 }}>{year} 年活動</span>
                 </div>
-                <p style={{ margin: '0 0 2px', fontSize: e.titleFontSize, fontWeight: 900, color: '#18120a', lineHeight: 1.25 }}>{e.titleLine1}</p>
+                <p style={{ margin: '0 0 2px', fontSize: e.titleFontSize, fontWeight: 900, color: contrastPrimary(e.leftBgColor), lineHeight: 1.25 }}>{e.titleLine1}</p>
                 <p style={{ margin: '4px 0 8px', fontSize: e.subtitleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.25 }}>{e.titleLine2}</p>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
                   <span style={{ fontSize: e.monthFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
-                  <span style={{ fontSize: 18, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: contrastSecondary(e.leftBgColor) }}>月份活動表</span>
                 </div>
-                <p style={{ margin: '0 0 2px', fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>各項活動皆歡迎居民們踴躍報名！</p>
-                <p style={{ margin: 0, fontSize: 11, color: '#9ca3af' }}>（數量有限，額滿為止）</p>
+                <p style={{ margin: '0 0 2px', fontSize: 12, color: contrastSecondary(e.leftBgColor), lineHeight: 1.5 }}>各項活動皆歡迎居民們踴躍報名！</p>
+                <p style={{ margin: 0, fontSize: 11, color: contrastTertiary(e.leftBgColor) }}>（數量有限，額滿為止）</p>
                 <div style={{ height: e.gapTitleToQr }} />
                 <div style={{ display: 'flex', gap: 8 }}>
                   <QrBox label="活動報名" color={e.accentColor} imgSrc={e.registrationQrMode === 'upload' && e.registrationQrUpload ? e.registrationQrUpload : QR_API(SITE_URL,200)} sub="線上報名" />
@@ -342,7 +360,7 @@ function PreviewPage({
                 </div>
                 <div style={{ height: e.gapQrToContact }} />
                 <div style={{ marginTop: 'auto' }}>
-                  {contactItems.map((item,i) => <ContactLine key={i} item={item} dotSize={6} />)}
+                  {contactItems.map((item,i) => <ContactLine key={i} item={item} dotSize={6} color={contrastSecondary(e.leftBgColor)} />)}
                 </div>
               </div>
             )}
@@ -354,16 +372,16 @@ function PreviewPage({
                   <div style={{ display: 'inline-block', marginBottom: 6 }}>
                     <span style={{ color: e.accentColor, fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', lineHeight: 1.4 }}>{year} 年活動</span>
                   </div>
-                  <p style={{ margin: '0 0 1px', fontSize: e.pTitleFontSize, fontWeight: 900, color: '#18120a', lineHeight: 1.2 }}>{e.titleLine1}</p>
+                  <p style={{ margin: '0 0 1px', fontSize: e.pTitleFontSize, fontWeight: 900, color: contrastPrimary(e.leftBgColor), lineHeight: 1.2 }}>{e.titleLine1}</p>
                   <p style={{ margin: '0 0 4px', fontSize: e.pSubtitleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.2 }}>{e.titleLine2}</p>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginBottom: e.pGapMonth }}>
                     <span style={{ fontSize: e.pMonthFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1 }}>{rocMonth}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#6b7280' }}>月份活動表</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: contrastSecondary(e.leftBgColor) }}>月份活動表</span>
                   </div>
                   {contactItems.map((item,i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginBottom: 2 }}>
                       <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#06C755', marginTop: 5, flexShrink: 0 }} />
-                      <span style={{ fontSize: 9, color: '#374151', lineHeight: 1.5 }}>{item}</span>
+                      <span style={{ fontSize: 9, color: contrastSecondary(e.leftBgColor), lineHeight: 1.5 }}>{item}</span>
                     </div>
                   ))}
                 </div>
@@ -379,7 +397,7 @@ function PreviewPage({
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: rightBg, backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', minWidth: 0, minHeight: 0 }}>
             <div style={{ display: 'grid', gridTemplateColumns: gridCols, background: e.accentColor, flexShrink: 0 }}>
               {colDefs.map(col => (
-                <div key={col.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: 14, padding: '13px 6px', textAlign: 'center' }}>{col.label}</div>
+                <div key={col.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: contrastPrimary(e.accentColor), fontWeight: 700, fontSize: 14, padding: '13px 6px', textAlign: 'center' }}>{col.label}</div>
               ))}
             </div>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -392,7 +410,7 @@ function PreviewPage({
                 const fsLocation = isL ? e.courseLocationFontSize : e.pCourseLocationFontSize
                 const fsFee = isL ? e.courseFeeFontSize : e.pCourseFeeFontSize
                 return (
-                  <div key={course.id} style={{ display: 'grid', gridTemplateColumns: gridCols, flex: 1, minHeight: 0, background: i%2===0 ? '#ffffff' : '#fff7ed', borderBottom: `1px solid ${e.accentColor}18`, alignItems: 'center' }}>
+                  <div key={course.id} style={{ display: 'grid', gridTemplateColumns: gridCols, flex: 1, minHeight: 0, background: hexToRgba(e.accentColor, i%2===0 ? 0.035 : 0.11), borderBottom: `1px solid ${e.accentColor}18`, alignItems: 'center' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', gap: 4 }}>
                       <span style={{ fontSize: fsDate, fontWeight: 800, color: '#18120a', lineHeight: 1 }}>{cm}/{day}</span>
                       <span style={{ fontWeight: 800, fontSize: Math.max(9, fsDate - 3), color: e.accentColor, lineHeight: 1 }}>{weekday}</span>
@@ -413,7 +431,7 @@ function PreviewPage({
                 )
               })}
               {Array.from({ length: emptyRows }).map((_,i) => (
-                <div key={`e${i}`} style={{ display: 'grid', gridTemplateColumns: gridCols, flex: 1, minHeight: 40, background: (pageCourses.length+i)%2===0 ? '#ffffff' : '#fff7ed', borderBottom: `1px solid ${e.accentColor}18` }}>
+                <div key={`e${i}`} style={{ display: 'grid', gridTemplateColumns: gridCols, flex: 1, minHeight: 40, background: hexToRgba(e.accentColor, (pageCourses.length+i)%2===0 ? 0.035 : 0.11), borderBottom: `1px solid ${e.accentColor}18` }}>
                   {colDefs.map((_,ci) => <div key={ci} />)}
                 </div>
               ))}
@@ -1258,7 +1276,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         ctx.font = font(10, 800); ctx.fillStyle = e.accentColor
         ctx.fillText(`${rocYear} 年活動`, PAD_X, cy + 10); cy += 24
 
-        ctx.font = font(e.titleFontSize, 900); ctx.fillStyle = '#18120a'
+        ctx.font = font(e.titleFontSize, 900); ctx.fillStyle = contrastPrimary(e.leftBgColor)
         const title1Lines = wrapText(ctx, e.titleLine1, LEFT_W - PAD_X * 2)
         title1Lines.forEach((line, li) => {
           ctx.fillText(line, PAD_X, cy + e.titleFontSize + li * e.titleFontSize * 1.2)
@@ -1276,13 +1294,13 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         const monthStr = String(rocMonth)
         const monthW = ctx.measureText(monthStr).width
         ctx.fillText(monthStr, PAD_X, cy + e.monthFontSize)
-        ctx.font = font(18, 700); ctx.fillStyle = '#6b7280'
+        ctx.font = font(18, 700); ctx.fillStyle = contrastSecondary(e.leftBgColor)
         ctx.fillText('月份活動表', PAD_X + monthW + 6, cy + e.monthFontSize)
         cy += e.monthFontSize * 1.2
 
-        ctx.font = font(12, 400); ctx.fillStyle = '#6b7280'
+        ctx.font = font(12, 400); ctx.fillStyle = contrastSecondary(e.leftBgColor)
         ctx.fillText('各項活動皆歡迎居民們踴躍報名！', PAD_X, cy + 14); cy += 20
-        ctx.font = font(11, 400); ctx.fillStyle = '#9ca3af'
+        ctx.font = font(11, 400); ctx.fillStyle = contrastTertiary(e.leftBgColor)
         ctx.fillText('（數量有限，額滿為止）', PAD_X, cy + 13); cy += 20
 
         cy += e.gapTitleToQr
@@ -1320,7 +1338,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         for (const item of contactItems) {
           ctx.fillStyle = '#06C755'
           ctx.beginPath(); ctx.arc(PAD_X + 3, cy + 5, 3, 0, Math.PI*2); ctx.fill()
-          ctx.font = font(11, 400); ctx.fillStyle = '#374151'
+          ctx.font = font(11, 400); ctx.fillStyle = contrastSecondary(e.leftBgColor)
           const lines = wrapText(ctx, item, LEFT_W - PAD_X * 2 - 12)
           for (const line of lines) { ctx.fillText(line, PAD_X + 10, cy + 13); cy += 16 }
           cy += 2
@@ -1337,7 +1355,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         ctx.font = font(9, 800); ctx.fillStyle = e.accentColor
         ctx.fillText(`${rocYear} 年活動`, PAD_X, cy + 9); cy += 20
 
-        ctx.font = font(e.pTitleFontSize, 900); ctx.fillStyle = '#18120a'
+        ctx.font = font(e.pTitleFontSize, 900); ctx.fillStyle = contrastPrimary(e.leftBgColor)
         ctx.fillText(e.titleLine1, PAD_X, cy + e.pTitleFontSize); cy += e.pTitleFontSize * 1.3
 
         ctx.font = font(e.pSubtitleFontSize, 900); ctx.fillStyle = e.accentColor
@@ -1348,14 +1366,14 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         const monthStr = String(rocMonth)
         const monthW = ctx.measureText(monthStr).width
         ctx.fillText(monthStr, PAD_X, cy + e.pMonthFontSize)
-        ctx.font = font(12, 700); ctx.fillStyle = '#6b7280'
+        ctx.font = font(12, 700); ctx.fillStyle = contrastSecondary(e.leftBgColor)
         ctx.fillText('月份活動表', PAD_X + monthW + 4, cy + e.pMonthFontSize)
         cy += e.pMonthFontSize * 1.2 + e.pGapMonth
 
         for (const item of contactItems) {
           ctx.fillStyle = '#06C755'
           ctx.beginPath(); ctx.arc(PAD_X + 2, cy + 4, 2, 0, Math.PI*2); ctx.fill()
-          ctx.font = font(9, 400); ctx.fillStyle = '#374151'
+          ctx.font = font(9, 400); ctx.fillStyle = contrastSecondary(e.leftBgColor)
           const lines = wrapText(ctx, item, leftAreaW - PAD_X - 12)
           for (const line of lines) { ctx.fillText(line, PAD_X + 8, cy + 10); cy += 14 }
           cy += 2
@@ -1411,7 +1429,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
     // ── 表頭 ──
     ctx.fillStyle = e.accentColor
     ctx.fillRect(isLandscape ? LEFT_W : 0, TABLE_TOP, TABLE_W, TABLE_HEADER_H)
-    ctx.font = font(14, 700); ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'
+    ctx.font = font(14, 700); ctx.fillStyle = contrastPrimary(e.accentColor); ctx.textAlign = 'center'
     for (const col of colsWithX) {
       ctx.fillText(col.label, col.x + col.w/2, TABLE_TOP + TABLE_HEADER_H/2 + 5)
     }
@@ -1420,7 +1438,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
     // ── 課程列 ──
     for (let i = 0; i < pageCourses.length + emptyRows; i++) {
       const rowY = TABLE_TOP + TABLE_HEADER_H + i * ROW_H
-      ctx.fillStyle = i % 2 === 0 ? '#ffffff' : '#fff7ed'
+      ctx.fillStyle = hexToRgba(e.accentColor, i % 2 === 0 ? 0.035 : 0.11)
       ctx.fillRect(isLandscape ? LEFT_W : 0, rowY, TABLE_W, ROW_H)
       ctx.strokeStyle = hexToRgba(e.accentColor, 0.1)
       ctx.lineWidth = 1
@@ -1496,12 +1514,12 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
     ctx.fillRect(0, 0, W, BRAND_H)
     ctx.fillStyle = e.accentColor
     ctx.fillRect(22, (BRAND_H-14)/2, 3, 14)
-    ctx.font = font(13, 800); ctx.fillStyle = '#ffffff'
+    ctx.font = font(13, 800); ctx.fillStyle = contrastPrimary(e.brandBgColor)
     ctx.letterSpacing = '0.1em'
     ctx.fillText('XINDIAN · YANGBEI SOCIAL HOUSING', 38, BRAND_H/2 + 5)
     ctx.letterSpacing = '0'
     if (totalPgs > 1) {
-      ctx.font = font(12, 400); ctx.fillStyle = 'rgba(255,255,255,0.6)'
+      ctx.font = font(12, 400); ctx.fillStyle = contrastTertiary(e.brandBgColor)
       ctx.textAlign = 'right'
       ctx.fillText(`${pageIdx+1} / ${totalPgs}`, W - 22, BRAND_H/2 + 5)
       ctx.textAlign = 'left'
