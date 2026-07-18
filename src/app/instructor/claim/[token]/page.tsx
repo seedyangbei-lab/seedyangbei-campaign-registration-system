@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useRef } from 'react'
+import { Suspense } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 
 const LINE_CHANNEL_ID = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2010077816'
@@ -27,17 +27,6 @@ function ClaimContent() {
   // 這裡保留判斷純粹是防禦性寫法，避免有人手動組出奇怪的網址
   const searchParams = useSearchParams()
   const error = searchParams.get('error')
-  // 防止同一次頁面載入內效果被觸發多次（手機瀏覽器有時會重跑 effect），
-  // 導致短時間內對 LINE 連續發出多次授權請求，前面拿到的 code 還沒用就被新的請求頂掉，
-  // 造成「invalid authorization code」的 token 交換失敗
-  const firedRef = useRef(false)
-
-  useEffect(() => {
-    if (token && !error && !firedRef.current) {
-      firedRef.current = true
-      window.location.href = getLineLoginUrl(token)
-    }
-  }, [token, error])
 
   if (!token) {
     return (
@@ -63,11 +52,25 @@ function ClaimContent() {
     )
   }
 
+  // 改成需要使用者真的點擊才會導向 LINE，不用頁面一載入就自動觸發：
+  // 部分手機瀏覽器（尤其 Samsung Internet 等有預先載入/預覽機制的瀏覽器）
+  // 會在使用者還沒真正點開連結前，就先在背景把頁面內容載入一次，
+  // 如果是自動觸發的寫法，會在使用者不知情的狀況下先對 LINE 發出一次授權請求，
+  // 等使用者真的點開時再發出第二次，兩次互相頂替導致 code 失效。
+  // 改成真人點擊才觸發，瀏覽器的背景預覽機制不會模擬點擊，能徹底避免這個情況
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="max-w-sm text-center">
-        <p className="text-stone-800 font-semibold mb-2">正在導向 LINE 登入…</p>
-        <p className="text-stone-400 text-sm">請稍候，即將完成講師身份綁定。</p>
+      <div className="max-w-sm text-center flex flex-col items-center gap-5">
+        <div>
+          <p className="text-stone-800 font-semibold mb-2">講師身份綁定</p>
+          <p className="text-stone-400 text-sm">請點下方按鈕，用你的 LINE 帳號完成綁定。</p>
+        </div>
+        <a
+          href={getLineLoginUrl(token)}
+          className="inline-block bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-xl text-sm font-medium transition-colors"
+        >
+          用 LINE 登入完成綁定
+        </a>
       </div>
     </div>
   )
