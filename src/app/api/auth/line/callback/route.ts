@@ -54,10 +54,16 @@ export async function GET(request: NextRequest) {
 
     const tokenData = await tokenRes.json()
 
-    // Token 交換失敗時記錄詳細錯誤
+    // Token 交換失敗時記錄詳細錯誤（順便記錄 error code + state 內容，方便之後判斷是哪個流程／裝置觸發的）
     if (!tokenData.access_token) {
       console.error('LINE token error:', JSON.stringify(tokenData))
-      await logLineLoginFail({ stage: 'token_exchange', reason: tokenData.error_description || 'no_token' })
+      await logLineLoginFail({
+        stage: 'token_exchange',
+        reason: tokenData.error_description || 'no_token',
+        errorCode: tokenData.error || null,
+        hasState: !!state,
+        userAgent: request.headers.get('user-agent') || null,
+      })
       let coursesParam = ''
       if (state) {
         try {

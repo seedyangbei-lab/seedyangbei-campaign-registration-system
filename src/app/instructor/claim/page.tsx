@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 const LINE_CHANNEL_ID = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2010077816'
@@ -23,9 +23,14 @@ function ClaimContent() {
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
   const error = searchParams.get('error')
+  // 防止同一次頁面載入內效果被觸發多次（手機瀏覽器有時會重跑 effect），
+  // 導致短時間內對 LINE 連續發出多次授權請求，前面拿到的 code 還沒用就被新的請求頂掉，
+  // 造成「invalid authorization code」的 token 交換失敗
+  const firedRef = useRef(false)
 
   useEffect(() => {
-    if (token && !error) {
+    if (token && !error && !firedRef.current) {
+      firedRef.current = true
       window.location.href = getLineLoginUrl(token)
     }
   }, [token, error])
