@@ -284,7 +284,6 @@ export default function SystemHealthPage() {
           style={{ background: 'linear-gradient(90deg, #FFF3E9 0%, #FFFFFF 100%)' }}
         >
           <h3 className="text-stone-800" style={{ fontSize: '20px', lineHeight: '28px', fontWeight: 400 }}>系統狀態與回報</h3>
-          <span className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 text-sm font-bold flex items-center justify-center shrink-0">{filteredRows.length}</span>
         </div>
 
         {/* 篩選列：來源／狀態／類型 + 每頁筆數，同一列 */}
