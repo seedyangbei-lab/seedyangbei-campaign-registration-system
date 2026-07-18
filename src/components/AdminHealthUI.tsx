@@ -101,6 +101,7 @@ const ISSUE_TYPE_STYLE: Record<string, { label: string; cls: string }> = {
   '頁面顯示異常': { label: '畫面顯示錯誤', cls: 'bg-blue-50 text-blue-600' },
   '功能無法使用': { label: '操作異常', cls: 'bg-violet-50 text-violet-600' },
   '資料錯誤': { label: '課程資料有誤', cls: 'bg-rose-50 text-rose-600' },
+  '功能許願': { label: '功能許願', cls: 'bg-amber-50 text-amber-700' },
   '其他': { label: '其他', cls: 'bg-stone-100 text-stone-600' },
 }
 

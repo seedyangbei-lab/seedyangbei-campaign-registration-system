@@ -6,7 +6,7 @@ import { CloseIcon, ChevronDownIcon } from '@/components/InstructorMobileUI'
 
 const MAX_SCREENSHOTS = 10
 
-const ISSUE_TYPES = ['頁面顯示異常', '功能無法使用', '資料錯誤', '其他']
+const ISSUE_TYPES = ['頁面顯示異常', '功能無法使用', '資料錯誤', '功能許願', '其他']
 
 function PlusIcon() {
   return (
@@ -126,17 +126,24 @@ export default function IssueReportModal({ instructorId, onClose, onSuccess }: P
             </select>
             <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
           </div>
+          {issueType === '功能許願' && (
+            <p className="text-xs text-amber-600 bg-amber-50 rounded-md px-2.5 py-1.5 w-full">
+              許願不保證會做到，但我們會認真評估開發，謝謝你！
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col gap-2 items-start w-full">
           <label className="flex items-center gap-1 text-sm font-medium text-stone-600">
-            <span className="text-red-500 text-xs leading-none">*</span>問題描述
+            <span className="text-red-500 text-xs leading-none">*</span>{issueType === '功能許願' ? '許願內容' : '問題描述'}
           </label>
           <textarea
             required
             value={description}
             onChange={e => setDescription(e.target.value)}
-            placeholder="請簡述遇到的問題，例如：點擊編輯課程後畫面空白"
+            placeholder={issueType === '功能許願'
+              ? '請描述你在執行上遇到的痛點，以及希望有什麼功能可以解決，例如：報名名單沒辦法一鍵匯出成 Excel，每次都要手動抄'
+              : '請簡述遇到的問題，例如：點擊編輯課程後畫面空白'}
             className="w-full h-24 bg-white border border-stone-200 rounded-md px-3 py-2 text-sm text-stone-600 resize-none focus:outline-none focus:ring-2 focus:ring-orange-200"
           />
         </div>

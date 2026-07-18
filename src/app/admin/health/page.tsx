@@ -64,6 +64,7 @@ const TYPE_OPTIONS = [
   { value: '頁面顯示異常', label: '畫面顯示錯誤' },
   { value: '功能無法使用', label: '操作異常' },
   { value: '資料錯誤', label: '課程資料有誤' },
+  { value: '功能許願', label: '功能許願（講師回報）' },
   { value: '其他', label: '其他（講師回報）' },
   { value: 'register_error', label: '報名異常' },
   { value: 'register_guard_fail', label: '課程資訊遺失' },
