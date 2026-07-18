@@ -380,12 +380,11 @@ export function InstructorMonthFilter({
 
 /* ---------- 個人資料編輯彈窗 ---------- */
 
-type ProfileFormState = { bio: string; avatar_url: string; phone: string; line_id: string }
+type ProfileFormState = { name: string; bio: string; avatar_url: string; phone: string; line_id: string }
 
 export function InstructorProfileEditModal({
-  name, form, saving, onChange, onUpload, onSubmit, onClose,
+  form, saving, onChange, onUpload, onSubmit, onClose,
 }: {
-  name?: string
   form: ProfileFormState
   saving: boolean
   onChange: (next: ProfileFormState) => void
@@ -409,7 +408,7 @@ export function InstructorProfileEditModal({
             {form.avatar_url ? (
               <img src={form.avatar_url} alt="大頭照" className="w-full h-full object-cover" />
             ) : (
-              <span className="text-orange-600 font-bold text-3xl">{name?.[0]}</span>
+              <span className="text-orange-600 font-bold text-3xl">{form.name?.[0]}</span>
             )}
           </div>
           <label className="absolute right-0 bottom-[6px] bg-orange-500 hover:bg-orange-600 rounded-full p-[7px] cursor-pointer transition-colors">
@@ -422,7 +421,12 @@ export function InstructorProfileEditModal({
           <label className="flex items-center gap-1 text-sm font-medium text-stone-600">
             <span className="text-red-500 text-xs leading-none">*</span>姓名
           </label>
-          <input readOnly value={name || ''} className="w-full bg-white border border-stone-200 rounded-md px-2 py-2 text-sm text-stone-600 cursor-default focus:outline-none" />
+          <input
+            value={form.name}
+            onChange={e => onChange({ ...form, name: e.target.value })}
+            placeholder="請輸入姓名"
+            className="w-full bg-white border border-stone-200 rounded-md px-2 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200"
+          />
         </div>
 
         <div className="flex flex-col gap-4 items-start w-full">

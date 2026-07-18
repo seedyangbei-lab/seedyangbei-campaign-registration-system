@@ -41,7 +41,7 @@ const emptyForm = {
   photos: [] as string[], max_seats: 20, co_instructor_ids: [] as string[],
 }
 
-const emptyProfileForm = { bio: '', avatar_url: '', phone: '', line_id: '' }
+const emptyProfileForm = { name: '', bio: '', avatar_url: '', phone: '', line_id: '' }
 
 function InstructorPortal() {
   const router = useRouter()
@@ -126,7 +126,7 @@ function InstructorPortal() {
     const { data } = await supabase.from('instructors').select('*').eq('line_user_id', lineUserId).maybeSingle()
     if (data) {
       setInstructor(data)
-      setProfileForm({ bio: data.bio || '', avatar_url: data.avatar_url || '', phone: data.phone || '', line_id: data.line_id || '' })
+      setProfileForm({ name: data.name || '', bio: data.bio || '', avatar_url: data.avatar_url || '', phone: data.phone || '', line_id: data.line_id || '' })
       setStatus('ready')
       fetchCourses(data.id)
       const { data: roster } = await supabase.from('instructors').select('id, name').eq('is_active', true).order('name')
@@ -210,14 +210,17 @@ function InstructorPortal() {
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!instructor) return
+    const trimmedName = profileForm.name.trim()
+    if (!trimmedName) { setToast('姓名不能是空白'); return }
     setProfileSaving(true)
     await supabase.from('instructors').update({
+      name: trimmedName,
       bio: profileForm.bio,
       avatar_url: profileForm.avatar_url || null,
       phone: profileForm.phone || null,
       line_id: profileForm.line_id || null,
     }).eq('id', instructor.id)
-    setInstructor({ ...instructor, ...profileForm })
+    setInstructor({ ...instructor, ...profileForm, name: trimmedName })
     setProfileSaving(false)
     setShowProfileModal(false)
     setToast('個人資料已儲存')
@@ -546,7 +549,6 @@ function InstructorPortal() {
 
       {showProfileModal && (
         <InstructorProfileEditModal
-          name={instructor?.name}
           form={profileForm}
           saving={profileSaving}
           onChange={setProfileForm}
