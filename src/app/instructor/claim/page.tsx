@@ -1,39 +1,23 @@
 'use client'
 
-import { Suspense, useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
-
-const LINE_CHANNEL_ID = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2010077816'
-const LINE_CALLBACK_URL = process.env.NEXT_PUBLIC_LINE_CALLBACK_URL || 'https://yangbei-campaign.vercel.app/api/auth/line/callback'
-
-function getLineLoginUrl(token: string) {
-  const nonce = Math.random().toString(36).slice(2)
-  const statePayload = JSON.stringify({ instructorClaim: token, nonce })
-  const params = new URLSearchParams({
-    response_type: 'code',
-    client_id: LINE_CHANNEL_ID,
-    redirect_uri: LINE_CALLBACK_URL,
-    state: statePayload,
-    scope: 'profile openid',
-  })
-  return `https://access.line.me/oauth2/v2.1/authorize?${params}`
-}
+import { Suspense, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 function ClaimContent() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
   const error = searchParams.get('error')
-  // 防止同一次頁面載入內效果被觸發多次（手機瀏覽器有時會重跑 effect），
-  // 導致短時間內對 LINE 連續發出多次授權請求，前面拿到的 code 還沒用就被新的請求頂掉，
-  // 造成「invalid authorization code」的 token 交換失敗
-  const firedRef = useRef(false)
 
+  // 相容舊格式連結（?token=xxx query string）：一律轉址到新的路徑格式 /instructor/claim/xxx。
+  // 改用路徑參數是因為部分 Android 裝置／訊息 App 的連結預覽或清除追蹤參數機制，
+  // 偶爾會把 query string 整個拿掉，導致這裡讀不到 token（畫面會誤判成「邀請連結無效」），
+  // 路徑參數是網址本身的一部分，不會被這類機制單獨拆掉
   useEffect(() => {
-    if (token && !error && !firedRef.current) {
-      firedRef.current = true
-      window.location.href = getLineLoginUrl(token)
+    if (token && !error) {
+      router.replace(`/instructor/claim/${token}`)
     }
-  }, [token, error])
+  }, [token, error, router])
 
   if (!token) {
     return (

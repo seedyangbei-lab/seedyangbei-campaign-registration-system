@@ -26,5 +26,5 @@ export async function POST(request: NextRequest) {
     ? new URL(process.env.NEXT_PUBLIC_LINE_CALLBACK_URL).origin
     : 'https://yangbei-campaign.vercel.app'
 
-  return NextResponse.json({ claimUrl: `${origin}/instructor/claim?token=${token}`, expiresAt })
+  return NextResponse.json({ claimUrl: `${origin}/instructor/claim/${token}`, expiresAt })
 }
