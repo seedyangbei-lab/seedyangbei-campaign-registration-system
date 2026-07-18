@@ -106,20 +106,37 @@ export async function GET(request: NextRequest) {
 
         if (parsedState.instructorClaim) {
           const supabase = createServerClient()
-          const { data: matched } = await supabase
+          const claimTokenPreview = typeof parsedState.instructorClaim === 'string'
+            ? parsedState.instructorClaim.slice(0, 12)
+            : String(parsedState.instructorClaim)
+          const { data: matched, error: claimLookupError } = await supabase
             .from('instructors')
             .select('id, claim_token_expires_at')
             .eq('claim_token', parsedState.instructorClaim)
             .maybeSingle()
 
+          // 之前這裡完全沒檢查 error，查詢本身失敗（例如權限、連線問題）會跟「單純沒配對到」
+          // 混在一起變成同一種「無效」訊息，完全查不出真正原因 —— 這裡分開記錄
+          if (claimLookupError) {
+            console.error('instructor claim token lookup error:', claimLookupError)
+            await logLineLoginFail({
+              stage: 'instructor_claim_token_mismatch',
+              reason: 'lookup_error',
+              dbError: claimLookupError.message,
+              tokenPreview: claimTokenPreview,
+            })
+            return NextResponse.redirect(new URL('/instructor/claim?error=invalid', origin))
+          }
+
           if (!matched) {
             // 常見原因：講師登入 LINE 授權期間，後台又重新產生了一次邀請連結，
             // 舊的 claim_token 瞬間被覆蓋掉，導致這裡查不到對應的講師 —— 補上記錄方便日後對照
-            await logLineLoginFail({ stage: 'instructor_claim_token_mismatch', reason: 'claim_token_not_found' })
+            console.error('instructor claim token not found, tokenPreview:', claimTokenPreview)
+            await logLineLoginFail({ stage: 'instructor_claim_token_mismatch', reason: 'claim_token_not_found', tokenPreview: claimTokenPreview })
             return NextResponse.redirect(new URL('/instructor/claim?error=invalid', origin))
           }
           if (matched.claim_token_expires_at && new Date(matched.claim_token_expires_at) < new Date()) {
-            await logLineLoginFail({ stage: 'instructor_claim_token_mismatch', reason: 'claim_token_expired', instructorId: matched.id })
+            await logLineLoginFail({ stage: 'instructor_claim_token_mismatch', reason: 'claim_token_expired', instructorId: matched.id, tokenPreview: claimTokenPreview })
             return NextResponse.redirect(new URL('/instructor/claim?error=expired', origin))
           }
 
