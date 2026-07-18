@@ -223,6 +223,13 @@ function InstructorPortal() {
     setToast('個人資料已儲存')
   }
 
+  const handleLogout = () => {
+    localStorage.removeItem('instructor_line_user')
+    setShowProfileModal(false)
+    setInstructor(null)
+    setStatus('not_bound')
+  }
+
   /* ---------- 課程編輯／複製 ---------- */
 
   const openEdit = (course: any) => {
@@ -546,6 +553,7 @@ function InstructorPortal() {
           onUpload={handleProfileUpload}
           onSubmit={handleProfileSave}
           onClose={() => setShowProfileModal(false)}
+          onLogout={handleLogout}
         />
       )}
 

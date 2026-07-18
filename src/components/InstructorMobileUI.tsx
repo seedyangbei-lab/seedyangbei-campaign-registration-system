@@ -370,7 +370,7 @@ export function InstructorMonthFilter({
 type ProfileFormState = { bio: string; avatar_url: string; phone: string; line_id: string }
 
 export function InstructorProfileEditModal({
-  name, form, saving, onChange, onUpload, onSubmit, onClose,
+  name, form, saving, onChange, onUpload, onSubmit, onClose, onLogout,
 }: {
   name?: string
   form: ProfileFormState
@@ -379,6 +379,7 @@ export function InstructorProfileEditModal({
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onSubmit: (e: React.FormEvent) => void
   onClose: () => void
+  onLogout: () => void
 }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -441,6 +442,13 @@ export function InstructorProfileEditModal({
 
         <button type="submit" disabled={saving} className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-2.5 rounded-lg text-base transition-colors">
           {saving ? '儲存中...' : '儲存個人資料'}
+        </button>
+        <button
+          type="button"
+          onClick={onLogout}
+          className="w-full border border-stone-200 text-stone-500 hover:bg-stone-50 hover:text-red-600 hover:border-red-200 font-medium py-2.5 rounded-lg text-base transition-colors"
+        >
+          登出
         </button>
       </form>
     </div>
