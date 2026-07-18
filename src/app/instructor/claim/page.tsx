@@ -19,25 +19,28 @@ function ClaimContent() {
     }
   }, [token, error, router])
 
-  if (!token) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="max-w-sm text-center">
-          <p className="text-stone-800 font-semibold mb-2">邀請連結無效</p>
-          <p className="text-stone-400 text-sm">請確認連結是否完整，或聯繫負責人重新產生。</p>
-        </div>
-      </div>
-    )
-  }
-
+  // error 一定要優先判斷：伺服器導回的錯誤網址本來就不會帶 token，
+  // 如果先判斷 !token 會讓「綁定失敗（連結已被取代/過期）」永遠被誤判成通用的「邀請連結無效」，
+  // 使用者看到的訊息會對不上真正發生的狀況，不利於判斷根因
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="max-w-sm text-center">
           <p className="text-stone-800 font-semibold mb-2">綁定失敗</p>
           <p className="text-stone-400 text-sm">
-            {error === 'expired' ? '這組邀請連結已過期，請聯繫負責人重新產生。' : '邀請連結已被使用或無效，請聯繫負責人重新產生。'}
+            {error === 'expired' ? '這組邀請連結已過期，請聯繫負責人重新產生。' : '這組邀請連結已被新產生的連結取代，或已完成綁定，請聯繫負責人確認最新連結。'}
           </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="max-w-sm text-center">
+          <p className="text-stone-800 font-semibold mb-2">邀請連結無效</p>
+          <p className="text-stone-400 text-sm">請確認連結是否完整，或聯繫負責人重新產生。</p>
         </div>
       </div>
     )

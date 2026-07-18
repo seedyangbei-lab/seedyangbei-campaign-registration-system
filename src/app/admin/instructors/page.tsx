@@ -7,6 +7,7 @@ interface Instructor {
   id: string; name: string; bio: string; avatar_url: string
   is_active: boolean; phone?: string; line_id?: string
   line_user_id?: string | null
+  claim_token?: string | null; claim_token_expires_at?: string | null
 }
 
 const emptyForm = { name: '', bio: '', avatar_url: '', phone: '', line_id: '', is_active: true }
@@ -87,6 +88,15 @@ export default function InstructorsPage() {
   const supabase = createClient()
 
   const handleGenerateClaim = async (instructorId: string) => {
+    // 重新產生邀請連結會立即讓舊連結失效（就算講師正在使用中也一樣）——
+    // 這是先前幾次講師綁定一直失敗的根因之一：後台端在講師還沒完成綁定前又點了一次「產生」，
+    // 舊連結瞬間變成無效，講師端會看到「邀請連結無效」。這裡先確認過再送出
+    const inst = instructors.find(i => i.id === instructorId)
+    const hasActiveToken = !!inst?.claim_token && !!inst?.claim_token_expires_at && new Date(inst.claim_token_expires_at) > new Date()
+    if (hasActiveToken) {
+      const ok = window.confirm('這位講師已經有一組尚未使用、還沒過期的邀請連結。重新產生後，舊連結會立即失效（就算他正在使用中也一樣）。確定要產生新的嗎？')
+      if (!ok) return
+    }
     setClaimLoadingId(instructorId); setClaimError(null)
     try {
       const res = await fetch('/api/instructor/generate-claim-link', {

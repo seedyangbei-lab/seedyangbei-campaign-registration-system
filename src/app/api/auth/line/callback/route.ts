@@ -113,9 +113,13 @@ export async function GET(request: NextRequest) {
             .maybeSingle()
 
           if (!matched) {
+            // 常見原因：講師登入 LINE 授權期間，後台又重新產生了一次邀請連結，
+            // 舊的 claim_token 瞬間被覆蓋掉，導致這裡查不到對應的講師 —— 補上記錄方便日後對照
+            await logLineLoginFail({ stage: 'instructor_claim_token_mismatch', reason: 'claim_token_not_found' })
             return NextResponse.redirect(new URL('/instructor/claim?error=invalid', origin))
           }
           if (matched.claim_token_expires_at && new Date(matched.claim_token_expires_at) < new Date()) {
+            await logLineLoginFail({ stage: 'instructor_claim_token_mismatch', reason: 'claim_token_expired', instructorId: matched.id })
             return NextResponse.redirect(new URL('/instructor/claim?error=expired', origin))
           }
 
