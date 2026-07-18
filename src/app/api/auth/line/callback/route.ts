@@ -146,7 +146,17 @@ export async function GET(request: NextRequest) {
             .eq('id', matched.id)
 
           if (bindError) {
+            // 這裡之前完全沒有寫入 funnel_logs，只有 console.error（看不到），
+            // 是這幾次講師綁定一直查不到任何紀錄的真正原因。
+            // 最常見成因：這個 LINE 帳號已經綁定在「別的」講師資料上（line_user_id 有 UNIQUE constraint），
+            // 例如同一個人有兩筆講師資料（一筆用中文名、一筆用英文名），其中一筆已經綁過了
             console.error('instructor claim bind error:', bindError)
+            await logLineLoginFail({
+              stage: 'instructor_claim_bind_error',
+              reason: bindError.message,
+              instructorId: matched.id,
+              lineUserId,
+            })
             return NextResponse.redirect(new URL('/instructor/claim?error=invalid', origin))
           }
 
