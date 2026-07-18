@@ -184,15 +184,23 @@ export default function SystemHealthPage() {
       return
     }
     setStatusSaving(true)
-    if (detailTarget.source === 'instructor') {
-      const { error } = await supabase.from('issue_reports').update({ status: pendingStatus }).eq('id', detailTarget.id)
-      if (!error) setIssueReports(prev => prev.map(r => r.id === detailTarget.id ? { ...r, status: pendingStatus } : r))
+    // 用 .select() 拿回實際被更新的那一列：若 RLS 政策擋掉寫入，Supabase 不會回傳 error，
+    // 但實際受影響筆數會是 0，這裡要能分辨「寫入成功」跟「靜默失敗」，避免畫面顯示假的已儲存狀態
+    const table = detailTarget.source === 'instructor' ? 'issue_reports' : 'funnel_logs'
+    const { data, error } = await supabase.from(table).update({ status: pendingStatus }).eq('id', detailTarget.id).select('id')
+    const succeeded = !error && (data?.length || 0) > 0
+    if (succeeded) {
+      if (detailTarget.source === 'instructor') {
+        setIssueReports(prev => prev.map(r => r.id === detailTarget.id ? { ...r, status: pendingStatus } : r))
+      } else {
+        setFunnelLogs(prev => prev.map(r => r.id === detailTarget.id ? { ...r, status: pendingStatus } : r))
+      }
+      setToast('狀態已更新')
     } else {
-      const { error } = await supabase.from('funnel_logs').update({ status: pendingStatus }).eq('id', detailTarget.id)
-      if (!error) setFunnelLogs(prev => prev.map(r => r.id === detailTarget.id ? { ...r, status: pendingStatus } : r))
+      console.error('狀態更新失敗:', error || '受影響筆數為 0，可能是 RLS 政策擋掉寫入')
+      setToast('狀態更新失敗，請稍後再試')
     }
     setStatusSaving(false)
-    setToast('狀態已更新')
     setDetailTarget(null)
   }
 
