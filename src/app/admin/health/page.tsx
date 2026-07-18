@@ -4,8 +4,8 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import {
   ArrowRightIcon, ArrowLeftIcon, CopyIcon, CloseIcon, StatCard,
-  SourceBadge, IssueTypeBadge, AnomalyTypeBadge, InstructorStatusBadge, SystemStatusBadge,
-  INSTRUCTOR_STATUS_OPTIONS, FilterSelect, PerPageSelect, PaginationBar,
+  SourceBadge, IssueTypeBadge, AnomalyTypeBadge, StatusBadge,
+  STATUS_OPTIONS, SYSTEM_ISSUE_STEPS, FilterSelect, PerPageSelect, PaginationBar,
   MobileFunnelCard, MobileFunnelArrow,
 } from '@/components/AdminHealthUI'
 
@@ -16,6 +16,7 @@ type FunnelLog = {
   course_ids: string | null
   detail: any
   created_at: string
+  status: string
 }
 
 type IssueReport = {
@@ -52,8 +53,6 @@ const FUNNEL_CARDS = [
   { step: 'register_success', desc: '完整完成流程' },
 ]
 
-const SYSTEM_ISSUE_STEPS = ['register_error', 'register_guard_fail', 'line_login_fail']
-
 const RANGE_OPTIONS = [
   { label: '今天', days: 1 },
   { label: '近 7 天', days: 7 },
@@ -71,14 +70,6 @@ const TYPE_OPTIONS = [
   { value: 'line_login_fail', label: 'LINE登入失敗' },
 ]
 
-const STATUS_OPTIONS = [
-  { value: 'pending', label: '待處理' },
-  { value: 'in_progress', label: '處理中' },
-  { value: 'resolved', label: '已解決' },
-  { value: 'recorded', label: '已記錄（系統）' },
-  { value: 'needs_attention', label: '需關注（系統）' },
-]
-
 export default function SystemHealthPage() {
   const supabase = createClient()
   const [funnelLogs, setFunnelLogs] = useState<FunnelLog[]>([])
@@ -94,7 +85,8 @@ export default function SystemHealthPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
-  const [detailTarget, setDetailTarget] = useState<IssueReport | null>(null)
+  const [detailTarget, setDetailTarget] = useState<HealthRow | null>(null)
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null)
   const [statusSaving, setStatusSaving] = useState(false)
   const [toast, setToast] = useState('')
   const [zoomImage, setZoomImage] = useState<string | null>(null)
@@ -114,6 +106,10 @@ export default function SystemHealthPage() {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = original }
   }, [detailTarget, zoomImage])
+
+  useEffect(() => {
+    setPendingStatus(detailTarget ? detailTarget.data.status : null)
+  }, [detailTarget])
 
   const fetchData = async () => {
     setLoading(true)
@@ -158,15 +154,7 @@ export default function SystemHealthPage() {
 
   const filteredRows = useMemo(() => combinedRows.filter(row => {
     if (sourceFilter && row.source !== sourceFilter) return false
-    if (statusFilter) {
-      if (row.source === 'instructor') {
-        if (row.data.status !== statusFilter) return false
-      } else {
-        const isRecent = Date.now() - new Date(row.createdAt).getTime() < 24 * 60 * 60 * 1000
-        const sysStatus = isRecent ? 'needs_attention' : 'recorded'
-        if (sysStatus !== statusFilter) return false
-      }
-    }
+    if (statusFilter && row.data.status !== statusFilter) return false
     if (typeFilter) {
       if (row.source === 'instructor') {
         if (row.data.issue_type !== typeFilter) return false
@@ -190,13 +178,22 @@ export default function SystemHealthPage() {
     setToast('已複製事件詳細內容')
   }
 
-  const handleStatusChange = async (status: string) => {
-    if (!detailTarget) return
+  const handleConfirmStatus = async () => {
+    if (!detailTarget || pendingStatus === null || pendingStatus === detailTarget.data.status) {
+      setDetailTarget(null)
+      return
+    }
     setStatusSaving(true)
-    await supabase.from('issue_reports').update({ status }).eq('id', detailTarget.id)
-    setDetailTarget({ ...detailTarget, status })
-    await fetchData()
+    if (detailTarget.source === 'instructor') {
+      const { error } = await supabase.from('issue_reports').update({ status: pendingStatus }).eq('id', detailTarget.id)
+      if (!error) setIssueReports(prev => prev.map(r => r.id === detailTarget.id ? { ...r, status: pendingStatus } : r))
+    } else {
+      const { error } = await supabase.from('funnel_logs').update({ status: pendingStatus }).eq('id', detailTarget.id)
+      if (!error) setFunnelLogs(prev => prev.map(r => r.id === detailTarget.id ? { ...r, status: pendingStatus } : r))
+    }
     setStatusSaving(false)
+    setToast('狀態已更新')
+    setDetailTarget(null)
   }
 
   return (
@@ -336,24 +333,15 @@ export default function SystemHealthPage() {
                         {row.source === 'instructor' ? row.data.description : (row.data.detail ? JSON.stringify(row.data.detail) : '—')}
                       </td>
                       <td className="px-2 py-4 overflow-hidden">
-                        {row.source === 'instructor' ? <InstructorStatusBadge status={row.data.status} /> : <SystemStatusBadge createdAt={row.createdAt} />}
+                        <StatusBadge status={row.data.status} />
                       </td>
                       <td className="px-2 py-4 overflow-hidden">
-                        {row.source === 'instructor' ? (
-                          <button
-                            onClick={() => setDetailTarget(row.data)}
-                            className="w-full flex items-center justify-center text-xs border border-stone-300 text-stone-600 hover:bg-stone-50 px-2 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap"
-                          >
-                            查看詳情
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleCopyDetail(row.data)}
-                            className="w-full flex items-center justify-center gap-1 text-xs bg-orange-50 border border-orange-200 text-orange-600 hover:bg-orange-100 px-2 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap"
-                          >
-                            <CopyIcon />複製資訊
-                          </button>
-                        )}
+                        <button
+                          onClick={() => setDetailTarget(row)}
+                          className="w-full flex items-center justify-center text-xs border border-stone-300 text-stone-600 hover:bg-stone-50 px-2 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap"
+                        >
+                          查看詳情
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -386,23 +374,14 @@ export default function SystemHealthPage() {
                   </p>
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-stone-600">狀態</span>
-                    {row.source === 'instructor' ? <InstructorStatusBadge status={row.data.status} /> : <SystemStatusBadge createdAt={row.createdAt} />}
+                    <StatusBadge status={row.data.status} />
                   </div>
-                  {row.source === 'instructor' ? (
-                    <button
-                      onClick={() => setDetailTarget(row.data)}
-                      className="w-full h-8 flex items-center justify-center text-xs border border-stone-300 text-stone-600 rounded-md font-medium transition-colors"
-                    >
-                      查看詳情
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleCopyDetail(row.data)}
-                      className="w-full h-8 flex items-center justify-center gap-1.5 text-xs bg-orange-50 border border-orange-200 text-orange-600 rounded-md font-medium transition-colors"
-                    >
-                      <CopyIcon />複製資訊
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setDetailTarget(row)}
+                    className="w-full h-8 flex items-center justify-center text-xs border border-stone-300 text-stone-600 rounded-md font-medium transition-colors"
+                  >
+                    查看詳情
+                  </button>
                 </div>
               ))}
             </div>
@@ -422,31 +401,51 @@ export default function SystemHealthPage() {
         </div>
       )}
 
-      {/* 講師回報：查看詳情彈窗（桌面版，可切換處理狀態） */}
+      {/* 查看詳情彈窗（桌面版，講師回報／系統偵測共用，可切換處理狀態） */}
       {detailTarget && (
         <div className="hidden md:flex fixed inset-0 bg-black/40 z-50 items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setDetailTarget(null) }}>
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-stone-100">
-              <h3 className="text-stone-800 font-bold text-lg">問題回報詳情</h3>
+              <h3 className="text-stone-800 font-bold text-lg">{detailTarget.source === 'instructor' ? '問題回報詳情' : '系統事件詳情'}</h3>
               <button onClick={() => setDetailTarget(null)} className="p-1.5 hover:bg-stone-100 rounded-full transition-colors" aria-label="關閉">
                 <CloseIcon className="text-stone-600" />
               </button>
             </div>
             <div className="p-6 space-y-5">
               <div className="flex items-center gap-2 flex-wrap">
-                <IssueTypeBadge issueType={detailTarget.issue_type} />
-                <span className="text-xs text-stone-400">{formatDT(detailTarget.created_at)}</span>
-                {detailTarget.instructors?.name && <span className="text-xs text-stone-400">・講師：{detailTarget.instructors.name}</span>}
+                {detailTarget.source === 'instructor' ? <IssueTypeBadge issueType={detailTarget.data.issue_type} /> : <AnomalyTypeBadge step={detailTarget.data.step} />}
+                <span className="text-xs text-stone-400">{formatDT(detailTarget.createdAt)}</span>
+                {detailTarget.source === 'instructor' && detailTarget.data.instructors?.name && <span className="text-xs text-stone-400">・講師：{detailTarget.data.instructors.name}</span>}
               </div>
-              <div>
-                <p className="text-sm font-medium text-stone-600 mb-1.5">問題描述</p>
-                <p className="text-sm text-stone-700 whitespace-pre-wrap bg-stone-50 rounded-xl p-3">{detailTarget.description}</p>
-              </div>
-              {detailTarget.screenshot_urls && detailTarget.screenshot_urls.length > 0 && (
+
+              {detailTarget.source === 'instructor' ? (
                 <div>
-                  <p className="text-sm font-medium text-stone-600 mb-1.5">截圖（{detailTarget.screenshot_urls.length}）</p>
+                  <p className="text-sm font-medium text-stone-600 mb-1.5">問題描述</p>
+                  <p className="text-sm text-stone-700 whitespace-pre-wrap bg-stone-50 rounded-xl p-3">{detailTarget.data.description}</p>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-sm font-medium text-stone-600">錯誤資訊</p>
+                    <button
+                      onClick={() => handleCopyDetail(detailTarget.data)}
+                      className="flex items-center gap-1 text-xs bg-orange-50 border border-orange-200 text-orange-600 hover:bg-orange-100 px-2 py-1 rounded-md font-medium transition-colors"
+                    >
+                      <CopyIcon />複製資訊
+                    </button>
+                  </div>
+                  {detailTarget.data.course_ids && <p className="text-xs text-stone-500 mb-1.5">課程：{detailTarget.data.course_ids}</p>}
+                  <pre className="text-xs text-stone-700 whitespace-pre-wrap break-all bg-stone-50 rounded-xl p-3 max-h-64 overflow-y-auto">
+                    {detailTarget.data.detail ? JSON.stringify(detailTarget.data.detail, null, 2) : '—'}
+                  </pre>
+                </div>
+              )}
+
+              {detailTarget.source === 'instructor' && detailTarget.data.screenshot_urls && detailTarget.data.screenshot_urls.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-stone-600 mb-1.5">截圖（{detailTarget.data.screenshot_urls.length}）</p>
                   <div className="grid grid-cols-4 gap-2">
-                    {detailTarget.screenshot_urls.map((url, i) => (
+                    {detailTarget.data.screenshot_urls.map((url, i) => (
                       <button key={url + i} type="button" onClick={() => setZoomImage(url)} className="aspect-square rounded-lg overflow-hidden border border-stone-200 block">
                         <img src={url} alt="" className="w-full h-full object-cover" />
                       </button>
@@ -454,16 +453,17 @@ export default function SystemHealthPage() {
                   </div>
                 </div>
               )}
+
               <div>
                 <p className="text-sm font-medium text-stone-600 mb-1.5">處理狀態</p>
                 <div className="flex gap-2">
-                  {INSTRUCTOR_STATUS_OPTIONS.map(o => (
+                  {STATUS_OPTIONS.map(o => (
                     <button
                       key={o.value}
-                      onClick={() => handleStatusChange(o.value)}
+                      onClick={() => setPendingStatus(o.value)}
                       disabled={statusSaving}
                       className={`flex-1 text-sm font-medium py-2 rounded-lg border transition-colors disabled:opacity-50 ${
-                        detailTarget.status === o.value ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-stone-200 text-stone-500 hover:bg-stone-50'
+                        pendingStatus === o.value ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-stone-200 text-stone-500 hover:bg-stone-50'
                       }`}
                     >
                       {o.label}
@@ -471,44 +471,72 @@ export default function SystemHealthPage() {
                   ))}
                 </div>
               </div>
+
+              <button
+                onClick={handleConfirmStatus}
+                disabled={statusSaving}
+                className="w-full h-11 flex items-center justify-center rounded-lg bg-orange-500 text-white text-sm font-medium disabled:opacity-50 transition-colors"
+              >
+                {statusSaving ? '儲存中...' : '確認'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 講師回報：查看詳情（手機版，全螢幕頁面樣式，底部按鈕 sticky，頁面本身不可捲動） */}
+      {/* 查看詳情（手機版，全螢幕頁面樣式，底部按鈕 sticky，頁面本身不可捲動） */}
       {detailTarget && (
         <div className="md:hidden fixed inset-0 z-50 bg-white flex flex-col">
           <div className="shrink-0 h-[52px] px-4 flex items-center justify-between shadow-[0px_4px_2px_0px_rgba(0,0,0,0.03)]">
             <button onClick={() => setDetailTarget(null)} className="p-1 -ml-1" aria-label="返回">
               <ArrowLeftIcon className="text-stone-700" />
             </button>
-            <p className="text-[14px] font-bold text-stone-600 tracking-[3px]">問題回報詳情</p>
+            <p className="text-[14px] font-bold text-stone-600 tracking-[3px]">{detailTarget.source === 'instructor' ? '問題回報詳情' : '系統事件詳情'}</p>
             <div className="w-4 h-4" aria-hidden="true" />
           </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto p-8 flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-stone-600">回報來源</span>
-              <SourceBadge source="instructor" />
+              <SourceBadge source={detailTarget.source} />
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-stone-600">時間</span>
-              <span className="text-sm text-stone-500">{formatDT(detailTarget.created_at)}</span>
+              <span className="text-sm text-stone-500">{formatDT(detailTarget.createdAt)}</span>
             </div>
-            <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-stone-600">問題描述</span>
-              <div className="bg-stone-50 rounded-xl p-3">
-                <p className="text-sm text-stone-600 whitespace-pre-wrap">{detailTarget.description}</p>
+
+            {detailTarget.source === 'instructor' ? (
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-medium text-stone-600">問題描述</span>
+                <div className="bg-stone-50 rounded-xl p-3">
+                  <p className="text-sm text-stone-600 whitespace-pre-wrap">{detailTarget.data.description}</p>
+                </div>
               </div>
-            </div>
-            {detailTarget.screenshot_urls && detailTarget.screenshot_urls.length > 0 && (
+            ) : (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-stone-600">錯誤資訊</span>
+                  <button
+                    onClick={() => handleCopyDetail(detailTarget.data)}
+                    className="flex items-center gap-1.5 text-xs bg-orange-50 border border-orange-200 text-orange-600 px-2.5 py-1.5 rounded-md font-medium transition-colors"
+                  >
+                    <CopyIcon />複製資訊
+                  </button>
+                </div>
+                {detailTarget.data.course_ids && <p className="text-xs text-stone-500">課程：{detailTarget.data.course_ids}</p>}
+                <pre className="text-xs text-stone-600 whitespace-pre-wrap break-all bg-stone-50 rounded-xl p-3 max-h-64 overflow-y-auto">
+                  {detailTarget.data.detail ? JSON.stringify(detailTarget.data.detail, null, 2) : '—'}
+                </pre>
+              </div>
+            )}
+
+            {detailTarget.source === 'instructor' && detailTarget.data.screenshot_urls && detailTarget.data.screenshot_urls.length > 0 && (
               <div className="flex flex-col gap-2">
                 <span className="text-sm font-medium text-stone-600">
-                  截圖上傳 <span className="text-xs text-stone-400">({detailTarget.screenshot_urls.length})</span>
+                  截圖上傳 <span className="text-xs text-stone-400">({detailTarget.data.screenshot_urls.length})</span>
                 </span>
                 <div className="grid grid-cols-3 gap-2">
-                  {detailTarget.screenshot_urls.map((url, i) => (
+                  {detailTarget.data.screenshot_urls.map((url, i) => (
                     <button
                       key={url + i}
                       type="button"
@@ -521,16 +549,17 @@ export default function SystemHealthPage() {
                 </div>
               </div>
             )}
+
             <div className="flex flex-col gap-2">
               <span className="text-sm font-medium text-stone-600">處理狀態</span>
               <div className="flex gap-2 pt-1.5">
-                {INSTRUCTOR_STATUS_OPTIONS.map(o => (
+                {STATUS_OPTIONS.map(o => (
                   <button
                     key={o.value}
-                    onClick={() => handleStatusChange(o.value)}
+                    onClick={() => setPendingStatus(o.value)}
                     disabled={statusSaving}
                     className={`flex-1 h-11 flex items-center justify-center rounded-lg border text-sm font-medium transition-colors disabled:opacity-50 ${
-                      detailTarget.status === o.value ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-stone-200 text-stone-500'
+                      pendingStatus === o.value ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-stone-200 text-stone-500'
                     }`}
                   >
                     {o.label}
@@ -542,10 +571,11 @@ export default function SystemHealthPage() {
 
           <div className="shrink-0 p-4 rounded-t-2xl shadow-[0px_-3px_4px_0px_rgba(0,0,0,0.08)] bg-white">
             <button
-              onClick={() => setDetailTarget(null)}
-              className="w-full h-[50px] flex items-center justify-center rounded-[10px] bg-orange-500 text-white text-base font-medium"
+              onClick={handleConfirmStatus}
+              disabled={statusSaving}
+              className="w-full h-[50px] flex items-center justify-center rounded-[10px] bg-orange-500 text-white text-base font-medium disabled:opacity-50"
             >
-              確認
+              {statusSaving ? '儲存中...' : '確認'}
             </button>
           </div>
         </div>

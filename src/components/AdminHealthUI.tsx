@@ -112,6 +112,8 @@ export function IssueTypeBadge({ issueType }: { issueType: string }) {
 
 /* ---------- Badge：異常類型（系統偵測用） ---------- */
 
+export const SYSTEM_ISSUE_STEPS = ['register_error', 'register_guard_fail', 'line_login_fail']
+
 const ANOMALY_TYPE_STYLE: Record<string, { label: string; cls: string }> = {
   register_error: { label: '報名異常', cls: 'bg-red-50 text-red-600' },
   register_guard_fail: { label: '課程資訊遺失', cls: 'bg-amber-50 text-amber-600' },
@@ -123,28 +125,17 @@ export function AnomalyTypeBadge({ step }: { step: string }) {
   return <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-md whitespace-nowrap ${s.cls}`}>{s.label}</span>
 }
 
-/* ---------- Badge：處理狀態（講師回報用，可切換） ---------- */
+/* ---------- Badge：處理狀態（講師回報／系統偵測共用，可切換） ---------- */
 
-export const INSTRUCTOR_STATUS_OPTIONS = [
+export const STATUS_OPTIONS = [
   { value: 'pending', label: '待處理', cls: 'bg-orange-50 text-orange-600' },
   { value: 'in_progress', label: '處理中', cls: 'bg-blue-50 text-blue-600' },
   { value: 'resolved', label: '已解決', cls: 'bg-green-50 text-green-700' },
 ]
 
-export function InstructorStatusBadge({ status }: { status: string }) {
-  const s = INSTRUCTOR_STATUS_OPTIONS.find(o => o.value === status) || INSTRUCTOR_STATUS_OPTIONS[0]
+export function StatusBadge({ status }: { status: string }) {
+  const s = STATUS_OPTIONS.find(o => o.value === status) || STATUS_OPTIONS[0]
   return <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-md whitespace-nowrap ${s.cls}`}>{s.label}</span>
-}
-
-/* ---------- Badge：系統偵測狀態（依事件新舊自動判斷，24hr 內＝需關注） ---------- */
-
-export function SystemStatusBadge({ createdAt }: { createdAt: string }) {
-  const isRecent = Date.now() - new Date(createdAt).getTime() < 24 * 60 * 60 * 1000
-  return isRecent ? (
-    <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-md whitespace-nowrap bg-amber-100 text-amber-700">需關注</span>
-  ) : (
-    <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-md whitespace-nowrap bg-stone-100 text-stone-500">已記錄</span>
-  )
 }
 
 /* ---------- 下拉篩選（sm, filled） ---------- */

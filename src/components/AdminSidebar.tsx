@@ -2,8 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock'
+import { createClient } from '@/lib/supabase'
+import { SYSTEM_ISSUE_STEPS } from '@/components/AdminHealthUI'
 
 type IconFn = (size: number) => React.ReactElement
 
@@ -80,7 +82,23 @@ export default function AdminSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [healthPendingCount, setHealthPendingCount] = useState(0)
   useBodyScrollLock(mobileOpen)
+
+  // 系統健康未讀角標：待處理的講師回報 + 待處理的系統偵測異常事件，合計數量
+  useEffect(() => {
+    const fetchHealthPendingCount = async () => {
+      const supabase = createClient()
+      const [issueRes, funnelRes] = await Promise.all([
+        supabase.from('issue_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('funnel_logs').select('id', { count: 'exact', head: true }).eq('status', 'pending').in('step', SYSTEM_ISSUE_STEPS),
+      ])
+      setHealthPendingCount((issueRes.count || 0) + (funnelRes.count || 0))
+    }
+    fetchHealthPendingCount()
+    const t = setInterval(fetchHealthPendingCount, 30000)
+    return () => clearInterval(t)
+  }, [pathname])
 
   const handleLogout = () => {
     localStorage.removeItem('admin_auth')
@@ -106,7 +124,12 @@ export default function AdminSidebar() {
                 className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-base font-medium transition-colors ${isActive(item.href) ? 'bg-orange-50 text-orange-600' : 'text-stone-600 hover:bg-stone-100 hover:text-stone-800'}`}
               >
                 <span className={isActive(item.href) ? 'text-orange-500' : 'text-stone-400'}>{item.icon(20)}</span>
-                <span>{item.label}</span>
+                <span className="flex-1">{item.label}</span>
+                {item.href === '/admin/health' && healthPendingCount > 0 && (
+                  <span className="min-w-[20px] h-5 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold leading-none">
+                    {healthPendingCount > 99 ? '99+' : healthPendingCount}
+                  </span>
+                )}
               </Link>
             </li>
           ))}
@@ -152,7 +175,12 @@ export default function AdminSidebar() {
                   className={`flex items-center gap-2 px-3 h-10 rounded-lg text-sm transition-colors ${isActive(item.href) ? 'bg-orange-50 text-orange-600 font-medium' : 'text-stone-600 font-normal hover:bg-stone-100'}`}
                 >
                   <span className={isActive(item.href) ? 'text-orange-500' : 'text-stone-400'}>{item.icon(18)}</span>
-                  <span>{item.label}</span>
+                  <span className="flex-1">{item.label}</span>
+                  {item.href === '/admin/health' && healthPendingCount > 0 && (
+                    <span className="min-w-[20px] h-5 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold leading-none">
+                      {healthPendingCount > 99 ? '99+' : healthPendingCount}
+                    </span>
+                  )}
                 </Link>
               </li>
             ))}
