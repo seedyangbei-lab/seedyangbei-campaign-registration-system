@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock'
 
 const SEEN_KEY = 'yangbei_seen_login_prompt'
@@ -79,7 +79,12 @@ export default function FirstVisitLoginModal() {
     setTimeout(() => setMounted(false), 300)
   }
 
+  const bindingRef = useRef(false)
+
   const handleBind = () => {
+    // 防止連續點擊發出多次 LINE 授權請求（見 CourseCard.tsx 同款修正的說明）
+    if (bindingRef.current) return
+    bindingRef.current = true
     markSeen()
     const nonce = Math.random().toString(36).slice(2)
     const statePayload = JSON.stringify({ url: `${window.location.origin}/`, nonce })

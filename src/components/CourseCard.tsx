@@ -227,6 +227,11 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
   const filterRowRef = useRef<HTMLDivElement>(null)
   const firstCardRef = useRef<HTMLDivElement>(null)
   const ctaRef = useRef<HTMLButtonElement>(null)
+  // 防止「前往報名」被連續點擊多次：手機上頁面跳轉前有短暫延遲，若使用者心急連點，
+  // 會對 LINE 連續發出多次授權請求，前一個請求的 code 還沒交換就被新請求頂掉，
+  // 造成登入失敗、選課資訊遺失（詳見 register_guard_fail 事件）
+  const proceedingRef = useRef(false)
+  const [proceeding, setProceeding] = useState(false)
 
   const startTutorialStep1 = () => {
     saveTutorialStep('1')
@@ -322,6 +327,9 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
     : filtered
 
   const handleProceed = () => {
+    if (proceedingRef.current) return
+    proceedingRef.current = true
+    setProceeding(true)
     if (tutorialStep === '2') saveTutorialStep('3')
     const ids = selected.join(',')
     logFunnelStep('select_course', ids)
@@ -577,9 +585,9 @@ export default function CourseCard({ courses, categories, lineCommunityUrl }: {
 
       {selected.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
-          <button ref={ctaRef} onClick={handleProceed}
+          <button ref={ctaRef} onClick={handleProceed} disabled={proceeding}
             style={{ boxShadow: '0px -1px 2px rgba(0,0,0,0.16)' }}
-            className="w-full flex items-center justify-between bg-stone-50 border border-stone-300 px-4 py-2.5 rounded-2xl transition-all active:scale-95">
+            className="w-full flex items-center justify-between bg-stone-50 border border-stone-300 px-4 py-2.5 rounded-2xl transition-all active:scale-95 disabled:opacity-60">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0">{selected.length}</div>
               <div className="text-left">

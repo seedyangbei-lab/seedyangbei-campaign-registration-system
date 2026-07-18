@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
 const LINE_CHANNEL_ID = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2010077816'
@@ -36,7 +36,12 @@ export default function SiteNavbar({ siteTitle, variant = 'home', onLogout }: Si
     }
   }, [])
 
+  const loggingInRef = useRef(false)
+
   const handleLogin = () => {
+    // 防止連續點擊發出多次 LINE 授權請求（見 CourseCard.tsx 同款修正的說明）
+    if (loggingInRef.current) return
+    loggingInRef.current = true
     const registerUrl = `${window.location.origin}/register`
     const nonce = Math.random().toString(36).slice(2)
     const statePayload = JSON.stringify({ url: registerUrl, nonce })
