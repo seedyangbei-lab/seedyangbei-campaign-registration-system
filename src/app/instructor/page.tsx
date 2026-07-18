@@ -451,7 +451,7 @@ function InstructorPortal() {
 
   return (
     <div className="min-h-screen bg-stone-50 md:bg-[#fff8f3] pb-10 md:pb-[60px]">
-      <InstructorNavbar name={instructor?.name} avatarUrl={instructor?.avatar_url} />
+      <InstructorNavbar name={instructor?.name} avatarUrl={instructor?.avatar_url} onLogout={handleLogout} />
 
       <div className="max-w-md mx-auto md:max-w-[800px] md:pt-10">
         <InstructorProfileCard
@@ -553,7 +553,6 @@ function InstructorPortal() {
           onUpload={handleProfileUpload}
           onSubmit={handleProfileSave}
           onClose={() => setShowProfileModal(false)}
-          onLogout={handleLogout}
         />
       )}
 

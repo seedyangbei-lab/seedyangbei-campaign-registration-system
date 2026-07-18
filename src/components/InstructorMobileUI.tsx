@@ -135,19 +135,32 @@ export function ChevronDownIcon({ className }: { className?: string }) {
 
 /* ---------- Navbar：課程管理系統 ---------- */
 
-export function InstructorNavbar({ name, avatarUrl }: { name?: string; avatarUrl?: string | null }) {
+export function InstructorNavbar({
+  name, avatarUrl, onLogout,
+}: { name?: string; avatarUrl?: string | null; onLogout?: () => void }) {
   return (
     <div className="sticky top-0 z-30 bg-white h-[65px] flex items-center justify-between px-4 shadow-[0px_4px_2px_rgba(0,0,0,0.03)]">
       <p className="text-sm font-bold tracking-[3px] text-stone-600">課程管理系統</p>
-      <div className="flex items-center gap-2 bg-white rounded-xl drop-shadow-[0px_1px_1.5px_rgba(0,0,0,0.1)] px-2.5 py-2">
-        {avatarUrl ? (
-          <img src={avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover" />
-        ) : (
-          <div className="w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center text-[10px] font-bold text-orange-600 shrink-0">
-            {name?.[0] || '?'}
-          </div>
+      {/* 大頭貼＋名字＋登出：比照前台 SiteNavbar 已登入狀態的排版，登出直接顯示在 header，不用點進選單 */}
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 bg-white rounded-xl drop-shadow-[0px_1px_1.5px_rgba(0,0,0,0.1)] px-2.5 py-2">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover" />
+          ) : (
+            <div className="w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center text-[10px] font-bold text-orange-600 shrink-0">
+              {name?.[0] || '?'}
+            </div>
+          )}
+          <span className="text-xs font-medium text-stone-700 whitespace-nowrap">{name}</span>
+        </div>
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            className="bg-white border border-stone-200 rounded-xl px-2.5 py-2 hover:bg-stone-50 transition-colors"
+          >
+            <span className="text-xs text-stone-500 whitespace-nowrap">登出</span>
+          </button>
         )}
-        <span className="text-xs font-medium text-stone-700 whitespace-nowrap">{name}</span>
       </div>
     </div>
   )
@@ -370,7 +383,7 @@ export function InstructorMonthFilter({
 type ProfileFormState = { bio: string; avatar_url: string; phone: string; line_id: string }
 
 export function InstructorProfileEditModal({
-  name, form, saving, onChange, onUpload, onSubmit, onClose, onLogout,
+  name, form, saving, onChange, onUpload, onSubmit, onClose,
 }: {
   name?: string
   form: ProfileFormState
@@ -379,7 +392,6 @@ export function InstructorProfileEditModal({
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onSubmit: (e: React.FormEvent) => void
   onClose: () => void
-  onLogout: () => void
 }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -442,13 +454,6 @@ export function InstructorProfileEditModal({
 
         <button type="submit" disabled={saving} className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-2.5 rounded-lg text-base transition-colors">
           {saving ? '儲存中...' : '儲存個人資料'}
-        </button>
-        <button
-          type="button"
-          onClick={onLogout}
-          className="w-full border border-stone-200 text-stone-500 hover:bg-stone-50 hover:text-red-600 hover:border-red-200 font-medium py-2.5 rounded-lg text-base transition-colors"
-        >
-          登出
         </button>
       </form>
     </div>
