@@ -1213,6 +1213,24 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
     return lines
   }
 
+  // 文字太長換行超過可用高度時，不能像原本那樣直接砍掉多出來的行（會整段文字消失），
+  // 改成自動把字級一階一階調小，直到全部行數都塞得進這一列的高度為止，確保文字永遠完整顯示
+  const fitWrappedText = (
+    ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxHeight: number,
+    baseFontSize: number, weight: number, lineHeightRatio: number, minFontSize = 8
+  ): { fontSize: number; lines: string[]; lineH: number } => {
+    let fontSize = baseFontSize
+    while (fontSize > minFontSize) {
+      ctx.font = `${weight} ${fontSize}px "Noto Sans TC","GenSenRounded2TW",sans-serif`
+      const lines = wrapText(ctx, text, maxWidth)
+      const lineH = Math.round(fontSize * lineHeightRatio)
+      if (lines.length * lineH <= maxHeight) return { fontSize, lines, lineH }
+      fontSize -= 1
+    }
+    ctx.font = `${weight} ${minFontSize}px "Noto Sans TC","GenSenRounded2TW",sans-serif`
+    return { fontSize: minFontSize, lines: wrapText(ctx, text, maxWidth), lineH: Math.round(minFontSize * lineHeightRatio) }
+  }
+
   const drawScheduleCanvas = async (
     canvas: HTMLCanvasElement,
     pageCourses: Course[],
@@ -1546,12 +1564,11 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
           ctx.font = font(fsTime, 700); ctx.fillStyle = e.courseTextColor
           ctx.fillText(course.time_end?.slice(0,5) || '', col.x + col.w/2, cy + 17)
         } else if (ci === 2) {
-          ctx.font = font(fsTitle, 700); ctx.fillStyle = e.courseTextColor
+          ctx.fillStyle = e.courseTextColor
           ctx.textAlign = 'center'
-          const lines = wrapText(ctx, course.title, col.w - 12)
-          const lineH = Math.round(fsTitle * 1.28)
+          const { lines, lineH } = fitWrappedText(ctx, course.title, col.w - 12, ROW_H - 8, fsTitle, 700, 1.28)
           const startY = cy - ((lines.length - 1) * lineH) / 2
-          lines.slice(0, 2).forEach((line, li) => {
+          lines.forEach((line, li) => {
             ctx.fillText(line, col.x + col.w/2, startY + li * lineH)
           })
         } else if (ci === 3) {
@@ -1561,11 +1578,10 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
             ctx.fillText(instructorText, col.x + col.w/2, cy + 5)
           }
         } else if (ci === 4) {
-          ctx.font = font(fsLocation, 700); ctx.fillStyle = e.courseTextColor
-          const lines = wrapText(ctx, course.location, col.w - 8)
-          const lineH = Math.round(fsLocation * 1.33)
+          ctx.fillStyle = e.courseTextColor
+          const { lines, lineH } = fitWrappedText(ctx, course.location, col.w - 8, ROW_H - 8, fsLocation, 700, 1.33)
           const startY = cy - ((lines.length - 1) * lineH) / 2
-          lines.slice(0, 2).forEach((line, li) => {
+          lines.forEach((line, li) => {
             ctx.fillText(line, col.x + col.w/2, startY + 5 + li * lineH)
           })
         } else if (ci === 5) {
