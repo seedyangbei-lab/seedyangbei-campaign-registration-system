@@ -17,11 +17,25 @@ async function logLineLoginFail(detail: Record<string, any>) {
   }
 }
 
+// 判斷這次 LINE 登入屬於哪個流程：居民報名 / 講師綁定邀請連結 / 講師登入中台
+// 提早在拿到 state 當下就判斷，這樣連 token 交換失敗這種最早期的錯誤也能分類，
+// 不用等到 profile 拿到之後才知道是誰在用
+function detectFlow(state: string | null): 'instructor_claim' | 'instructor_login' | 'resident' {
+  if (!state) return 'resident'
+  try {
+    const parsed = JSON.parse(decodeURIComponent(state))
+    if (parsed.instructorClaim) return 'instructor_claim'
+    if (parsed.instructorLogin) return 'instructor_login'
+  } catch {}
+  return 'resident'
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
   const state = searchParams.get('state')
   const error = searchParams.get('error')
+  const flow = detectFlow(state)
 
   if (error || !code) {
     let coursesParam = ''
@@ -63,6 +77,7 @@ export async function GET(request: NextRequest) {
         errorCode: tokenData.error || null,
         hasState: !!state,
         userAgent: request.headers.get('user-agent') || null,
+        flow,
       })
       let coursesParam = ''
       if (state) {
@@ -87,7 +102,7 @@ export async function GET(request: NextRequest) {
 
     if (!lineUserId) {
       console.error('LINE profile error:', JSON.stringify(profile))
-      await logLineLoginFail({ stage: 'profile_fetch', reason: 'no_user_id' })
+      await logLineLoginFail({ stage: 'profile_fetch', reason: 'no_user_id', flow })
       let coursesParam = ''
       if (state) {
         try {
@@ -262,7 +277,7 @@ export async function GET(request: NextRequest) {
     )
   } catch (err: any) {
     console.error('LINE Login unexpected error:', err?.message || err)
-    await logLineLoginFail({ stage: 'unexpected', reason: err?.message || String(err) })
+    await logLineLoginFail({ stage: 'unexpected', reason: err?.message || String(err), flow })
     let coursesParam = ''
     if (state) {
       try {

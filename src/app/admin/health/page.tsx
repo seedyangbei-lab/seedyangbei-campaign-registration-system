@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import {
   ArrowRightIcon, ArrowLeftIcon, CopyIcon, CloseIcon, StatCard,
-  SourceBadge, IssueTypeBadge, AnomalyTypeBadge, StatusBadge,
+  SourceBadge, IssueTypeBadge, AnomalyTypeBadge, StatusBadge, getAnomalySubtype,
   STATUS_OPTIONS, SYSTEM_ISSUE_STEPS, FilterSelect, PerPageSelect, PaginationBar,
   MobileFunnelCard, MobileFunnelArrow,
 } from '@/components/AdminHealthUI'
@@ -67,7 +67,9 @@ const TYPE_OPTIONS = [
   { value: '其他', label: '其他（講師回報）' },
   { value: 'register_error', label: '報名異常' },
   { value: 'register_guard_fail', label: '課程資訊遺失' },
-  { value: 'line_login_fail', label: 'LINE登入失敗' },
+  { value: 'line_login_fail_resident', label: '居民登入失敗' },
+  { value: 'line_login_fail_instructor_claim', label: '講師綁定失敗' },
+  { value: 'line_login_fail_instructor_login', label: '講師登入失敗' },
 ]
 
 export default function SystemHealthPage() {
@@ -159,7 +161,7 @@ export default function SystemHealthPage() {
       if (row.source === 'instructor') {
         if (row.data.issue_type !== typeFilter) return false
       } else {
-        if (row.data.step !== typeFilter) return false
+        if (getAnomalySubtype(row.data.step, row.data.detail) !== typeFilter) return false
       }
     }
     return true
@@ -331,7 +333,7 @@ export default function SystemHealthPage() {
                       <td className="px-2 py-4 overflow-hidden"><SourceBadge source={row.source} /></td>
                       <td className="px-2 py-4 text-stone-400 text-xs whitespace-nowrap overflow-hidden">{formatDT(row.createdAt)}</td>
                       <td className="px-2 py-4 overflow-hidden">
-                        {row.source === 'instructor' ? <IssueTypeBadge issueType={row.data.issue_type} /> : <AnomalyTypeBadge step={row.data.step} />}
+                        {row.source === 'instructor' ? <IssueTypeBadge issueType={row.data.issue_type} /> : <AnomalyTypeBadge step={row.data.step} detail={row.data.detail} />}
                       </td>
                       <td className="px-2 py-4 text-stone-600 text-xs truncate overflow-hidden">
                         {row.source === 'instructor' ? (row.data.instructors?.name ? `講師：${row.data.instructors.name}` : '—') : (row.data.course_ids || '—')}
@@ -373,7 +375,7 @@ export default function SystemHealthPage() {
                         </span>
                       </>
                     ) : (
-                      <AnomalyTypeBadge step={row.data.step} />
+                      <AnomalyTypeBadge step={row.data.step} detail={row.data.detail} />
                     )}
                   </div>
                   <p className="text-[11px] text-stone-500 truncate">
@@ -420,7 +422,7 @@ export default function SystemHealthPage() {
             </div>
             <div className="p-6 space-y-5">
               <div className="flex items-center gap-2 flex-wrap">
-                {detailTarget.source === 'instructor' ? <IssueTypeBadge issueType={detailTarget.data.issue_type} /> : <AnomalyTypeBadge step={detailTarget.data.step} />}
+                {detailTarget.source === 'instructor' ? <IssueTypeBadge issueType={detailTarget.data.issue_type} /> : <AnomalyTypeBadge step={detailTarget.data.step} detail={detailTarget.data.detail} />}
                 <span className="text-xs text-stone-400">{formatDT(detailTarget.createdAt)}</span>
                 {detailTarget.source === 'instructor' && detailTarget.data.instructors?.name && <span className="text-xs text-stone-400">・講師：{detailTarget.data.instructors.name}</span>}
               </div>

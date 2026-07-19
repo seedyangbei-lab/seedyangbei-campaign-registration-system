@@ -114,14 +114,32 @@ export function IssueTypeBadge({ issueType }: { issueType: string }) {
 
 export const SYSTEM_ISSUE_STEPS = ['register_error', 'register_guard_fail', 'line_login_fail']
 
+// line_login_fail 這個 step 底下混了三種完全不同的人：居民報名登入、講師點邀請連結綁定、
+// 講師登入中台。光看 step 分不出來，要進一步看 detail 裡的 stage / flow 才能區分是誰卡住
+export function getAnomalySubtype(step: string, detail: any): string {
+  if (step !== 'line_login_fail') return step
+  const stage = detail?.stage
+  if (stage === 'instructor_claim_token_mismatch' || stage === 'instructor_claim_bind_error') {
+    return 'line_login_fail_instructor_claim'
+  }
+  const flow = detail?.flow
+  if (flow === 'instructor_claim') return 'line_login_fail_instructor_claim'
+  if (flow === 'instructor_login') return 'line_login_fail_instructor_login'
+  // 舊資料（補這個欄位之前留下的紀錄）沒有 flow，一律當居民登入失敗處理
+  return 'line_login_fail_resident'
+}
+
 const ANOMALY_TYPE_STYLE: Record<string, { label: string; cls: string }> = {
   register_error: { label: '報名異常', cls: 'bg-red-50 text-red-600' },
   register_guard_fail: { label: '課程資訊遺失', cls: 'bg-amber-50 text-amber-600' },
-  line_login_fail: { label: 'LINE登入失敗', cls: 'bg-cyan-50 text-cyan-600' },
+  line_login_fail_resident: { label: '居民登入失敗', cls: 'bg-cyan-50 text-cyan-600' },
+  line_login_fail_instructor_claim: { label: '講師綁定失敗', cls: 'bg-purple-50 text-purple-600' },
+  line_login_fail_instructor_login: { label: '講師登入失敗', cls: 'bg-indigo-50 text-indigo-600' },
 }
 
-export function AnomalyTypeBadge({ step }: { step: string }) {
-  const s = ANOMALY_TYPE_STYLE[step] || { label: step, cls: 'bg-stone-100 text-stone-600' }
+export function AnomalyTypeBadge({ step, detail }: { step: string; detail?: any }) {
+  const key = getAnomalySubtype(step, detail)
+  const s = ANOMALY_TYPE_STYLE[key] || { label: step, cls: 'bg-stone-100 text-stone-600' }
   return <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-md whitespace-nowrap ${s.cls}`}>{s.label}</span>
 }
 
