@@ -25,16 +25,22 @@ export async function POST(request: NextRequest) {
   }
 
   // 稽核紀錄：以後遇到 claim_token_not_found 可用 tokenPreview 反查是哪位講師產生的連結
-  // fire-and-forget，失敗不影響邀請連結產生
-  supabase.from('funnel_logs').insert({
-    session_id: 'system',
-    step: 'instructor_claim_generated',
-    detail: {
-      instructorId,
-      instructorName: updated?.name ?? null,
-      tokenPreview: token.slice(0, 12),
-    },
-  }).then(() => {})
+  // 注意：這裡一定要 await，Vercel 是 serverless function，response 一送出函式就可能被終止，
+  // 不 await 的 insert 常常根本來不及送出就被砍掉（第一版就是這樣悄悄失敗的），
+  // 用 try/catch 包起來，就算寫入失敗也不影響邀請連結本身的產生
+  try {
+    await supabase.from('funnel_logs').insert({
+      session_id: 'system',
+      step: 'instructor_claim_generated',
+      detail: {
+        instructorId,
+        instructorName: updated?.name ?? null,
+        tokenPreview: token.slice(0, 12),
+      },
+    })
+  } catch (logError) {
+    console.error('instructor_claim_generated log failed:', logError)
+  }
 
   const origin = process.env.NEXT_PUBLIC_LINE_CALLBACK_URL
     ? new URL(process.env.NEXT_PUBLIC_LINE_CALLBACK_URL).origin
