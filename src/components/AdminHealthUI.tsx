@@ -125,14 +125,17 @@ export function getAnomalySubtype(step: string, detail: any): string {
   const flow = detail?.flow
   if (flow === 'instructor_claim') return 'line_login_fail_instructor_claim'
   if (flow === 'instructor_login') return 'line_login_fail_instructor_login'
-  // 舊資料（補這個欄位之前留下的紀錄）沒有 flow，一律當居民登入失敗處理
-  return 'line_login_fail_resident'
+  if (flow === 'resident_register') return 'line_login_fail_resident_register'
+  if (flow === 'resident_general') return 'line_login_fail_resident_general'
+  // 舊資料（補這個欄位之前留下的紀錄）沒有 flow，一律當「居民登入失敗（一般）」處理
+  return 'line_login_fail_resident_general'
 }
 
 const ANOMALY_TYPE_STYLE: Record<string, { label: string; cls: string }> = {
   register_error: { label: '報名異常', cls: 'bg-red-50 text-red-600' },
   register_guard_fail: { label: '課程資訊遺失', cls: 'bg-amber-50 text-amber-600' },
-  line_login_fail_resident: { label: '居民登入失敗', cls: 'bg-cyan-50 text-cyan-600' },
+  line_login_fail_resident_register: { label: '居民報名登入失敗', cls: 'bg-cyan-50 text-cyan-600' },
+  line_login_fail_resident_general: { label: '居民登入失敗', cls: 'bg-teal-50 text-teal-600' },
   line_login_fail_instructor_claim: { label: '講師綁定失敗', cls: 'bg-purple-50 text-purple-600' },
   line_login_fail_instructor_login: { label: '講師登入失敗', cls: 'bg-indigo-50 text-indigo-600' },
 }

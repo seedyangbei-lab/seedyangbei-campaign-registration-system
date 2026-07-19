@@ -17,17 +17,19 @@ async function logLineLoginFail(detail: Record<string, any>) {
   }
 }
 
-// 判斷這次 LINE 登入屬於哪個流程：居民報名 / 講師綁定邀請連結 / 講師登入中台
+// 判斷這次 LINE 登入屬於哪個流程：講師綁定邀請連結 / 講師登入中台 /
+// 居民為了報名某堂課而登入（CourseCard，state 帶 courses）/ 居民一般登入（首次訪問彈窗、導覽列，state 只帶 url）
 // 提早在拿到 state 當下就判斷，這樣連 token 交換失敗這種最早期的錯誤也能分類，
 // 不用等到 profile 拿到之後才知道是誰在用
-function detectFlow(state: string | null): 'instructor_claim' | 'instructor_login' | 'resident' {
-  if (!state) return 'resident'
+function detectFlow(state: string | null): 'instructor_claim' | 'instructor_login' | 'resident_register' | 'resident_general' {
+  if (!state) return 'resident_general'
   try {
     const parsed = JSON.parse(decodeURIComponent(state))
     if (parsed.instructorClaim) return 'instructor_claim'
     if (parsed.instructorLogin) return 'instructor_login'
+    if (parsed.courses) return 'resident_register'
   } catch {}
-  return 'resident'
+  return 'resident_general'
 }
 
 export async function GET(request: NextRequest) {

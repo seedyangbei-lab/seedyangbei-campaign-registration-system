@@ -67,7 +67,8 @@ const TYPE_OPTIONS = [
   { value: '其他', label: '其他（講師回報）' },
   { value: 'register_error', label: '報名異常' },
   { value: 'register_guard_fail', label: '課程資訊遺失' },
-  { value: 'line_login_fail_resident', label: '居民登入失敗' },
+  { value: 'line_login_fail_resident_register', label: '居民報名登入失敗' },
+  { value: 'line_login_fail_resident_general', label: '居民登入失敗' },
   { value: 'line_login_fail_instructor_claim', label: '講師綁定失敗' },
   { value: 'line_login_fail_instructor_login', label: '講師登入失敗' },
 ]
