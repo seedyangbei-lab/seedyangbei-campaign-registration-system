@@ -64,12 +64,12 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
             </video>
           ) : (
             <>
-              {/* 暈影遮罩：radial-gradient 偽元素，前端寫死，柔化插圖邊緣融入頁面背景（最底層） */}
+              {/* 暈影遮罩：由中心不透明單調淡出到完全透明，不在邊界再度變深，避免出現生硬的方框感 */}
               <div
                 className="absolute pointer-events-none"
                 style={{
-                  left: '50%', top: '52%', width: '561px', height: '592px', transform: 'translate(-50%, -50%)',
-                  background: 'radial-gradient(circle, rgba(254,215,170,1) 0%, rgba(254,215,170,0) 55%, rgba(254,215,170,0.15) 78%, rgba(254,215,170,0.45) 92%, rgba(254,215,170,0.7) 100%)',
+                  left: '50%', top: '52%', width: '760px', height: '760px', transform: 'translate(-50%, -50%)',
+                  background: 'radial-gradient(circle, rgba(254,215,170,0.55) 0%, rgba(254,215,170,0.25) 45%, rgba(254,215,170,0) 78%)',
                 }}
               />
               {/* 建築物底圖圖層 */}
@@ -82,6 +82,8 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
                   style={{
                     left: '52%', top: '52%', width: '750px', height: '446px',
                     transform: 'translate(-50%, -50%)', opacity: bgOpacity,
+                    maskImage: 'radial-gradient(ellipse farthest-side at center, black 62%, transparent 100%)',
+                    WebkitMaskImage: 'radial-gradient(ellipse farthest-side at center, black 62%, transparent 100%)',
                   }}
                 />
               )}
@@ -106,7 +108,9 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
                 style={{
                   left: '52%', top: '52%', width: '596px', height: '354px',
                   transform: 'translate(-50%, -50%)',
-                  boxShadow: '0px 8px 24px 0px rgba(0,0,0,0.12)',
+                  filter: 'drop-shadow(0px 8px 24px rgba(0,0,0,0.12))',
+                  maskImage: 'radial-gradient(ellipse farthest-side at center, black 68%, transparent 100%)',
+                  WebkitMaskImage: 'radial-gradient(ellipse farthest-side at center, black 68%, transparent 100%)',
                 }}
               />
             </>
