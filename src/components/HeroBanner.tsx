@@ -28,32 +28,8 @@ export default function HeroBanner({ settings: s }: { settings: Record<string, s
         </div>
       )}
 
-      {s.site_title && (
-        <div className="absolute top-2 left-0 right-0 flex flex-col items-center px-6 text-center z-20 pointer-events-none">
-          <h1
-            className="text-xl md:text-3xl font-bold leading-none tracking-tight whitespace-nowrap overflow-hidden"
-            style={{
-              fontFamily: "'Dela Gothic One', sans-serif",
-              color: s.hero_title_color || '#1c1917',
-              WebkitTextStroke: s.hero_title_stroke ? `2px ${s.hero_title_stroke}` : undefined,
-              textShadow: s.hero_title_stroke ? 'none' : '0 2px 10px rgba(255,255,255,0.9)',
-            }}
-          >
-            {s.site_title}
-          </h1>
-        </div>
-      )}
-
-      {s.site_subtitle && (
-        <div className="absolute bottom-2 left-0 right-0 flex justify-center px-6 z-20 pointer-events-none">
-          <p
-            className="text-xs md:text-sm text-stone-700 text-center px-3 py-1.5 rounded-full bg-white/60 backdrop-blur-sm"
-            style={{ textShadow: '0 1px 6px rgba(255,255,255,0.8)' }}
-          >
-            {s.site_subtitle}
-          </p>
-        </div>
-      )}
+      {/* 手機版 Hero 只留 KV 插圖本身，不再疊主標／副標文字——
+          banner 圖片已經佔滿版面，疊字反而顯得擁擠（活動介紹說明、活動標籤本來就只有桌機版會顯示，這裡不用另外處理）*/}
 
       <style jsx>{`
         .hero-banner-float {
