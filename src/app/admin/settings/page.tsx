@@ -29,6 +29,8 @@ const TEXT_FIELDS: { key: keyof Settings; label: string; placeholder: string; hi
   { key: 'site_title', label: '網站主標題', placeholder: '央北社宅活動報名系統', hint: '顯示在首頁 Hero 主標題及瀏覽器分頁標題' },
   { key: 'site_subtitle', label: '網站副標題', placeholder: '歡迎報名參加社區活動', hint: '主標題下方說明文字' },
   { key: 'site_description', label: '活動介紹說明', placeholder: '歡迎報名參加社區活動', hint: '首頁詳細說明文字', multiline: true },
+  { key: 'hero_badge_text', label: '首頁活動標籤', placeholder: '央北社宅專屬活動報名系統', hint: '強調活動平台定位' },
+  { key: 'hero_cta_text', label: '主頁 CTA 按鈕', placeholder: '立即探索課程', hint: '引導點擊的核心動作' },
   { key: 'footer_note', label: '頁面底部說明文字', placeholder: 'yangbeiseed2022@gmail.com', hint: '顯示在網站最下方，可填聯絡資訊或注意事項' },
   { key: 'contact_email', label: '負責單位信箱', placeholder: 'yangbeiseed2022@gmail.com', hint: '前台頁尾聯絡信箱' },
   { key: 'line_community_url', label: '央北社區大學 LINE 社群連結', placeholder: 'https://line.me/R/ti/g/xxxxxxxx', hint: '填入後，課程列表上方會顯示綠色「社區大學」入口按鈕' },
@@ -220,32 +222,6 @@ function VisualCardBody({ settings, isEditing, uploading, aspectWarning, onChang
           <UploadField field="hero_image_mobile" label="手機背景底圖" settings={settings} isEditing={isEditing} uploading={uploading} aspectWarning={aspectWarning} onUpload={onUpload} onRemove={onRemoveImage} />
           <UploadField field="hero_cutout_mobile" label="主視覺圖" accept="image/png" settings={settings} isEditing={isEditing} uploading={uploading} aspectWarning={aspectWarning} onUpload={onUpload} onRemove={onRemoveImage} />
         </div>
-      </div>
-      <Divider />
-
-      <div>
-        <p className="text-stone-700 text-sm font-medium">首頁活動標籤</p>
-        <p className="text-stone-400 text-xs mb-1.5">強調活動平台定位</p>
-        <input
-          value={settings.hero_badge_text}
-          onChange={e => isEditing && onChange('hero_badge_text', e.target.value)}
-          readOnly={!isEditing}
-          placeholder="央北社宅專屬活動報名系統"
-          className={`w-full border rounded-xl px-4 py-3 text-sm transition-colors ${isEditing ? 'border-stone-300 focus:outline-none focus:ring-2 focus:ring-orange-300 text-stone-800 bg-white' : 'border-stone-200 bg-stone-50 text-stone-600 cursor-not-allowed'}`}
-        />
-      </div>
-      <Divider />
-
-      <div>
-        <p className="text-stone-700 text-sm font-medium">主頁 CTA 按鈕</p>
-        <p className="text-stone-400 text-xs mb-1.5">引導點擊的核心動作</p>
-        <input
-          value={settings.hero_cta_text}
-          onChange={e => isEditing && onChange('hero_cta_text', e.target.value)}
-          readOnly={!isEditing}
-          placeholder="立即探索課程"
-          className={`w-full border rounded-xl px-4 py-3 text-sm transition-colors ${isEditing ? 'border-stone-300 focus:outline-none focus:ring-2 focus:ring-orange-300 text-stone-800 bg-white' : 'border-stone-200 bg-stone-50 text-stone-600 cursor-not-allowed'}`}
-        />
       </div>
       <Divider />
 

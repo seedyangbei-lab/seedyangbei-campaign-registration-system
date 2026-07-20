@@ -68,7 +68,7 @@ export default async function HomePage() {
       {/* 從課程列表開始才鋪頁面底色 */}
       <div className="relative bg-stone-50">
         {/* Course List */}
-        <section id="courses" className="max-w-[800px] mx-auto px-6 py-8">
+        <section id="courses" className="max-w-[800px] mx-auto px-6 py-8 scroll-mt-20">
           <div className="flex items-center justify-between border-b border-stone-200 pb-4 mb-4">
             <h2 className="text-xl font-bold text-stone-600">近期課程活動</h2>
             {courses && courses.length > 0 && (

@@ -78,7 +78,8 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
           ref={visualRef}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
-          className="relative overflow-hidden min-h-[820px] h-full"
+          className="relative overflow-hidden w-full"
+          style={{ aspectRatio: '872 / 820', minHeight: '480px' }}
         >
           {videoActive ? (
             <video key={s.hero_video} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover">
@@ -90,7 +91,7 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
               <div
                 className="absolute pointer-events-none"
                 style={{
-                  left: '50%', top: '52%', width: '760px', height: '760px', transform: 'translate(-50%, -50%)',
+                  left: '50%', top: '52%', width: '87%', height: '93%', transform: 'translate(-50%, -50%)',
                   background: 'radial-gradient(circle, rgba(254,215,170,0.55) 0%, rgba(254,215,170,0.25) 45%, rgba(254,215,170,0) 78%)',
                 }}
               />
@@ -99,7 +100,7 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
                 <div
                   className="absolute"
                   style={{
-                    left: '52%', top: '52%', width: '750px', height: '446px',
+                    left: '52%', top: '52%', width: '86%', height: '54.4%',
                     transform: `translate(calc(-50% + ${tilt.x * 6}px), calc(-50% + ${tilt.y * 6}px))`,
                     transition: 'transform 0.25s ease-out',
                   }}
@@ -110,8 +111,10 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
                     fetchPriority="high"
                     className="w-full h-full object-cover"
                     style={{
-                      maskImage: 'radial-gradient(ellipse farthest-corner at center, black 82%, transparent 100%)',
-                      WebkitMaskImage: 'radial-gradient(ellipse farthest-corner at center, black 82%, transparent 100%)',
+                      maskImage: 'radial-gradient(ellipse farthest-corner at center, black 82%, transparent 100%), linear-gradient(to bottom, black 85%, transparent 100%)',
+                      maskComposite: 'intersect',
+                      WebkitMaskImage: 'radial-gradient(ellipse farthest-corner at center, black 82%, transparent 100%), linear-gradient(to bottom, black 85%, transparent 100%)',
+                      WebkitMaskComposite: 'source-in',
                     }}
                   />
                 </div>
@@ -121,7 +124,7 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
                 <div
                   className="absolute"
                   style={{
-                    left: '52%', top: '52%', width: '850px', height: '504px',
+                    left: '52%', top: '52%', width: '97.5%', height: '61.5%',
                     transform: `translate(calc(-50% + ${tilt.x * 10}px), calc(-50% + ${tilt.y * 10}px))`,
                     transition: 'transform 0.25s ease-out',
                   }}
@@ -133,7 +136,7 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
               <div
                 className="absolute"
                 style={{
-                  left: '52%', top: '52%', width: '596px', height: '354px',
+                  left: '52%', top: '52%', width: '68.3%', height: '43.2%',
                   transform: `translate(calc(-50% + ${tilt.x * 18}px), calc(-50% + ${tilt.y * 18}px))`,
                   transition: 'transform 0.25s ease-out',
                 }}
@@ -145,8 +148,10 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
                   className="w-full h-full object-cover hero-desktop-float"
                   style={{
                     filter: 'drop-shadow(0px 8px 24px rgba(0,0,0,0.12))',
-                    maskImage: 'radial-gradient(ellipse farthest-corner at center, black 85%, transparent 100%)',
-                    WebkitMaskImage: 'radial-gradient(ellipse farthest-corner at center, black 85%, transparent 100%)',
+                    maskImage: 'radial-gradient(ellipse farthest-corner at center, black 85%, transparent 100%), linear-gradient(to bottom, black 88%, transparent 100%)',
+                    maskComposite: 'intersect',
+                    WebkitMaskImage: 'radial-gradient(ellipse farthest-corner at center, black 85%, transparent 100%), linear-gradient(to bottom, black 88%, transparent 100%)',
+                    WebkitMaskComposite: 'source-in',
                   }}
                 />
               </div>

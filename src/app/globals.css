@@ -59,6 +59,17 @@ html, body {
   overscroll-behavior-y: none;
 }
 
+/* CTA 按鈕點擊錨點連結（如 #courses）時走平滑捲動，而不是瞬間跳轉；
+   尊重使用者「減少動態效果」的系統偏好設定 */
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 body {
   font-family: var(--font-body);
   background: var(--background);
