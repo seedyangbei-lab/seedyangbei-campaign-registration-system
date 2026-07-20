@@ -46,7 +46,7 @@ export default function HeroSection({ settings: s }: { settings: Record<string, 
     }
   }, [s.hero_video])
 
-  const hasVideo = !!s.hero_video
+  const hasVideo = s.hero_video_enabled === 'true' && !!s.hero_video
   const bgImage = isMobile === null ? null : isMobile ? (s.hero_image_mobile || s.hero_image_desktop) : s.hero_image_desktop
 
   return (
@@ -66,7 +66,7 @@ export default function HeroSection({ settings: s }: { settings: Record<string, 
               fetchPriority="high"
               decoding="async"
               className="absolute inset-0 w-full h-full object-cover object-center"
-              style={{ opacity: parseFloat(s.hero_bg_opacity || '0.18') }}
+              style={{ opacity: parseFloat(s.hero_bg_opacity || '0.80') }}
             />
           )}
         </>

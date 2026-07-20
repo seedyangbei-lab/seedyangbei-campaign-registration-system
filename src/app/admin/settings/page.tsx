@@ -15,9 +15,13 @@ const [settings, setSettings] = useState({
     hero_cutout_desktop: '',
     hero_cutout_mobile: '',
     hero_video: '',
-    hero_bg_opacity: '0.18',
+    hero_video_enabled: 'false',
+    hero_bg_opacity: '0.80',
     hero_title_color: '#1c1917',
     hero_title_stroke: '',
+    hero_decoration_desktop: '',
+    hero_badge_text: '',
+    hero_cta_text: '',
     line_community_url: '',
   })
   const [savedSettings, setSavedSettings] = useState({ ...settings })
@@ -98,9 +102,9 @@ const [settings, setSettings] = useState({
 
   const handleKvSave = async () => {
     setKvSaving(true)
-    await upsertSettings(['hero_image_desktop','hero_image_mobile','hero_cutout_desktop','hero_cutout_mobile','hero_video','hero_bg_opacity','hero_title_color','hero_title_stroke'])
-    setSavedSettings(prev => ({ ...prev, hero_image_desktop: settings.hero_image_desktop, hero_image_mobile: settings.hero_image_mobile, hero_cutout_desktop: settings.hero_cutout_desktop, hero_cutout_mobile: settings.hero_cutout_mobile, hero_video: settings.hero_video, hero_bg_opacity: settings.hero_bg_opacity,
-    hero_title_color: settings.hero_title_color,hero_title_stroke: settings.hero_title_stroke }))
+    await upsertSettings(['hero_image_desktop','hero_image_mobile','hero_cutout_desktop','hero_cutout_mobile','hero_decoration_desktop','hero_video','hero_video_enabled','hero_bg_opacity','hero_title_color','hero_title_stroke','hero_badge_text','hero_cta_text'])
+    setSavedSettings(prev => ({ ...prev, hero_image_desktop: settings.hero_image_desktop, hero_image_mobile: settings.hero_image_mobile, hero_cutout_desktop: settings.hero_cutout_desktop, hero_cutout_mobile: settings.hero_cutout_mobile, hero_decoration_desktop: settings.hero_decoration_desktop, hero_video: settings.hero_video, hero_video_enabled: settings.hero_video_enabled, hero_bg_opacity: settings.hero_bg_opacity,
+    hero_title_color: settings.hero_title_color, hero_title_stroke: settings.hero_title_stroke, hero_badge_text: settings.hero_badge_text, hero_cta_text: settings.hero_cta_text }))
     setKvSaved(true); setKvSaving(false); setIsKvEditing(false)
     setTimeout(() => setKvSaved(false), 3000)
   }
@@ -178,12 +182,14 @@ const [settings, setSettings] = useState({
     </div>
   )
 
+  const SITE_DESC_MAX = 100
+
   const textFields = [
     { key: 'site_title', label: '網站主標題', placeholder: '央北社宅活動報名系統', hint: '顯示在 KV 上的大標題（不設定則不顯示）' },
     { key: 'site_subtitle', label: '網站副標題', placeholder: '歡迎報名參加社區活動', hint: '主標題下方說明文字' },
     { key: 'site_description', label: '活動介紹說明', placeholder: '歡迎加入央北社宅的活動！', hint: '首頁詳細說明文字', multiline: true },
     { key: 'footer_note', label: '頁面底部說明文字', placeholder: '央北社宅 · 種子戶團隊', hint: '顯示在網站最下方，可填聯絡資訊或注意事項' },
-    { key: 'contact_email', label: '', placeholder: 'yangbeiseed2022@gmail.com', hint: '顯示在頁面底部' },
+    { key: 'contact_email', label: '負責單位信箱', placeholder: 'yangbeiseed2022@gmail.com', hint: '前台頁尾聯絡信箱' },
     { key: 'line_community_url', label: '央北社區大學 LINE 社群連結', placeholder: 'https://line.me/R/ti/g/xxxxxxxx', hint: '填入後，課程列表上方會顯示綠色「社區大學」入口按鈕' },
   ]
 
@@ -230,9 +236,14 @@ const [settings, setSettings] = useState({
                 <label className="block text-stone-700 text-sm font-medium mb-1">{f.label}</label>
                 {f.hint && <p className="text-stone-400 text-xs mb-1.5">{f.hint}</p>}
                 {(f as any).multiline ? (
-                  <textarea value={(settings as any)[f.key]} onChange={e => isEditing && setSettings({...settings, [f.key]: e.target.value})}
-                    placeholder={f.placeholder} rows={3} readOnly={!isEditing}
-                    className={`w-full border rounded-xl px-4 py-3 text-sm resize-none transition-colors ${isEditing ? 'border-stone-300 focus:outline-none focus:ring-2 focus:ring-orange-300 text-stone-800 bg-white' : 'border-stone-200 bg-stone-50 text-stone-600 cursor-not-allowed'}`} />
+                  <>
+                    <textarea value={(settings as any)[f.key]} onChange={e => isEditing && setSettings({...settings, [f.key]: e.target.value})}
+                      placeholder={f.placeholder} rows={3} readOnly={!isEditing}
+                      className={`w-full border rounded-xl px-4 py-3 text-sm resize-none transition-colors ${isEditing ? 'border-stone-300 focus:outline-none focus:ring-2 focus:ring-orange-300 text-stone-800 bg-white' : 'border-stone-200 bg-stone-50 text-stone-600 cursor-not-allowed'}`} />
+                    <p className={`text-right text-xs mt-1 ${(settings as any)[f.key].length > SITE_DESC_MAX ? 'text-orange-500' : 'text-stone-400'}`}>
+                      {(settings as any)[f.key].length}/{SITE_DESC_MAX}
+                    </p>
+                  </>
                 ) : (
                   <input value={(settings as any)[f.key]} onChange={e => isEditing && setSettings({...settings, [f.key]: e.target.value})}
                     placeholder={f.placeholder} readOnly={!isEditing}
@@ -249,7 +260,7 @@ const [settings, setSettings] = useState({
           <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100">
             <div>
               <h3 className="font-semibold text-stone-700">首頁視覺圖片（KV）</h3>
-              <p className="text-stone-400 text-xs mt-0.5">分別上傳桌機版與手機版的背景底圖和去背人物圖</p>
+              <p className="text-stone-400 text-xs mt-0.5">桌機版與手機版的背景底圖和去背人物圖</p>
             </div>
             {!isKvEditing ? (
               <button onClick={() => setIsKvEditing(true)}
@@ -269,68 +280,110 @@ const [settings, setSettings] = useState({
           </div>
           <div className="p-6 space-y-6">
 
-            <div>
-  <label className="block text-stone-700 text-sm font-medium mb-1">底圖透明度</label>
-  <p className="text-stone-400 text-xs mb-3">數值越低越透明，0 = 完全隱藏，1 = 完全顯示</p>
-  <div className="flex items-center gap-4">
-    <input
-      type="range" min="0" max="1" step="0.01"
-      value={settings.hero_bg_opacity || '0.18'}
-      disabled={!isKvEditing}
-      onChange={e => setSettings({...settings, hero_bg_opacity: e.target.value})}
-      className="flex-1"
-    />
-    <span className="text-sm font-medium text-stone-700 w-10 text-right">
-      {parseFloat(settings.hero_bg_opacity || '0.18').toFixed(2)}
-    </span>
-  </div>
-</div>
-<div className="grid grid-cols-2 gap-4">
-  <div>
-    <label className="block text-stone-700 text-sm font-medium mb-1">主標題顏色</label>
-    <div className="flex items-center gap-3">
-      <input type="color"
-        value={settings.hero_title_color || '#1c1917'}
-        disabled={!isKvEditing}
-        onChange={e => setSettings({...settings, hero_title_color: e.target.value})}
-        className="w-10 h-10 rounded-lg border border-stone-300 cursor-pointer disabled:cursor-not-allowed" />
-      <span className="text-sm text-stone-500 font-mono">{settings.hero_title_color || '#1c1917'}</span>
-    </div>
-  </div>
-  <div>
-    <label className="block text-stone-700 text-sm font-medium mb-1">外框顏色 <span className="text-stone-400 font-normal">（留空則無外框）</span></label>
-    <div className="flex items-center gap-3">
-      <input type="color"
-        value={settings.hero_title_stroke || '#ffffff'}
-        disabled={!isKvEditing}
-        onChange={e => setSettings({...settings, hero_title_stroke: e.target.value})}
-        className="w-10 h-10 rounded-lg border border-stone-300 cursor-pointer disabled:cursor-not-allowed" />
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-stone-500 font-mono">{settings.hero_title_stroke || '無'}</span>
-        {settings.hero_title_stroke && isKvEditing && (
-          <button type="button" onClick={() => setSettings({...settings, hero_title_stroke: ''})}
-            className="text-xs text-red-400 hover:text-red-600">清除</button>
-        )}
-      </div>
-    </div>
-  </div>
-</div>
-<div className="border-t border-stone-100 pt-6">
-              <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-4">背景影片（選填，優先於下方靜態底圖）</p>
-              <VideoUploadField />
+            <div className="border-b border-stone-100 pb-6">
+              <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-4">桌機版</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <UploadField field="hero_image_desktop" label="底圖" hint="建築物底圖，PNG/JPG，小於 3MB" />
+                <UploadField field="hero_cutout_desktop" label="人物圖" hint="PNG 透明背景，建議人物高度 800px 以上" accept="image/png" />
+                <UploadField field="hero_decoration_desktop" label="裝飾物" hint="PNG 透明背景，Hero 右側裝飾插圖" accept="image/png" />
+              </div>
             </div>
-            <div className="border-t border-stone-100 pt-6">
-              <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-4">靜態背景底圖（影片未設定時顯示）</p>
+
+            <div className="border-b border-stone-100 pb-6">
+              <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-4">手機版</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <p className="text-xs font-bold text-stone-500 uppercase tracking-wider">桌機版（16:9）</p>
-                  <UploadField field="hero_image_desktop" label="背景底圖" hint="建議比例 16:9（例如 1920 × 1080px），JPG/PNG，小於 3MB" />
-                  <UploadField field="hero_cutout_desktop" label="人物去背圖（PNG）" hint="PNG 透明背景，建議人物高度 800px 以上" accept="image/png" />
+                <UploadField field="hero_image_mobile" label="手機背景底圖" hint="建議：1080 × 1920px，JPG/PNG，小於 3MB" />
+                <UploadField field="hero_cutout_mobile" label="主視覺圖" hint="PNG 透明背景，建議人物高度 600px 以上" accept="image/png" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-stone-700 text-sm font-medium mb-1">首頁活動標籤</label>
+              <p className="text-stone-400 text-xs mb-2">顯示在 Hero 左上角的小標籤文字</p>
+              <input
+                value={settings.hero_badge_text}
+                disabled={!isKvEditing}
+                onChange={e => setSettings({ ...settings, hero_badge_text: e.target.value })}
+                placeholder="央北社宅專屬活動報名系統"
+                className={`w-full border rounded-xl px-4 py-3 text-sm transition-colors ${isKvEditing ? 'border-stone-300 focus:outline-none focus:ring-2 focus:ring-orange-300 text-stone-800 bg-white' : 'border-stone-200 bg-stone-50 text-stone-600 cursor-not-allowed'}`}
+              />
+            </div>
+
+            <div>
+              <label className="block text-stone-700 text-sm font-medium mb-1">主頁 CTA 按鈕</label>
+              <p className="text-stone-400 text-xs mb-2">按鈕文字（箭頭「↓」固定顯示，不需輸入）</p>
+              <input
+                value={settings.hero_cta_text}
+                disabled={!isKvEditing}
+                onChange={e => setSettings({ ...settings, hero_cta_text: e.target.value })}
+                placeholder="立即探索課程"
+                className={`w-full border rounded-xl px-4 py-3 text-sm transition-colors ${isKvEditing ? 'border-stone-300 focus:outline-none focus:ring-2 focus:ring-orange-300 text-stone-800 bg-white' : 'border-stone-200 bg-stone-50 text-stone-600 cursor-not-allowed'}`}
+              />
+            </div>
+
+            <div className="border-t border-stone-100 pt-6">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-stone-700 text-sm font-medium">首頁背景影片</label>
+                <button
+                  type="button"
+                  disabled={!isKvEditing}
+                  onClick={() => setSettings({ ...settings, hero_video_enabled: settings.hero_video_enabled === 'true' ? 'false' : 'true' })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 disabled:opacity-50 ${settings.hero_video_enabled === 'true' ? 'bg-orange-500' : 'bg-stone-200'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${settings.hero_video_enabled === 'true' ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+              <p className="text-stone-400 text-xs mb-4">選填。支援 MP4（H.264），開啟後會以影片取代上方靜態桌機/手機底圖</p>
+              {settings.hero_video_enabled === 'true' && <VideoUploadField />}
+            </div>
+
+            <div className="border-t border-stone-100 pt-6">
+              <label className="block text-stone-700 text-sm font-medium mb-1">背景底圖透明度</label>
+              <p className="text-stone-400 text-xs mb-3">數值越低越透明，0 = 完全隱藏，1 = 完全顯示；控制桌機版建築物底圖圖層的透明度</p>
+              <div className="flex items-center gap-4">
+                <input
+                  type="range" min="0" max="1" step="0.01"
+                  value={settings.hero_bg_opacity || '0.80'}
+                  disabled={!isKvEditing}
+                  onChange={e => setSettings({...settings, hero_bg_opacity: e.target.value})}
+                  className="flex-1"
+                />
+                <span className="text-sm font-medium text-stone-700 w-10 text-right">
+                  {parseFloat(settings.hero_bg_opacity || '0.80').toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            <div className="border-t border-stone-100 pt-6">
+              <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-4">手機版標題樣式（僅影響手機版 Hero 疊字標題，桌機版不使用）</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-stone-700 text-sm font-medium mb-1">主標題顏色</label>
+                  <div className="flex items-center gap-3">
+                    <input type="color"
+                      value={settings.hero_title_color || '#1c1917'}
+                      disabled={!isKvEditing}
+                      onChange={e => setSettings({...settings, hero_title_color: e.target.value})}
+                      className="w-10 h-10 rounded-lg border border-stone-300 cursor-pointer disabled:cursor-not-allowed" />
+                    <span className="text-sm text-stone-500 font-mono">{settings.hero_title_color || '#1c1917'}</span>
+                  </div>
                 </div>
-                <div className="space-y-4">
-                  <p className="text-xs font-bold text-stone-500 uppercase tracking-wider">手機版（9:16）</p>
-                  <UploadField field="hero_image_mobile" label="背景底圖" hint="建議：1080 × 1920px，JPG/PNG，小於 3MB" />
-                  <UploadField field="hero_cutout_mobile" label="人物去背圖（PNG）" hint="PNG 透明背景，建議人物高度 600px 以上" accept="image/png" />
+                <div>
+                  <label className="block text-stone-700 text-sm font-medium mb-1">外框顏色 <span className="text-stone-400 font-normal">（留空則無外框）</span></label>
+                  <div className="flex items-center gap-3">
+                    <input type="color"
+                      value={settings.hero_title_stroke || '#ffffff'}
+                      disabled={!isKvEditing}
+                      onChange={e => setSettings({...settings, hero_title_stroke: e.target.value})}
+                      className="w-10 h-10 rounded-lg border border-stone-300 cursor-pointer disabled:cursor-not-allowed" />
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-stone-500 font-mono">{settings.hero_title_stroke || '無'}</span>
+                      {settings.hero_title_stroke && isKvEditing && (
+                        <button type="button" onClick={() => setSettings({...settings, hero_title_stroke: ''})}
+                          className="text-xs text-red-400 hover:text-red-600">清除</button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

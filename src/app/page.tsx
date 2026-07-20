@@ -1,6 +1,7 @@
 import { createServerClient } from '@/lib/supabase-server'
 import HeroSection from '@/components/HeroSection'
 import HeroBanner from '@/components/HeroBanner'
+import HeroDesktop from '@/components/HeroDesktop'
 import CourseCard from '@/components/CourseCard'
 import GreetingBar from '@/components/GreetingBar'
 import RegistrationSteps from '@/components/RegistrationSteps'
@@ -41,13 +42,18 @@ export default async function HomePage() {
   return (
     <main className="min-h-screen">
       <FirstVisitLoginModal />
-      {/* 底圖：固定置頂的裝飾背景層，滾動時一直存在 */}
-      <HeroSection settings={s} />
+      {/* 手機版 Hero：底圖（固定置頂裝飾背景層）+ KV 插圖橫幅，跟桌機版是兩套完全獨立的設計，
+          只在 md 以下顯示 */}
+      <div className="md:hidden">
+        <HeroSection settings={s} />
+      </div>
       <SiteNavbar siteTitle={s.site_title} />
+      <div className="md:hidden">
+        <HeroBanner settings={s} />
+      </div>
 
-      {/* Hero Banner：KV 插圖橫幅，矮版設計，正常隨頁面捲動；這一段跟下面的 Steps/Greeting
-          都不鋪底色，才能讓上面固定的底圖透出來 */}
-      <HeroBanner settings={s} />
+      {/* 桌機版 Hero：左文右圖不對稱佈局，只在 md 以上顯示 */}
+      <HeroDesktop settings={s} />
 
       {/* 報名步驟 */}
       <RegistrationSteps />
