@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 
-type Tab = 'content' | 'kv' | 'schedule'
+type Tab = 'content' | 'kv'
 
 export default function SettingsPage() {
   const [tab, setTab] = useState<Tab>('content')
@@ -19,17 +19,6 @@ const [settings, setSettings] = useState({
     hero_title_color: '#1c1917',
     hero_title_stroke: '',
     line_community_url: '',
-    schedule_phone: '',
-    schedule_contact: '',
-    schedule_hours: '',
-    schedule_register_qr: '',
-    schedule_community_qr: '',
-    schedule_logo_1: '',
-    schedule_logo_2: '',
-    schedule_logo_3: '',
-    schedule_logo_1_name: '新北市政府城鄉發展局',
-    schedule_logo_2_name: '跨世代共居種子計畫',
-    schedule_logo_3_name: '街道案子團隊',
   })
   const [savedSettings, setSavedSettings] = useState({ ...settings })
   const [saving, setSaving] = useState(false)
@@ -207,7 +196,7 @@ const [settings, setSettings] = useState({
 
       {/* Tab Bar */}
       <div className="flex gap-1 bg-stone-100 rounded-xl p-1 mb-6">
-{([['content','網站文字內容'],['kv','首頁視覺'],['schedule','課表設定']] as const).map(([t, label]) => (          <button key={t} onClick={() => setTab(t)}
+{([['content','網站文字內容'],['kv','首頁視覺']] as const).map(([t, label]) => (          <button key={t} onClick={() => setTab(t)}
             className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${tab === t ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}>
             {label}
           </button>
@@ -255,154 +244,6 @@ const [settings, setSettings] = useState({
         </div>
       )}
 
-      {/* KV Tab — 只有圖片/影片，已移除課程類別 */}
-      {tab === 'schedule' && (
-        <div className="space-y-6">
-          {/* 聯繫資訊 */}
-          <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100">
-              <div>
-                <h3 className="font-semibold text-stone-700">聯繫資訊</h3>
-                <p className="text-stone-400 text-xs mt-0.5">顯示在課表底部</p>
-              </div>
-            </div>
-            <div className="p-6 space-y-4">
-              {[
-                { key: 'schedule_phone', label: '洽詢電話', placeholder: '03-286-0010' },
-                { key: 'schedule_contact', label: '聯絡窗口', placeholder: '聯繫 街道案子有限公司 — 林小姐' },
-                { key: 'schedule_hours', label: '服務時間', placeholder: '週一至週五 10:00 – 18:00' },
-              ].map(f => (
-                <div key={f.key}>
-                  <label className="block text-stone-700 text-sm font-medium mb-1.5">{f.label}</label>
-                  <input
-                    value={(settings as any)[f.key]}
-                    onChange={e => setSettings({ ...settings, [f.key]: e.target.value })}
-                    placeholder={f.placeholder}
-                    className="w-full border border-stone-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
-                  />
-                </div>
-              ))}
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={async () => {
-                    setSaving(true)
-                    await upsertSettings(['schedule_phone','schedule_contact','schedule_hours'])
-                    setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 3000)
-                  }}
-                  disabled={saving}
-                  className="bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium px-6 py-2.5 rounded-xl text-sm transition-colors"
-                >
-                  {saving ? '儲存中...' : saved ? '已儲存！' : '儲存'}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* QR Code */}
-          <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-stone-100">
-              <h3 className="font-semibold text-stone-700">QR Code 圖片</h3>
-              <p className="text-stone-400 text-xs mt-0.5">課表左側顯示的兩個 QR Code</p>
-            </div>
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[
-                { key: 'schedule_register_qr', label: '活動報名 QR Code', hint: '建議 400×400px 以上，PNG/JPG' },
-                { key: 'schedule_community_qr', label: '種子社區大學社群 QR Code', hint: '建議 400×400px 以上，PNG/JPG' },
-              ].map(f => (
-                <div key={f.key}>
-                  <label className="block text-stone-700 text-sm font-medium mb-1">{f.label}</label>
-                  <p className="text-stone-400 text-xs mb-2">{f.hint}</p>
-                  <label className="flex items-center justify-center gap-2 w-full border-2 border-dashed border-stone-300 hover:border-orange-300 rounded-xl py-3 cursor-pointer transition-colors">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-stone-400"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    <span className="text-sm text-stone-500">{uploading[f.key] ? '上傳中...' : '點擊上傳'}</span>
-                    <input type="file" accept="image/*" className="hidden" disabled={uploading[f.key]}
-                      onChange={e => { const file = e.target.files?.[0]; if (file) handleUpload(f.key, file) }} />
-                  </label>
-                  {(settings as any)[f.key] && (
-                    <div className="mt-2 relative rounded-xl overflow-hidden border border-stone-200">
-                      <img src={(settings as any)[f.key]} alt={f.label} className="w-full h-28 object-contain bg-stone-50" />
-                      <button type="button" onClick={() => setSettings(s => ({ ...s, [f.key]: '' }))}
-                        className="absolute top-2 right-2 bg-white rounded-full p-1 shadow">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-              <div className="md:col-span-2 flex gap-3 pt-2">
-                <button
-                  onClick={async () => {
-                    setSaving(true)
-                    await upsertSettings(['schedule_register_qr','schedule_community_qr'])
-                    setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 3000)
-                  }}
-                  disabled={saving}
-                  className="bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium px-6 py-2.5 rounded-xl text-sm transition-colors"
-                >
-                  {saving ? '儲存中...' : saved ? '已儲存！' : '儲存'}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* 合作夥伴 Logo */}
-          <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-stone-100">
-              <h3 className="font-semibold text-stone-700">合作夥伴</h3>
-              <p className="text-stone-400 text-xs mt-0.5">顯示在課表底部的 Logo 與名稱（共 3 個）</p>
-            </div>
-            <div className="p-6 space-y-6">
-              {[
-                { logoKey: 'schedule_logo_1', nameKey: 'schedule_logo_1_name', label: '合作夥伴 1' },
-                { logoKey: 'schedule_logo_2', nameKey: 'schedule_logo_2_name', label: '合作夥伴 2' },
-                { logoKey: 'schedule_logo_3', nameKey: 'schedule_logo_3_name', label: '合作夥伴 3' },
-              ].map(f => (
-                <div key={f.logoKey} className="flex gap-4 items-start">
-                  <div className="flex-1">
-                    <label className="block text-stone-700 text-sm font-medium mb-1.5">{f.label} 名稱</label>
-                    <input
-                      value={(settings as any)[f.nameKey]}
-                      onChange={e => setSettings({ ...settings, [f.nameKey]: e.target.value })}
-                      className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
-                    />
-                  </div>
-                  <div className="w-32">
-                    <label className="block text-stone-700 text-sm font-medium mb-1.5">Logo</label>
-                    <label className="flex items-center justify-center gap-1 w-full border-2 border-dashed border-stone-300 hover:border-orange-300 rounded-xl py-2 cursor-pointer transition-colors">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-stone-400"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                      <span className="text-xs text-stone-500">{uploading[f.logoKey] ? '上傳中...' : '上傳'}</span>
-                      <input type="file" accept="image/*" className="hidden" disabled={uploading[f.logoKey]}
-                        onChange={e => { const file = e.target.files?.[0]; if (file) handleUpload(f.logoKey, file) }} />
-                    </label>
-                    {(settings as any)[f.logoKey] && (
-                      <div className="mt-1 relative rounded-lg overflow-hidden border border-stone-200">
-                        <img src={(settings as any)[f.logoKey]} alt="" className="w-full h-12 object-contain bg-stone-50" />
-                        <button type="button" onClick={() => setSettings(s => ({ ...s, [f.logoKey]: '' }))}
-                          className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow">
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={async () => {
-                    setSaving(true)
-                    await upsertSettings(['schedule_logo_1','schedule_logo_2','schedule_logo_3','schedule_logo_1_name','schedule_logo_2_name','schedule_logo_3_name'])
-                    setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 3000)
-                  }}
-                  disabled={saving}
-                  className="bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium px-6 py-2.5 rounded-xl text-sm transition-colors"
-                >
-                  {saving ? '儲存中...' : saved ? '已儲存！' : '儲存'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
       {tab === 'kv' && (
         <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100">
