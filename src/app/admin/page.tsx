@@ -31,24 +31,29 @@ export default function AdminDashboard() {
   const fetchAll = async () => {
     setLoading(true)
     const [
-      { count: activeCourses },
       { data: regs },
       { data: courseList },
     ] = await Promise.all([
-      supabase.from('courses').select('*', { count: 'exact', head: true }).eq('is_active', true),
       supabase.from('registrations')
         .select('*, users(name, room_number, phone, age_group, line_id), courses(id, title, date)')
         .in('status', ['confirmed', 'attended', 'cancelled'])
         .order('registered_at', { ascending: false }),
-      supabase.from('courses').select('id, title, date').order('date', { ascending: false }),
+      // 這裡補上 time_end + is_active：原本只用 is_active 算「開放中課程」，
+      // 沒排除已經過期的課程（課程結束後 is_active 預設不會自動關掉，需要人工到課程管理手動關），
+      // 導致這裡的數字跟課程管理頁「開放中」Tab（is_active 且未過期）對不起來
+      supabase.from('courses').select('id, title, date, time_end, is_active').order('date', { ascending: false }),
     ])
 
     const allRegs = regs || []
     const activeRegs = allRegs.filter((r: any) => r.status !== 'cancelled')
     const uniqueUserIds = new Set(activeRegs.map((r: any) => r.user_id))
+    const now = new Date()
+    const activeCourses = (courseList || []).filter(
+      (c: any) => c.is_active && new Date(`${c.date}T${c.time_end}`) >= now
+    ).length
 
     setStats({
-      activeCourses: activeCourses ?? 0,
+      activeCourses,
       totalRegistrations: activeRegs.length,
       uniqueRegistrants: uniqueUserIds.size,
     })
