@@ -111,9 +111,9 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
                     fetchPriority="high"
                     className="w-full h-full object-cover"
                     style={{
-                      maskImage: 'radial-gradient(ellipse farthest-corner at center, black 82%, transparent 100%), linear-gradient(to bottom, black 85%, transparent 100%)',
+                      maskImage: 'radial-gradient(ellipse farthest-corner at center, black 82%, transparent 100%), linear-gradient(to bottom, black 97%, transparent 100%)',
                       maskComposite: 'intersect',
-                      WebkitMaskImage: 'radial-gradient(ellipse farthest-corner at center, black 82%, transparent 100%), linear-gradient(to bottom, black 85%, transparent 100%)',
+                      WebkitMaskImage: 'radial-gradient(ellipse farthest-corner at center, black 82%, transparent 100%), linear-gradient(to bottom, black 97%, transparent 100%)',
                       WebkitMaskComposite: 'source-in',
                     }}
                   />
@@ -148,9 +148,9 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
                   className="w-full h-full object-cover hero-desktop-float"
                   style={{
                     filter: 'drop-shadow(0px 8px 24px rgba(0,0,0,0.12))',
-                    maskImage: 'radial-gradient(ellipse farthest-corner at center, black 85%, transparent 100%), linear-gradient(to bottom, black 88%, transparent 100%)',
+                    maskImage: 'radial-gradient(ellipse farthest-corner at center, black 85%, transparent 100%), linear-gradient(to bottom, black 97.5%, transparent 100%)',
                     maskComposite: 'intersect',
-                    WebkitMaskImage: 'radial-gradient(ellipse farthest-corner at center, black 85%, transparent 100%), linear-gradient(to bottom, black 88%, transparent 100%)',
+                    WebkitMaskImage: 'radial-gradient(ellipse farthest-corner at center, black 85%, transparent 100%), linear-gradient(to bottom, black 97.5%, transparent 100%)',
                     WebkitMaskComposite: 'source-in',
                   }}
                 />
