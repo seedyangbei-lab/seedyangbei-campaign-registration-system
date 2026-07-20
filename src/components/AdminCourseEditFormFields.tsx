@@ -119,11 +119,13 @@ export default function AdminCourseEditFormFields({
       </div>
 
       <div>
-        <label className="block text-stone-600 text-sm font-medium mb-1.5">課程類別</label>
+        <label className="block text-stone-600 text-sm font-medium mb-1.5">課程類別 *</label>
         <div className="relative">
-          <select value={form.category_id} onChange={e => setForm({ ...form, category_id: e.target.value })}
+          <select required value={form.category_id} onChange={e => setForm({ ...form, category_id: e.target.value })}
             className="w-full appearance-none border border-stone-300 rounded-xl pl-4 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-            <option value="">不分類</option>
+            {/* 課程類別改為必填，移除「不分類」這個可選值；這個 placeholder 是 disabled 的，
+                只用來在還沒選之前顯示提示文字，選過一次之後就選不回來了，逼使用者一定要選一個真正的類別 */}
+            <option value="" disabled>請選擇課程類別</option>
             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9" /></svg>

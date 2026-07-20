@@ -86,6 +86,7 @@ function EditCoursePageInner() {
     e.preventDefault()
     if (timeError) return
     if (form.photo_urls.length === 0) { setError('請至少上傳 1 張課程照片'); return }
+    if (!form.category_id) { setError('請選擇課程類別'); return }
     if (form.suitable_age === '其他' && !form.custom_age.trim()) { setError('請填寫適合年齡的說明'); return }
     setError('')
     setSaving(true)

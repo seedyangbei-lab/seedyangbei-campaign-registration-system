@@ -224,6 +224,7 @@ export default function CoursesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); if (timeError) return
     if (form.photo_urls.length === 0) { alert('請至少上傳 1 張課程照片'); return }
+    if (!form.category_id) { alert('請選擇課程類別'); return }
     if (form.suitable_age === '其他' && !form.custom_age.trim()) { alert('請填寫適合年齡的說明'); return }
     setLoading(true)
     const location = form.location === '其他' ? form.custom_location : form.location
