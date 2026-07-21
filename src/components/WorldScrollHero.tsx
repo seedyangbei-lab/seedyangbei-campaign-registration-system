@@ -16,6 +16,7 @@ export default function WorldScrollHero() {
   const [progress, setProgress] = useState(0) // 0~1
   const [videoOk, setVideoOk] = useState(false)
   const [reducedMotion, setReducedMotion] = useState(false)
+  const [entered, setEntered] = useState(false) // 進場動畫用：剛載入時是否已經「定位」
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -23,6 +24,13 @@ export default function WorldScrollHero() {
     const onChange = () => setReducedMotion(mq.matches)
     mq.addEventListener('change', onChange)
     return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  // 進場動畫：頁面一載入，畫面先從「稍微縮小＋淡出」的狀態，用一個跟滾動無關的時間軸慢慢定位、淡入，
+  // 讓使用者感覺鏡頭正在「靠近、對焦」，而不是一開始就整片全螢幕貼臉、像是滾動已經被拉到一半的錯覺
+  useEffect(() => {
+    const t = setTimeout(() => setEntered(true), 60)
+    return () => clearTimeout(t)
   }, [])
 
   // 用 blob 載入影片，確保 seek 一定準（靜態主機常常不支援 range request，導致卡在第 0 幀）
@@ -37,6 +45,7 @@ export default function WorldScrollHero() {
         const el = videoRef.current
         if (el) {
           el.src = url
+          el.load()
           el.addEventListener('loadedmetadata', () => setVideoOk(true), { once: true })
         }
       })
@@ -86,7 +95,15 @@ export default function WorldScrollHero() {
   return (
     <div ref={containerRef} style={{ height: `${VH_MULTIPLIER * 100}vh` }} className="relative bg-stone-900">
       <div className="sticky top-0 h-screen w-full overflow-hidden">
-        <div className="absolute inset-0" style={{ background: '#FDEBD3' }}>
+        <div
+          className="absolute inset-0"
+          style={{
+            background: '#FDEBD3',
+            transform: entered ? 'scale(1)' : 'scale(1.06)',
+            opacity: entered ? 1 : 0,
+            transition: 'transform 1.15s cubic-bezier(0.16,1,0.3,1), opacity 0.9s ease-out',
+          }}
+        >
           <video
             ref={videoRef}
             muted
@@ -102,31 +119,25 @@ export default function WorldScrollHero() {
           )}
         </div>
 
-        {/* 深色暈影跟整體素樸手繪插畫風格不搭（淺色插畫上疊一塊深色會悶成一片灰霧）——
-            改成深色文字＋白色柔光暈邊（像貼紙的白邊效果），比較貼近手繪插畫的紙感，
-            插畫背景本身是淺色系，深色文字對比已經足夠，不需要額外遮罩 */}
+        {/* 文字卡片：原本用多層 drop-shadow 疊白邊，在淺色插畫上糊成一片灰霧，質感很差。
+            改成跟專案既有卡片語彙一致的做法——半透明暖色卡片 + backdrop-blur，
+            像一張輕輕貼在畫面上的紙卡，邊界柔和、對比乾淨，不會有生硬的暈影邊框 */}
         <div
-          className="absolute left-1/2 w-full max-w-xl text-center px-6"
-          style={{ top: `${textTopPercent}%`, transform: 'translate(-50%, -50%)', opacity: textOpacity }}
+          className="absolute left-1/2 w-[92%] max-w-xl text-center px-8 py-7 rounded-2xl"
+          style={{
+            top: `${textTopPercent}%`,
+            transform: 'translate(-50%, -50%)',
+            opacity: textOpacity,
+            background: 'rgba(253, 240, 220, 0.68)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.5)',
+            boxShadow: '0 8px 32px rgba(120, 80, 40, 0.08)',
+          }}
         >
-          <p
-            className="text-orange-600 text-sm font-medium tracking-widest mb-2"
-            style={{ filter: 'drop-shadow(0 1px 5px rgba(255,255,255,0.95)) drop-shadow(0 0 2px rgba(255,255,255,0.9))' }}
-          >
-            歡迎回家
-          </p>
-          <h2
-            className="text-stone-800 text-4xl md:text-5xl font-bold mb-3"
-            style={{ filter: 'drop-shadow(0 2px 8px rgba(255,255,255,0.95)) drop-shadow(0 0 3px rgba(255,255,255,0.95))' }}
-          >
-            走進央北社宅
-          </h2>
-          <p
-            className="text-stone-600 text-lg"
-            style={{ filter: 'drop-shadow(0 1px 5px rgba(255,255,255,0.9)) drop-shadow(0 0 2px rgba(255,255,255,0.85))' }}
-          >
-            從社區大門開始，帶你看看這裡的生活
-          </p>
+          <p className="text-orange-600 text-sm font-medium tracking-widest mb-2">歡迎回家</p>
+          <h2 className="text-stone-800 text-4xl md:text-5xl font-bold mb-3">走進央北社宅</h2>
+          <p className="text-stone-600 text-lg">從社區大門開始，帶你看看這裡的生活</p>
         </div>
 
         <p
