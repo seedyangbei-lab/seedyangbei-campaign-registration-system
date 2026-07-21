@@ -43,6 +43,7 @@ function RegisterForm() {
 
   const [initialized, setInitialized] = useState(false)
   const [shouldRedirect, setShouldRedirect] = useState(false)
+  const [redirectTarget, setRedirectTarget] = useState('/')
   const [courseIds, setCourseIds] = useState<string[]>([])
   const [courses, setCourses] = useState<any[]>([])
   const [lineUser, setLineUser] = useState<any>(null)
@@ -97,6 +98,10 @@ function RegisterForm() {
 
    if (ids.length === 0) {
       logFunnelStep('register_guard_fail', undefined, { hadLineUserParam: !!lineUserParam, url: window.location.href })
+      // 這裡以前直接彈回首頁，如果是「一般登入」失敗被導回 /register（沒帶 courses），
+      // errParam 會被一起丟掉，使用者完全看不到登入失敗的訊息——這裡把 error 一起帶回首頁，
+      // 由 SiteNavbar 統一顯示提示（見 SiteNavbar.tsx 的 error 偵測邏輯）
+      setRedirectTarget(errParam ? `/?error=${errParam}` : '/')
       setShouldRedirect(true)
       setInitialized(true)
       return
@@ -132,8 +137,8 @@ function RegisterForm() {
   }, [])
 
   useEffect(() => {
-    if (shouldRedirect) router.push('/')
-  }, [shouldRedirect])
+    if (shouldRedirect) router.push(redirectTarget)
+  }, [shouldRedirect, redirectTarget])
 
   const prefillUserData = async (lineUserId: string) => {
     setPrefilling(true)

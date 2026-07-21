@@ -32,22 +32,41 @@ function detectFlow(state: string | null): 'instructor_claim' | 'instructor_logi
   return 'resident_general'
 }
 
+// 登入失敗／被取消時要導去哪裡：
+// - 報名某堂課途中登入（state 帶 courses）→ 導回 /register，帶著 courses 讓表單知道要顯示哪些課程
+// - 一般居民登入（導覽列、首次訪問彈窗，state 只帶 url，通常是當下那一頁）→ 導回原本那一頁，並帶 error 參數
+//   （這裡以前不管是哪種登入，失敗一律導去 /register；但一般登入的 state.url 常常是首頁，
+//   /register 沒有 courses 資訊時前台會直接判定「課程資訊遺失」整頁彈回首頁，
+//   使用者完全看不到任何錯誤訊息，登入失敗變成「按了沒反應」，這裡改成尊重 state.url）
+// - 都沒有 state（理論上不會發生）→ 保底導去 /register
+function buildFailureRedirect(origin: string, state: string | null, errorCode: string, detail?: string) {
+  let targetBase = `${origin}/register`
+  let coursesParam = ''
+  if (state) {
+    try {
+      const parsedState = JSON.parse(decodeURIComponent(state))
+      if (parsedState.courses) {
+        coursesParam = `&courses=${encodeURIComponent(parsedState.courses)}`
+      } else if (parsedState.url && parsedState.url.startsWith('http')) {
+        targetBase = parsedState.url
+      }
+    } catch {}
+  }
+  const sep = targetBase.includes('?') ? '&' : '?'
+  const detailParam = detail ? `&detail=${encodeURIComponent(detail)}` : ''
+  return `${targetBase}${sep}error=${errorCode}${detailParam}${coursesParam}`
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
   const state = searchParams.get('state')
   const error = searchParams.get('error')
   const flow = detectFlow(state)
+  const origin = new URL(request.url).origin
 
   if (error || !code) {
-    let coursesParam = ''
-    if (state) {
-      try {
-        const parsedState = JSON.parse(decodeURIComponent(state))
-        if (parsedState.courses) coursesParam = `&courses=${encodeURIComponent(parsedState.courses)}`
-      } catch {}
-    }
-    return NextResponse.redirect(new URL(`/register?error=line_denied${coursesParam}`, request.url))
+    return NextResponse.redirect(new URL(buildFailureRedirect(origin, state, 'line_denied'), request.url))
   }
 
   // 從 NEXT_PUBLIC_ 或 server-side 環境變數都嘗試讀取
@@ -81,14 +100,7 @@ export async function GET(request: NextRequest) {
         userAgent: request.headers.get('user-agent') || null,
         flow,
       })
-      let coursesParam = ''
-      if (state) {
-        try {
-          const parsedState = JSON.parse(decodeURIComponent(state))
-          if (parsedState.courses) coursesParam = `&courses=${encodeURIComponent(parsedState.courses)}`
-        } catch {}
-      }
-      return NextResponse.redirect(new URL(`/register?error=line_failed&detail=${encodeURIComponent(tokenData.error_description || 'no_token')}${coursesParam}`, request.url))
+      return NextResponse.redirect(new URL(buildFailureRedirect(origin, state, 'line_failed', tokenData.error_description || 'no_token'), request.url))
     }
 
     // Step 2: Get user profile
@@ -105,21 +117,13 @@ export async function GET(request: NextRequest) {
     if (!lineUserId) {
       console.error('LINE profile error:', JSON.stringify(profile))
       await logLineLoginFail({ stage: 'profile_fetch', reason: 'no_user_id', flow })
-      let coursesParam = ''
-      if (state) {
-        try {
-          const parsedState = JSON.parse(decodeURIComponent(state))
-          if (parsedState.courses) coursesParam = `&courses=${encodeURIComponent(parsedState.courses)}`
-        } catch {}
-      }
-      return NextResponse.redirect(new URL(`/register?error=line_failed${coursesParam}`, request.url))
+      return NextResponse.redirect(new URL(buildFailureRedirect(origin, state, 'line_failed'), request.url))
     }
 
     // Step 2.5: 講師中台登入／邀請連結綁定分流（跟居民報名流程互不影響）
     if (state) {
       try {
         const parsedState = JSON.parse(decodeURIComponent(state))
-        const origin = new URL(request.url).origin
 
         if (parsedState.instructorClaim) {
           const supabase = createServerClient()
@@ -253,7 +257,6 @@ export async function GET(request: NextRequest) {
       email,
     }))
 
-   const origin = new URL(request.url).origin
    let redirectUrl = `${origin}/register`
     if (state) {
       try {
@@ -280,13 +283,6 @@ export async function GET(request: NextRequest) {
   } catch (err: any) {
     console.error('LINE Login unexpected error:', err?.message || err)
     await logLineLoginFail({ stage: 'unexpected', reason: err?.message || String(err), flow })
-    let coursesParam = ''
-    if (state) {
-      try {
-        const parsedState = JSON.parse(decodeURIComponent(state))
-        if (parsedState.courses) coursesParam = `&courses=${encodeURIComponent(parsedState.courses)}`
-      } catch {}
-    }
-    return NextResponse.redirect(new URL(`/register?error=line_failed${coursesParam}`, request.url))
+    return NextResponse.redirect(new URL(buildFailureRedirect(origin, state, 'line_failed'), request.url))
   }
 }

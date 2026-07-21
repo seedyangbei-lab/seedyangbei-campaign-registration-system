@@ -6,6 +6,13 @@ import Link from 'next/link'
 const LINE_CHANNEL_ID = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2010077816'
 const LINE_CALLBACK_URL = process.env.NEXT_PUBLIC_LINE_CALLBACK_URL || 'https://yangbei-campaign.vercel.app/api/auth/line/callback'
 
+// 一般居民登入（不是為了報名特定課程）失敗時，callback 會把使用者導回原本那一頁並帶上這個參數，
+// 這裡統一顯示成一條提示列，讓「登入失敗」不再是使用者感覺到的「按了沒反應」
+const LOGIN_ERROR_MESSAGES: Record<string, string> = {
+  line_denied: 'LINE 登入已取消',
+  line_failed: 'LINE 登入失敗，請重新登入試試',
+}
+
 type SiteNavbarProps = {
   siteTitle?: string
   /** 'home'：首頁，左側顯示網站標題。'inner'：其他內頁，左側顯示「‹ 返回首頁」 */
@@ -18,6 +25,7 @@ type SiteNavbarProps = {
 // 確保「捲動時導覽列不會被滑走」的行為和樣式在每個頁面都一致。
 export default function SiteNavbar({ siteTitle, variant = 'home', onLogout }: SiteNavbarProps) {
   const [lineUser, setLineUser] = useState<any>(null)
+  const [loginError, setLoginError] = useState<string | null>(null)
 
   useEffect(() => {
     try {
@@ -26,14 +34,21 @@ export default function SiteNavbar({ siteTitle, variant = 'home', onLogout }: Si
     } catch {}
     const params = new URLSearchParams(window.location.search)
     const lu = params.get('line_user')
+    const err = params.get('error')
+    let shouldCleanUrl = false
     if (lu) {
       try {
         const user = JSON.parse(decodeURIComponent(lu))
         setLineUser(user)
         localStorage.setItem('line_user', JSON.stringify(user))
-        window.history.replaceState({}, '', window.location.pathname)
+        shouldCleanUrl = true
       } catch {}
     }
+    if (err && LOGIN_ERROR_MESSAGES[err]) {
+      setLoginError(LOGIN_ERROR_MESSAGES[err])
+      shouldCleanUrl = true
+    }
+    if (shouldCleanUrl) window.history.replaceState({}, '', window.location.pathname)
   }, [])
 
   const loggingInRef = useRef(false)
@@ -42,6 +57,7 @@ export default function SiteNavbar({ siteTitle, variant = 'home', onLogout }: Si
     // 防止連續點擊發出多次 LINE 授權請求（見 CourseCard.tsx 同款修正的說明）
     if (loggingInRef.current) return
     loggingInRef.current = true
+    setLoginError(null)
     const registerUrl = `${window.location.origin}/register`
     const nonce = Math.random().toString(36).slice(2)
     const statePayload = JSON.stringify({ url: registerUrl, nonce })
@@ -62,6 +78,7 @@ export default function SiteNavbar({ siteTitle, variant = 'home', onLogout }: Si
   }
 
   return (
+    <>
     <div className="sticky top-0 z-40 w-full h-[52px] md:h-14 px-4 md:px-6 flex items-center justify-between bg-white shadow-[0px_4px_2px_rgba(0,0,0,0.03)]">
       {/* 左側：未登入時一律顯示站名（比照 Figma 未登入版，不分首頁/內頁）；已登入時才依 variant 切換 */}
       {!lineUser || variant === 'home' ? (
@@ -110,5 +127,19 @@ export default function SiteNavbar({ siteTitle, variant = 'home', onLogout }: Si
         </div>
       )}
     </div>
+    {loginError && (
+      <div className="sticky top-[52px] md:top-14 z-30 w-full bg-orange-50 border-b border-orange-200 px-4 md:px-6 py-2.5 flex items-center justify-between gap-3">
+        <p className="text-sm text-orange-700">{loginError}</p>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <button onClick={handleLogin} className="text-sm font-medium text-orange-700 underline underline-offset-2">重新登入</button>
+          <button onClick={() => setLoginError(null)} aria-label="關閉提示" className="text-orange-400">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
