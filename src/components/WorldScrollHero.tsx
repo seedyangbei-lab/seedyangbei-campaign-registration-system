@@ -101,7 +101,7 @@ export default function WorldScrollHero() {
         </div>
 
         <div
-          className="absolute left-0 right-0 bottom-[12%] px-10 md:px-20 transition-opacity duration-300"
+          className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 transition-opacity duration-300"
           style={{ opacity: textOpacity }}
         >
           <p className="text-orange-300 text-sm font-medium tracking-widest mb-2">歡迎回家</p>
