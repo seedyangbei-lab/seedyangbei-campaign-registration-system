@@ -119,20 +119,17 @@ export default function WorldScrollHero() {
           )}
         </div>
 
-        {/* 文字卡片：原本用多層 drop-shadow 疊白邊，在淺色插畫上糊成一片灰霧，質感很差。
-            改成跟專案既有卡片語彙一致的做法——半透明暖色卡片 + backdrop-blur，
-            像一張輕輕貼在畫面上的紙卡，邊界柔和、對比乾淨，不會有生硬的暈影邊框 */}
+        {/* 文字卡片：試過半透明暖色卡片＋backdrop-blur，但透明底跟下面素樸手繪插畫的紙感不搭，
+            會有一點「玻璃感」違和。改回實色白卡（不透明），像一張真的貼在畫面上的紙卡，
+            跟插畫本身乾淨、平塗、無漸層的手繪風格更一致 */}
         <div
           className="absolute left-1/2 w-[92%] max-w-xl text-center px-8 py-7 rounded-2xl"
           style={{
             top: `${textTopPercent}%`,
             transform: 'translate(-50%, -50%)',
             opacity: textOpacity,
-            background: 'rgba(253, 240, 220, 0.68)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255,255,255,0.5)',
-            boxShadow: '0 8px 32px rgba(120, 80, 40, 0.08)',
+            background: '#FFFFFF',
+            boxShadow: '0 8px 28px rgba(120, 80, 40, 0.14)',
           }}
         >
           <p className="text-orange-600 text-sm font-medium tracking-widest mb-2">歡迎回家</p>
