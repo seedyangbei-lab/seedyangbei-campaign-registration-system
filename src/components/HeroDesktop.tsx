@@ -150,13 +150,17 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
                   <img src={s.hero_decoration_desktop} alt="" className="w-full h-full object-contain" />
                 </div>
               )}
-              {/* 人物圖層：最前景，滑鼠位移幅度最大，另外疊加獨立的漂浮動畫（互不干擾） */}
+              {/* 人物圖層：最前景，滑鼠位移幅度最大，另外疊加獨立的漂浮動畫（互不干擾）。
+                  陰影（drop-shadow）改放在外層 wrapper div、不跟 mask 放在同一個元素上——
+                  filter 和 mask-image 疊在同一個 <img> 上時，mask 會把 filter 溢出圖片本身範圍
+                  的陰影一併裁掉，導致人物左右邊界出現一條生硬的陰影切邊。分開放兩層就不會互相影響。 */}
               <div
                 className="absolute"
                 style={{
                   left: '52%', top: '52%', width: '68.3%', height: '43.2%',
                   transform: `translate(calc(-50% + ${tilt.x * 18}px), calc(-50% + ${tilt.y * 18}px))`,
                   transition: 'transform 0.25s ease-out',
+                  filter: 'drop-shadow(0px 8px 24px rgba(0,0,0,0.12))',
                 }}
               >
                 <img
@@ -165,7 +169,6 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
                   fetchPriority="high"
                   className="w-full h-full object-contain hero-desktop-float"
                   style={{
-                    filter: 'drop-shadow(0px 8px 24px rgba(0,0,0,0.12))',
                     maskImage: 'radial-gradient(ellipse farthest-corner at center, black 85%, transparent 100%), linear-gradient(to bottom, black 97.5%, transparent 100%)',
                     maskComposite: 'intersect',
                     WebkitMaskImage: 'radial-gradient(ellipse farthest-corner at center, black 85%, transparent 100%), linear-gradient(to bottom, black 97.5%, transparent 100%)',
