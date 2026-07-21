@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 // 影片還沒放進去之前，畫面顯示暖色系佔位色塊，不會整頁壞掉。
 // 捲動到底之後，接續 src/app/world/page.tsx 裡下方的課程列表區塊。
 
-const VIDEO_SRC = '/videos/world/gate-scene.mp4'
+const VIDEO_SRC = '/videos/world/gate-scene-v2.mp4' // 檔名加版號：確保 CDN／瀏覽器快取不會繼續吃到舊的低解析度版本
 const VH_MULTIPLIER = 2.2 // 這一幕給多少倍視窗高度的捲動空間，越大代表滾動起來越慢、越細緻
 
 export default function WorldScrollHero() {
@@ -102,21 +102,31 @@ export default function WorldScrollHero() {
           )}
         </div>
 
-        {/* 文字疊在天空區時，底下顏色偏淺，白字直接放上去對比不夠——
-            用暖色調（不是純黑，純黑在淺色插畫上會悶成一片灰霧）、範圍縮小成局部光暈，
-            只在文字周圍輕輕加深，確保對比又不會蓋掉整張插畫 */}
-        <div
-          className="absolute inset-x-0 top-0 h-[42%] pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 60% 100% at 50% 35%, rgba(41,26,13,0.32), rgba(41,26,13,0.1) 60%, rgba(41,26,13,0) 85%)' }}
-        />
-
+        {/* 深色暈影跟整體素樸手繪插畫風格不搭（淺色插畫上疊一塊深色會悶成一片灰霧）——
+            改成深色文字＋白色柔光暈邊（像貼紙的白邊效果），比較貼近手繪插畫的紙感，
+            插畫背景本身是淺色系，深色文字對比已經足夠，不需要額外遮罩 */}
         <div
           className="absolute left-1/2 w-full max-w-xl text-center px-6"
           style={{ top: `${textTopPercent}%`, transform: 'translate(-50%, -50%)', opacity: textOpacity }}
         >
-          <p className="text-orange-300 text-sm font-medium tracking-widest mb-2">歡迎回家</p>
-          <h2 className="text-white text-4xl md:text-5xl font-bold mb-3 drop-shadow-lg">走進央北社宅</h2>
-          <p className="text-white/90 text-lg drop-shadow">從社區大門開始，帶你看看這裡的生活</p>
+          <p
+            className="text-orange-600 text-sm font-medium tracking-widest mb-2"
+            style={{ filter: 'drop-shadow(0 1px 5px rgba(255,255,255,0.95)) drop-shadow(0 0 2px rgba(255,255,255,0.9))' }}
+          >
+            歡迎回家
+          </p>
+          <h2
+            className="text-stone-800 text-4xl md:text-5xl font-bold mb-3"
+            style={{ filter: 'drop-shadow(0 2px 8px rgba(255,255,255,0.95)) drop-shadow(0 0 3px rgba(255,255,255,0.95))' }}
+          >
+            走進央北社宅
+          </h2>
+          <p
+            className="text-stone-600 text-lg"
+            style={{ filter: 'drop-shadow(0 1px 5px rgba(255,255,255,0.9)) drop-shadow(0 0 2px rgba(255,255,255,0.85))' }}
+          >
+            從社區大門開始，帶你看看這裡的生活
+          </p>
         </div>
 
         <p
