@@ -29,7 +29,7 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
 
   return (
     <section className="hidden md:block w-full bg-white">
-      <div className="max-w-[1512px] mx-auto grid grid-cols-[640px_1fr] items-center">
+      <div className="max-w-[1512px] mx-auto grid grid-cols-[minmax(320px,640px)_minmax(340px,1fr)] items-center">
         {/* Left-Content (586:12177) */}
         <div className="flex flex-col justify-center gap-6 px-20 py-20 min-h-[820px]">
           {/* Badge (589:11750) variant: color=brand, style=subtle */}
@@ -92,14 +92,15 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
         </div>
 
         {/* Right-Visual (586:12189)：clipsContent 開啟，滑鼠移入時多圖層視差。
-            改成「固定尺寸、靠右錨定」而不是整體等比縮放——RWD 縮窄時，右側（有主要人物的一側）
-            永遠維持完整不變形，多出來裁掉的份量固定從左側（警衛先生那側）犧牲，
-            不會出現整體縮小或人物比例跑掉的狀況。 */}
+            用 aspect-ratio 鎖住設計比例（872:820），內部圖層全部改用百分比尺寸置中錨定——
+            RWD 縮窄時整組插畫跟著容器寬度等比縮小，不裁切、不變形；真正需要「換行喘息」
+            的是左欄文字（左欄改成彈性寬度，見上面 grid-cols），不是靠裁掉圖片來擠空間。 */}
         <div
           ref={visualRef}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
-          className="relative overflow-hidden w-full h-full min-h-[480px]"
+          className="relative overflow-hidden w-full"
+          style={{ aspectRatio: '872 / 820', minHeight: '360px' }}
         >
           {videoActive ? (
             <video key={s.hero_video} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover">
@@ -111,7 +112,7 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
               <div
                 className="absolute pointer-events-none"
                 style={{
-                  right: '38.6px', top: '52%', width: '760px', height: '760px', transform: 'translateY(-50%)',
+                  left: '50%', top: '52%', width: '87%', height: '93%', transform: 'translate(-50%, -50%)',
                   background: 'radial-gradient(circle, rgba(254,215,170,0.55) 0%, rgba(254,215,170,0.25) 45%, rgba(254,215,170,0) 78%)',
                 }}
               />
@@ -120,8 +121,8 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
                 <div
                   className="absolute"
                   style={{
-                    right: '43.6px', top: '52%', width: '750px', height: '446px',
-                    transform: `translate(${tilt.x * 6}px, calc(-50% + ${tilt.y * 6}px))`,
+                    left: '52%', top: '52%', width: '86%', height: '54.4%',
+                    transform: `translate(calc(-50% + ${tilt.x * 6}px), calc(-50% + ${tilt.y * 6}px))`,
                     transition: 'transform 0.25s ease-out',
                   }}
                 >
@@ -144,8 +145,8 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
                 <div
                   className="absolute"
                   style={{
-                    right: '-6.4px', top: '52%', width: '850px', height: '504px',
-                    transform: `translate(${tilt.x * 10}px, calc(-50% + ${tilt.y * 10}px))`,
+                    left: '52%', top: '52%', width: '97.5%', height: '61.5%',
+                    transform: `translate(calc(-50% + ${tilt.x * 10}px), calc(-50% + ${tilt.y * 10}px))`,
                     transition: 'transform 0.25s ease-out',
                   }}
                 >
@@ -158,8 +159,8 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
               <div
                 className="absolute"
                 style={{
-                  right: '120.6px', top: '52%', width: '596px', height: '354px',
-                  transform: `translate(${tilt.x * 18}px, calc(-50% + ${tilt.y * 18}px))`,
+                  left: '52%', top: '52%', width: '68.3%', height: '43.2%',
+                  transform: `translate(calc(-50% + ${tilt.x * 18}px), calc(-50% + ${tilt.y * 18}px))`,
                   transition: 'transform 0.25s ease-out',
                   filter: 'drop-shadow(0px 8px 24px rgba(0,0,0,0.12))',
                 }}
