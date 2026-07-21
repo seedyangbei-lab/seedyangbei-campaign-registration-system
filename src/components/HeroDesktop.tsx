@@ -91,13 +91,15 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
           </div>
         </div>
 
-        {/* Right-Visual (586:12189)：clipsContent 開啟，滑鼠移入時多圖層視差 */}
+        {/* Right-Visual (586:12189)：clipsContent 開啟，滑鼠移入時多圖層視差。
+            改成「固定尺寸、靠右錨定」而不是整體等比縮放——RWD 縮窄時，右側（有主要人物的一側）
+            永遠維持完整不變形，多出來裁掉的份量固定從左側（警衛先生那側）犧牲，
+            不會出現整體縮小或人物比例跑掉的狀況。 */}
         <div
           ref={visualRef}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
-          className="relative overflow-hidden w-full"
-          style={{ aspectRatio: '872 / 820', minHeight: '480px' }}
+          className="relative overflow-hidden w-full h-full min-h-[480px]"
         >
           {videoActive ? (
             <video key={s.hero_video} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover">
@@ -109,7 +111,7 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
               <div
                 className="absolute pointer-events-none"
                 style={{
-                  left: '50%', top: '52%', width: '87%', height: '93%', transform: 'translate(-50%, -50%)',
+                  right: '38.6px', top: '52%', width: '760px', height: '760px', transform: 'translateY(-50%)',
                   background: 'radial-gradient(circle, rgba(254,215,170,0.55) 0%, rgba(254,215,170,0.25) 45%, rgba(254,215,170,0) 78%)',
                 }}
               />
@@ -118,8 +120,8 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
                 <div
                   className="absolute"
                   style={{
-                    left: '52%', top: '52%', width: '86%', height: '54.4%',
-                    transform: `translate(calc(-50% + ${tilt.x * 6}px), calc(-50% + ${tilt.y * 6}px))`,
+                    right: '43.6px', top: '52%', width: '750px', height: '446px',
+                    transform: `translate(${tilt.x * 6}px, calc(-50% + ${tilt.y * 6}px))`,
                     transition: 'transform 0.25s ease-out',
                   }}
                 >
@@ -142,8 +144,8 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
                 <div
                   className="absolute"
                   style={{
-                    left: '52%', top: '52%', width: '97.5%', height: '61.5%',
-                    transform: `translate(calc(-50% + ${tilt.x * 10}px), calc(-50% + ${tilt.y * 10}px))`,
+                    right: '-6.4px', top: '52%', width: '850px', height: '504px',
+                    transform: `translate(${tilt.x * 10}px, calc(-50% + ${tilt.y * 10}px))`,
                     transition: 'transform 0.25s ease-out',
                   }}
                 >
@@ -151,14 +153,13 @@ export default function HeroDesktop({ settings: s }: { settings: Record<string, 
                 </div>
               )}
               {/* 人物圖層：最前景，滑鼠位移幅度最大，另外疊加獨立的漂浮動畫（互不干擾）。
-                  陰影（drop-shadow）改放在外層 wrapper div、不跟 mask 放在同一個元素上——
-                  filter 和 mask-image 疊在同一個 <img> 上時，mask 會把 filter 溢出圖片本身範圍
-                  的陰影一併裁掉，導致人物左右邊界出現一條生硬的陰影切邊。分開放兩層就不會互相影響。 */}
+                  陰影（drop-shadow）放在外層 wrapper div、不跟 mask 放在同一個元素上，避免陰影溢出
+                  範圍被 mask 一併裁掉造成硬邊。 */}
               <div
                 className="absolute"
                 style={{
-                  left: '52%', top: '52%', width: '68.3%', height: '43.2%',
-                  transform: `translate(calc(-50% + ${tilt.x * 18}px), calc(-50% + ${tilt.y * 18}px))`,
+                  right: '120.6px', top: '52%', width: '596px', height: '354px',
+                  transform: `translate(${tilt.x * 18}px, calc(-50% + ${tilt.y * 18}px))`,
                   transition: 'transform 0.25s ease-out',
                   filter: 'drop-shadow(0px 8px 24px rgba(0,0,0,0.12))',
                 }}
