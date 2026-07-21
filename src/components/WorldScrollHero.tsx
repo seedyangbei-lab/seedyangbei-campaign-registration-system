@@ -77,7 +77,9 @@ export default function WorldScrollHero() {
     )
   }
 
-  // 文字疊字：開頭淡入停留，滾到約 1/3 進度後淡出，讓出畫面給開門瞬間
+  // 文字疊字：開頭在建築物上方（天空區），滾動時往下移到畫面正中央，同時淡出，讓出畫面給開門瞬間
+  const moveT = Math.min(progress / 0.35, 1)
+  const textTopPercent = 16 + moveT * (50 - 16)
   const textOpacity = Math.max(0, 1 - progress / 0.35)
   const hintOpacity = progress < 0.9 ? 1 : 0
 
@@ -100,9 +102,16 @@ export default function WorldScrollHero() {
           )}
         </div>
 
+        {/* 文字疊在天空區時，底下的雲/建築物顏色偏淺，白字直接放上去對比不夠——
+            疊一層由上往下淡出的深色暈影，確保文字在任何位置都跟得上 WCAG 對比 */}
         <div
-          className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 transition-opacity duration-300"
-          style={{ opacity: textOpacity }}
+          className="absolute inset-x-0 top-0 h-[65%] pointer-events-none"
+          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.12) 60%, rgba(0,0,0,0) 100%)' }}
+        />
+
+        <div
+          className="absolute left-1/2 w-full max-w-xl text-center px-6"
+          style={{ top: `${textTopPercent}%`, transform: 'translate(-50%, -50%)', opacity: textOpacity }}
         >
           <p className="text-orange-300 text-sm font-medium tracking-widest mb-2">歡迎回家</p>
           <h2 className="text-white text-4xl md:text-5xl font-bold mb-3 drop-shadow-lg">走進央北社宅</h2>
