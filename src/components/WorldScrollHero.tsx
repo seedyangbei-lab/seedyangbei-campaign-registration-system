@@ -102,11 +102,12 @@ export default function WorldScrollHero() {
           )}
         </div>
 
-        {/* 文字疊在天空區時，底下的雲/建築物顏色偏淺，白字直接放上去對比不夠——
-            疊一層由上往下淡出的深色暈影，確保文字在任何位置都跟得上 WCAG 對比 */}
+        {/* 文字疊在天空區時，底下顏色偏淺，白字直接放上去對比不夠——
+            用暖色調（不是純黑，純黑在淺色插畫上會悶成一片灰霧）、範圍縮小成局部光暈，
+            只在文字周圍輕輕加深，確保對比又不會蓋掉整張插畫 */}
         <div
-          className="absolute inset-x-0 top-0 h-[65%] pointer-events-none"
-          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.12) 60%, rgba(0,0,0,0) 100%)' }}
+          className="absolute inset-x-0 top-0 h-[42%] pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse 60% 100% at 50% 35%, rgba(41,26,13,0.32), rgba(41,26,13,0.1) 60%, rgba(41,26,13,0) 85%)' }}
         />
 
         <div
