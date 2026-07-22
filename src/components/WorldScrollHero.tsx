@@ -13,6 +13,7 @@ const VH_MULTIPLIER = 2.2 // 這一幕給多少倍視窗高度的捲動空間，
 export default function WorldScrollHero() {
   const containerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const viewportHRef = useRef(0) // 只在 mount／resize 時更新，滾動時不重算，避免手機工具列跳動造成抖動
   const [progress, setProgress] = useState(0) // 0~1
   const [videoOk, setVideoOk] = useState(false)
   const [reducedMotion, setReducedMotion] = useState(false)
@@ -55,17 +56,28 @@ export default function WorldScrollHero() {
 
   useEffect(() => {
     if (reducedMotion) return
+    const updateViewportH = () => {
+      // 用 visualViewport 優先：手機瀏覽器網址列收合時比 window.innerHeight 更穩定
+      viewportHRef.current = window.visualViewport?.height ?? window.innerHeight
+    }
     const onScroll = () => {
       const el = containerRef.current
       if (!el) return
       const rect = el.getBoundingClientRect()
-      const total = rect.height - window.innerHeight
+      const total = rect.height - viewportHRef.current
       const scrolled = Math.min(Math.max(-rect.top, 0), total)
       setProgress(total > 0 ? scrolled / total : 0)
     }
+    updateViewportH()
     window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', updateViewportH)
+    window.addEventListener('orientationchange', updateViewportH)
     onScroll()
-    return () => window.removeEventListener('scroll', onScroll)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', updateViewportH)
+      window.removeEventListener('orientationchange', updateViewportH)
+    }
   }, [reducedMotion])
 
   useEffect(() => {
@@ -93,8 +105,13 @@ export default function WorldScrollHero() {
   const hintOpacity = progress < 0.9 ? 1 : 0
 
   return (
-    <div ref={containerRef} style={{ height: `${VH_MULTIPLIER * 100}vh` }} className="relative bg-stone-900">
-      <div className="sticky top-0 h-screen w-full overflow-hidden">
+    <div ref={containerRef} style={{ height: `${VH_MULTIPLIER * 100}dvh` }} className="relative bg-stone-900">
+      {/* top 跟高度都要扣掉最上面 SiteNavbar 的高度（手機 52px／桌機 56px）——
+          SiteNavbar 自己也是 sticky top-0，兩個 sticky 元素是手足關係、不是巢狀，
+          如果這裡也用 top-0 + h-screen，滾動時這個滿版影片區塊會直接疊到導覽列「下面」，
+          導覽列高度那一截影片畫面就被永久蓋住，而且 h-screen 沒扣掉導覽列高度，
+          捲動總距離的計算會多算出一截，手機上工具列收合時尤其明顯，就是「跑版」的主因 */}
+      <div className="sticky top-[52px] md:top-14 h-[calc(100dvh-52px)] md:h-[calc(100dvh-56px)] w-full overflow-hidden">
         <div
           className="absolute inset-0"
           style={{
@@ -123,7 +140,7 @@ export default function WorldScrollHero() {
             會有一點「玻璃感」違和。改回實色白卡（不透明），像一張真的貼在畫面上的紙卡，
             跟插畫本身乾淨、平塗、無漸層的手繪風格更一致 */}
         <div
-          className="absolute left-1/2 w-[92%] max-w-xl text-center px-8 py-7 rounded-2xl"
+          className="absolute left-1/2 w-[90%] max-w-xl text-center px-5 py-5 md:px-8 md:py-7 rounded-2xl"
           style={{
             top: `${textTopPercent}%`,
             transform: 'translate(-50%, -50%)',
@@ -133,8 +150,8 @@ export default function WorldScrollHero() {
           }}
         >
           <p className="text-orange-600 text-sm font-medium tracking-widest mb-2">歡迎回家</p>
-          <h2 className="text-stone-800 text-4xl md:text-5xl font-bold mb-3">走進央北社宅</h2>
-          <p className="text-stone-600 text-lg">從社區大門開始，帶你看看這裡的生活</p>
+          <h2 className="text-stone-800 text-2xl md:text-5xl font-bold mb-2 md:mb-3">走進央北社宅</h2>
+          <p className="text-stone-600 text-sm md:text-lg">從社區大門開始，帶你看看這裡的生活</p>
         </div>
 
         <p
