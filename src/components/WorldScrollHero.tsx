@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react'
 // 捲動到底之後，接續 src/app/world/page.tsx 裡下方的課程列表區塊。
 
 const VIDEO_SRC = '/videos/world/gate-scene-v2.mp4' // 檔名加版號：確保 CDN／瀏覽器快取不會繼續吃到舊的低解析度版本
+const BACKDROP_SRC = '/videos/world/gate-scene-backdrop.jpg' // 影片其中一幀截圖，當作模糊背景墊底用（見下方說明）
 const VH_MULTIPLIER = 2.2 // 這一幕給多少倍視窗高度的捲動空間，越大代表滾動起來越慢、越細緻
 
 export default function WorldScrollHero() {
@@ -121,12 +122,29 @@ export default function WorldScrollHero() {
             transition: 'transform 1.15s cubic-bezier(0.16,1,0.3,1), opacity 0.9s ease-out',
           }}
         >
+          {/* 影片原始比例是 16:9，手機直向螢幕大概 9:19，用 object-cover 硬撐滿螢幕的話
+              左右會被裁掉快一半，警衛、貓咪旁的鄰居家庭那組角色直接被切出畫面外。
+              改成「模糊背景墊底＋前景完整不裁切」的做法（IG 限時動態放橫式影片常見手法）：
+              背景放同一支影片的截圖，模糊＋放大鋪滿全螢幕製造氛圍色；
+              前景影片改用 object-contain，整個畫面完整顯示、一個角色都不會被裁掉，
+              上下（手機）或左右（桌機，其實幾乎沒差）多出來的空間就用模糊背景自然補滿，
+              不會出現生硬的黑邊或白邊 */}
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url(${BACKDROP_SRC})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'blur(28px) brightness(0.92)',
+              transform: 'scale(1.15)', // 放大蓋掉模糊造成的邊緣透光
+            }}
+          />
           <video
             ref={videoRef}
             muted
             playsInline
             preload="auto"
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-contain"
             style={{ opacity: videoOk ? 1 : 0, transition: 'opacity 0.4s' }}
           />
           {!videoOk && (
