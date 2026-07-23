@@ -7,8 +7,8 @@ import { useEffect, useRef, useState } from 'react'
 // 影片還沒放進去之前，畫面顯示暖色系佔位色塊，不會整頁壞掉。
 // 捲動到底之後，接續 src/app/world/page.tsx 裡下方的課程列表區塊。
 
-const VIDEO_SRC = '/videos/world/gate-scene-v3.mp4' // 換成 0723 新素材，檔名版號往上加，避免快取吃到舊影片
-const BACKDROP_SRC = '/videos/world/gate-scene-v3-backdrop.jpg' // 從新影片重新截一幀，背景色調要跟前景影片一致，不能沿用舊影片截圖
+const DESKTOP_VIDEO_SRC = '/videos/world/gate-scene-v3.mp4'
+const MOBILE_VIDEO_SRC = '/videos/world/gate-scene-mobile.mp4' // 原生 9:16 直式素材，不用再靠模糊背景墊底湊版面
 const VH_MULTIPLIER = 2.2 // 這一幕給多少倍視窗高度的捲動空間，越大代表滾動起來越慢、越細緻
 
 export default function WorldScrollHero() {
@@ -19,6 +19,9 @@ export default function WorldScrollHero() {
   const [videoOk, setVideoOk] = useState(false)
   const [reducedMotion, setReducedMotion] = useState(false)
   const [entered, setEntered] = useState(false) // 進場動畫用：剛載入時是否已經「定位」
+  // 現在有兩支原生比例都對的素材（桌機 16:9／手機 9:16），不用再靠「模糊背景墊底＋object-contain」
+  // 硬湊版面，直接依斷點切換來源、用 object-cover 滿版顯示即可
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -27,6 +30,17 @@ export default function WorldScrollHero() {
     mq.addEventListener('change', onChange)
     return () => mq.removeEventListener('change', onChange)
   }, [])
+
+  useEffect(() => {
+    // 768px 對齊 Tailwind 的 md 斷點，跟其他地方（SiteNavbar 等）判斷桌機/手機的邊界一致
+    const mq = window.matchMedia('(min-width: 768px)')
+    setIsMobile(!mq.matches)
+    const onChange = () => setIsMobile(!mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  const videoSrc = isMobile ? MOBILE_VIDEO_SRC : DESKTOP_VIDEO_SRC
 
   // 進場動畫：頁面一載入，畫面先從「稍微縮小＋淡出」的狀態，用一個跟滾動無關的時間軸慢慢定位、淡入，
   // 讓使用者感覺鏡頭正在「靠近、對焦」，而不是一開始就整片全螢幕貼臉、像是滾動已經被拉到一半的錯覺
@@ -39,7 +53,8 @@ export default function WorldScrollHero() {
   useEffect(() => {
     if (reducedMotion) return
     let cancelled = false
-    fetch(VIDEO_SRC)
+    setVideoOk(false)
+    fetch(videoSrc)
       .then(r => { if (!r.ok) throw new Error('no video yet'); return r.blob() })
       .then(blob => {
         if (cancelled) return
@@ -53,7 +68,7 @@ export default function WorldScrollHero() {
       })
       .catch(() => { /* 影片還沒生成好，維持佔位色塊 */ })
     return () => { cancelled = true }
-  }, [reducedMotion])
+  }, [reducedMotion, videoSrc])
 
   useEffect(() => {
     if (reducedMotion) return
@@ -122,34 +137,19 @@ export default function WorldScrollHero() {
             transition: 'transform 1.15s cubic-bezier(0.16,1,0.3,1), opacity 0.9s ease-out',
           }}
         >
-          {/* 影片原始比例是 16:9，手機直向螢幕大概 9:19，用 object-cover 硬撐滿螢幕的話
-              左右會被裁掉快一半，警衛、貓咪旁的鄰居家庭那組角色直接被切出畫面外。
-              改成「模糊背景墊底＋前景完整不裁切」的做法（IG 限時動態放橫式影片常見手法）：
-              背景放同一支影片的截圖，模糊＋放大鋪滿全螢幕製造氛圍色；
-              前景影片改用 object-contain，整個畫面完整顯示、一個角色都不會被裁掉，
-              上下（手機）或左右（桌機，其實幾乎沒差）多出來的空間就用模糊背景自然補滿，
-              不會出現生硬的黑邊或白邊 */}
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: `url(${BACKDROP_SRC})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              filter: 'blur(28px) brightness(0.92)',
-              transform: 'scale(1.15)', // 放大蓋掉模糊造成的邊緣透光
-            }}
-          />
+          {/* 手機現在有原生 9:16 直式素材、桌機維持 16:9，兩邊比例都跟螢幕貼近，
+              不用再靠模糊背景墊底湊版面，直接 object-cover 滿版顯示即可 */}
           <video
             ref={videoRef}
             muted
             playsInline
             preload="auto"
-            className="absolute inset-0 w-full h-full object-contain"
+            className="absolute inset-0 w-full h-full object-cover"
             style={{ opacity: videoOk ? 1 : 0, transition: 'opacity 0.4s' }}
           />
           {!videoOk && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <p className="text-stone-500 text-sm">〔影片尚未生成：{VIDEO_SRC}〕</p>
+              <p className="text-stone-500 text-sm">〔影片尚未生成：{videoSrc}〕</p>
             </div>
           )}
         </div>
