@@ -7,8 +7,8 @@ import { useEffect, useRef, useState } from 'react'
 // 影片還沒放進去之前，畫面顯示暖色系佔位色塊，不會整頁壞掉。
 // 捲動到底之後，接續 src/app/world/page.tsx 裡下方的課程列表區塊。
 
-const VIDEO_SRC = '/videos/world/gate-scene-v2.mp4' // 檔名加版號：確保 CDN／瀏覽器快取不會繼續吃到舊的低解析度版本
-const BACKDROP_SRC = '/videos/world/gate-scene-backdrop.jpg' // 影片其中一幀截圖，當作模糊背景墊底用（見下方說明）
+const VIDEO_SRC = '/videos/world/gate-scene-v3.mp4' // 換成 0723 新素材，檔名版號往上加，避免快取吃到舊影片
+const BACKDROP_SRC = '/videos/world/gate-scene-v3-backdrop.jpg' // 從新影片重新截一幀，背景色調要跟前景影片一致，不能沿用舊影片截圖
 const VH_MULTIPLIER = 2.2 // 這一幕給多少倍視窗高度的捲動空間，越大代表滾動起來越慢、越細緻
 
 export default function WorldScrollHero() {
