@@ -156,21 +156,24 @@ export default function WorldScrollHero() {
 
         {/* 文字卡片：試過半透明暖色卡片＋backdrop-blur，但透明底跟下面素樸手繪插畫的紙感不搭，
             會有一點「玻璃感」違和。改回實色白卡（不透明），像一張真的貼在畫面上的紙卡，
-            跟插畫本身乾淨、平塗、無漸層的手繪風格更一致 */}
-        <div
-          className="absolute left-1/2 w-[90%] max-w-xl text-center px-5 py-5 md:px-8 md:py-7 rounded-2xl"
-          style={{
-            top: `${textTopPercent}%`,
-            transform: 'translate(-50%, -50%)',
-            opacity: textOpacity,
-            background: '#FFFFFF',
-            boxShadow: '0 8px 28px rgba(120, 80, 40, 0.14)',
-          }}
-        >
-          <p className="text-orange-600 text-sm font-medium tracking-widest mb-2">歡迎回家</p>
-          <h2 className="text-stone-800 text-2xl md:text-5xl font-bold mb-2 md:mb-3">走進央北社宅</h2>
-          <p className="text-stone-600 text-sm md:text-lg">從社區大門開始，帶你看看這裡的生活</p>
-        </div>
+            跟插畫本身乾淨、平塗、無漸層的手繪風格更一致。
+            手機版影片開頭自己燒了「央北種子計畫」標題卡進去，這張 HTML 疊字先移掉，避免兩層文字疊在一起 */}
+        {!isMobile && (
+          <div
+            className="absolute left-1/2 w-[90%] max-w-xl text-center px-5 py-5 md:px-8 md:py-7 rounded-2xl"
+            style={{
+              top: `${textTopPercent}%`,
+              transform: 'translate(-50%, -50%)',
+              opacity: textOpacity,
+              background: '#FFFFFF',
+              boxShadow: '0 8px 28px rgba(120, 80, 40, 0.14)',
+            }}
+          >
+            <p className="text-orange-600 text-sm font-medium tracking-widest mb-2">歡迎回家</p>
+            <h2 className="text-stone-800 text-2xl md:text-5xl font-bold mb-2 md:mb-3">走進央北社宅</h2>
+            <p className="text-stone-600 text-sm md:text-lg">從社區大門開始，帶你看看這裡的生活</p>
+          </div>
+        )}
 
         <p
           className="absolute left-6 bottom-6 text-white/50 text-xs transition-opacity duration-300"
