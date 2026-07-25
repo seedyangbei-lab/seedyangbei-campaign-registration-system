@@ -1,9 +1,7 @@
 import { createServerClient } from '@/lib/supabase-server'
 import WorldScrollHero from '@/components/WorldScrollHero'
 import CourseCard from '@/components/CourseCard'
-import SiteNavbar from '@/components/SiteNavbar'
-import RegistrationSteps from '@/components/RegistrationSteps'
-import GreetingBar from '@/components/GreetingBar'
+import WorldHeaderStack from '@/components/WorldHeaderStack'
 
 export const revalidate = 60
 export const metadata = { title: '央北社宅 · 滾動世界試看' }
@@ -42,11 +40,9 @@ export default async function WorldPage() {
 
   return (
     <main className="min-h-screen">
-      <SiteNavbar siteTitle={s.site_title} variant="inner" />
-
-      {/* 試看：把首頁原本的報名步驟條、問候列疊在滾動世界上面，看看組合起來的效果 */}
-      <RegistrationSteps />
-      <GreetingBar course={activeCourses[0] ? {
+      {/* 導覽列＋報名步驟條＋問候列，三段全部 sticky 釘住，量測出來的總高度會寫進
+          CSS 變數 --world-header-h，WorldScrollHero 會讀這個變數算自己要留多高 */}
+      <WorldHeaderStack siteTitle={s.site_title} course={activeCourses[0] ? {
         title: activeCourses[0].title,
         date: activeCourses[0].date,
         time_start: activeCourses[0].time_start,

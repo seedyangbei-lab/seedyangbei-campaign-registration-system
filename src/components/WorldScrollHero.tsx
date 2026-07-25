@@ -122,12 +122,19 @@ export default function WorldScrollHero() {
 
   return (
     <div ref={containerRef} style={{ height: `${VH_MULTIPLIER * 100}dvh` }} className="relative bg-stone-900">
-      {/* top 跟高度都要扣掉最上面 SiteNavbar 的高度（手機 52px／桌機 56px）——
-          SiteNavbar 自己也是 sticky top-0，兩個 sticky 元素是手足關係、不是巢狀，
-          如果這裡也用 top-0 + h-screen，滾動時這個滿版影片區塊會直接疊到導覽列「下面」，
-          導覽列高度那一截影片畫面就被永久蓋住，而且 h-screen 沒扣掉導覽列高度，
-          捲動總距離的計算會多算出一截，手機上工具列收合時尤其明顯，就是「跑版」的主因 */}
-      <div className="sticky top-[52px] md:top-14 h-[calc(100dvh-52px)] md:h-[calc(100dvh-56px)] w-full overflow-hidden">
+      {/* top 跟高度都要扣掉上面整組 header（導覽列＋報名步驟條＋問候列）的高度——
+          這些都是 sticky、彼此是手足關係、不是巢狀，如果這裡也用 top-0 + h-screen，
+          滾動時這個滿版影片區塊會直接疊到 header 底下，那一截影片畫面永久被蓋住，
+          捲動總距離的計算也會多算出一截。--world-header-h 是 WorldHeaderStack 即時量測寫入的
+          CSS 變數（見該檔案），沒有這個 wrapper（例如以後別的頁面直接用這個元件）就退回
+          52px／56px 這組原本的導覽列高度常數 */}
+      <div
+        className="sticky w-full overflow-hidden"
+        style={{
+          top: 'var(--world-header-h, 52px)',
+          height: 'calc(100dvh - var(--world-header-h, 52px))',
+        }}
+      >
         <div
           className="absolute inset-0"
           style={{
