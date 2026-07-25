@@ -69,25 +69,25 @@ export default function WorldScrollHero() {
     return () => clearTimeout(t)
   }, [])
 
-  // 用 blob 載入影片，確保 seek 一定準（靜態主機常常不支援 range request，導致卡在第 0 幀）
+  // 直接把網址設成 <video src>，讓瀏覽器自己用 HTTP Range Request 邊下載邊播放／跳轉，
+  // 不用等整支影片抓完才看得到畫面。Vercel 對 /public 底下的靜態檔案有支援 range request，
+  // 之前「靜態主機常常不支援 range request，導致卡在第 0 幀」的疑慮在這裡不成立，
+  // 改回瀏覽器原生載入方式，時間到影片點（time to first frame）會明顯變快。
   useEffect(() => {
     if (reducedMotion) return
-    let cancelled = false
     setVideoOk(false)
-    fetch(videoSrc)
-      .then(r => { if (!r.ok) throw new Error('no video yet'); return r.blob() })
-      .then(blob => {
-        if (cancelled) return
-        const url = URL.createObjectURL(blob)
-        const el = videoRef.current
-        if (el) {
-          el.src = url
-          el.load()
-          el.addEventListener('loadedmetadata', () => setVideoOk(true), { once: true })
-        }
-      })
-      .catch(() => { /* 影片還沒生成好，維持佔位色塊 */ })
-    return () => { cancelled = true }
+    const el = videoRef.current
+    if (!el) return
+    const onLoaded = () => setVideoOk(true)
+    const onError = () => setVideoOk(false) // 影片還沒生成好，維持佔位色塊
+    el.addEventListener('loadedmetadata', onLoaded)
+    el.addEventListener('error', onError)
+    el.src = videoSrc
+    el.load()
+    return () => {
+      el.removeEventListener('loadedmetadata', onLoaded)
+      el.removeEventListener('error', onError)
+    }
   }, [reducedMotion, videoSrc])
 
   useEffect(() => {
