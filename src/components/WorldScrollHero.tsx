@@ -175,12 +175,14 @@ export default function WorldScrollHero() {
           </div>
         )}
 
-        <p
-          className="absolute left-6 bottom-6 text-white/50 text-xs transition-opacity duration-300"
+        <div
+          className="absolute left-1/2 bottom-6 -translate-x-1/2 flex items-center gap-1.5 bg-white rounded-full px-4 py-2 shadow-[0_4px_14px_rgba(120,80,40,0.16)] transition-opacity duration-300"
           style={{ opacity: hintOpacity }}
         >
-          往下滑，繼續往前走
-        </p>
+          <span className="text-stone-600 text-xs font-medium whitespace-nowrap">往下滑，繼續往前走</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/scroll-down-arrow.gif" alt="" aria-hidden="true" className="w-4 h-4 flex-shrink-0" />
+        </div>
       </div>
     </div>
   )
