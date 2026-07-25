@@ -38,7 +38,7 @@ const STEPS = [
   { label: '完成報名', icon: <IconComplete /> },
 ]
 
-export default function RegistrationSteps() {
+export default function RegistrationSteps({ id }: { id?: string } = {}) {
   const [active, setActive] = useState(0)
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export default function RegistrationSteps() {
   }, [])
 
   return (
-    <section className="bg-white sticky top-[52px] z-30">
+    <section id={id} className="bg-white sticky top-[52px] z-30">
       {/* 手機版：拿掉巢狀 wrapper，3 張卡片＋2 個箭頭都在同一層 flex 子元素，flex-1 才能真正平分寬度，
           左右 padding 才會對稱、不會右邊被壓縮。gap/padding 縮小＋icon 改 16px＋文字允許換行，
           三重保險確保「LINE 登入」這種較長label 在窄螢幕也不會撐爆卡片寬度。電腦版視覺不變。 */}
