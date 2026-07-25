@@ -42,6 +42,26 @@ export default function WorldScrollHero() {
 
   const videoSrc = isMobile ? MOBILE_VIDEO_SRC : DESKTOP_VIDEO_SRC
 
+  // 順序是「導覽列 > 報名步驟條 > 這支影片」，這三段要收在第一個 100vh 裡，影片區塊的
+  // sticky top／高度要扣掉導覽列（固定常數 52／56px）+ 報名步驟條的實際渲染高度。
+  // 步驟條本身也是 sticky，量測時不能包一層 wrapper div 去取 ref——那會讓 wrapper 高度
+  // 剛好等於內容高度，等於步驟條完全沒有「可以黏」的捲動空間，滾一下就被推走（踩過這個坑）。
+  // 改成用 id 直接查 DOM 節點本身，src/app/world/page.tsx 那邊要記得傳 id="world-steps"。
+  const [stepsH, setStepsH] = useState(0)
+  useEffect(() => {
+    const update = () => {
+      setStepsH(document.getElementById('world-steps')?.offsetHeight ?? 0)
+    }
+    update()
+    const el = document.getElementById('world-steps')
+    const ro = new ResizeObserver(update)
+    if (el) ro.observe(el)
+    window.addEventListener('resize', update)
+    return () => { ro.disconnect(); window.removeEventListener('resize', update) }
+  }, [])
+  const navH = isMobile ? 52 : 56
+  const stickyTop = navH + stepsH
+
   // 進場動畫：頁面一載入，畫面先從「稍微縮小＋淡出」的狀態，用一個跟滾動無關的時間軸慢慢定位、淡入，
   // 讓使用者感覺鏡頭正在「靠近、對焦」，而不是一開始就整片全螢幕貼臉、像是滾動已經被拉到一半的錯覺
   useEffect(() => {
@@ -122,17 +142,15 @@ export default function WorldScrollHero() {
 
   return (
     <div ref={containerRef} style={{ height: `${VH_MULTIPLIER * 100}dvh` }} className="relative bg-stone-900">
-      {/* top 跟高度都要扣掉上面整組 header（導覽列＋報名步驟條＋問候列）的高度——
-          這些都是 sticky、彼此是手足關係、不是巢狀，如果這裡也用 top-0 + h-screen，
-          滾動時這個滿版影片區塊會直接疊到 header 底下，那一截影片畫面永久被蓋住，
-          捲動總距離的計算也會多算出一截。--world-header-h 是 WorldHeaderStack 即時量測寫入的
-          CSS 變數（見該檔案），沒有這個 wrapper（例如以後別的頁面直接用這個元件）就退回
-          52px／56px 這組原本的導覽列高度常數 */}
+      {/* top 跟高度都要扣掉導覽列 + 報名步驟條的高度（見上面 stepsH 量測），
+          這兩個都是 sticky、彼此是手足關係、不是巢狀，如果這裡也用 top-0 + h-screen，
+          滾動時這個滿版影片區塊會直接疊到它們底下，那一截影片畫面永久被蓋住，
+          捲動總距離的計算也會多算出一截 */}
       <div
         className="sticky w-full overflow-hidden"
         style={{
-          top: 'var(--world-header-h, 52px)',
-          height: 'calc(100dvh - var(--world-header-h, 52px))',
+          top: stickyTop,
+          height: `calc(100dvh - ${stickyTop}px)`,
         }}
       >
         <div

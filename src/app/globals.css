@@ -51,14 +51,6 @@
   /* 字體變數 */
   --font-heading: 'Huninn', 'GenSenRounded2TW', 'Noto Sans TC', sans-serif;
   --font-body: 'GenSenRounded2TW', 'Noto Sans TC', sans-serif;
-  /* /world 試看頁用：WorldHeaderStack 會在掛載後即時量測、覆寫這個值，
-     這裡只是給 JS 還沒跑之前（第一次畫面）的預設值，對齊導覽列高度，避免閃一下跳版 */
-  --world-header-h: 52px;
-}
-@media (min-width: 768px) {
-  :root {
-    --world-header-h: 56px;
-  }
 }
 
 html, body {

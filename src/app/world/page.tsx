@@ -1,7 +1,9 @@
 import { createServerClient } from '@/lib/supabase-server'
 import WorldScrollHero from '@/components/WorldScrollHero'
 import CourseCard from '@/components/CourseCard'
-import WorldHeaderStack from '@/components/WorldHeaderStack'
+import SiteNavbar from '@/components/SiteNavbar'
+import RegistrationSteps from '@/components/RegistrationSteps'
+import GreetingBar from '@/components/GreetingBar'
 
 export const revalidate = 60
 export const metadata = { title: '央北社宅 · 滾動世界試看' }
@@ -40,16 +42,20 @@ export default async function WorldPage() {
 
   return (
     <main className="min-h-screen">
-      {/* 導覽列＋報名步驟條＋問候列，三段全部 sticky 釘住，量測出來的總高度會寫進
-          CSS 變數 --world-header-h，WorldScrollHero 會讀這個變數算自己要留多高 */}
-      <WorldHeaderStack siteTitle={s.site_title} course={activeCourses[0] ? {
+      {/* 順序：導覽列 > 報名步驟條 > 捲動影片 > 問候列。
+          導覽列＋步驟條＋影片這三段要收在第一個 100vh 裡（WorldScrollHero 內部會量測
+          步驟條實際高度去扣），問候列不用擠進 100vh，就讓它接在影片捲動結束之後、
+          正常排版往下滑就看得到，跟首頁「Hero 之後接步驟條/問候列」的順序邏輯一致，
+          只是步驟條要先於影片、問候列殿後，配合這個頁面的需求調整過順序 */}
+      <SiteNavbar siteTitle={s.site_title} variant="inner" />
+      <RegistrationSteps id="world-steps" />
+      <WorldScrollHero />
+      <GreetingBar course={activeCourses[0] ? {
         title: activeCourses[0].title,
         date: activeCourses[0].date,
         time_start: activeCourses[0].time_start,
         location: activeCourses[0].location,
       } : null} />
-
-      <WorldScrollHero />
 
       <div className="relative bg-stone-50">
         <section id="courses" className="max-w-[800px] mx-auto px-6 py-8 scroll-mt-20">
