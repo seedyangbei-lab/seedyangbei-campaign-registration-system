@@ -537,7 +537,7 @@ export default function CourseCard({ courses, categories }: {
               {course.description && (
                 <div className="bg-stone-100 md:bg-[#fafaf9] px-4 py-4">
                   <p
-                    className="text-sm md:text-base text-stone-400 leading-relaxed"
+                    className="text-sm md:text-base text-stone-600 leading-relaxed"
                     style={{
                       display: '-webkit-box',
                       WebkitLineClamp: 3,
