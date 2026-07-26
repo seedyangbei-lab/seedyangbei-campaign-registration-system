@@ -69,9 +69,11 @@ export default async function HomePage() {
       <div className="relative bg-stone-50">
         {/* Course List */}
         <section id="courses" className="max-w-[800px] mx-auto px-6 py-8 scroll-mt-20">
-          <div className="flex items-center justify-between border-b border-stone-200 pb-4 mb-4">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-stone-600">近期課程活動</h2>
+          <div className="flex items-start justify-between gap-3 border-b border-stone-200 pb-4 mb-4">
+            <h2 className="text-xl font-bold text-stone-600">近期課程活動</h2>
+            {/* 「加入社群」跟「N 個課程開放報名」合成一個直向 grid，跟標題左右排列，
+                避免窄螢幕下三個元素擠在同一行導致標題被迫換行 */}
+            <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
               {/* 手機版專用的「加入社群」入口，桌機版改放在 Hero 主標題旁邊當次要按鈕（見 HeroDesktop.tsx） */}
               {s.line_community_url && (
                 <a
@@ -87,10 +89,10 @@ export default async function HomePage() {
                   加入社群
                 </a>
               )}
+              {courses && courses.length > 0 && (
+                <span className="text-sm text-stone-500 whitespace-nowrap">{activeCourses.length} 個課程開放報名</span>
+              )}
             </div>
-            {courses && courses.length > 0 && (
-               <span className="text-sm text-stone-500">{activeCourses.length} 個課程開放報名</span>
-            )}
           </div>
           {!activeCourses || activeCourses.length === 0 ? (
             <div className="text-center py-24 text-stone-400">
