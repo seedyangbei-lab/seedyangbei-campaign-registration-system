@@ -191,11 +191,6 @@ function InfoSpriteIcon({ y }: { y: number }) {
 const IconPerson = () => <InfoSpriteIcon y={0} />
 const IconClock = () => <InfoSpriteIcon y={28} />
 const IconPin = () => <InfoSpriteIcon y={56} />
-const IconNotice = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fa7315" strokeWidth="2" className="flex-shrink-0">
-    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-  </svg>
-)
 
 const IconCheck = () => (
   <svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round">
@@ -524,14 +519,6 @@ export default function CourseCard({ courses, categories }: {
                   <InfoRow icon={<IconPin />}>{course.location}</InfoRow>
                 </div>
 
-                {course.notes && (
-                  <div className="px-4">
-                    <div className="flex items-start gap-1.5 rounded-lg px-2 py-1.5 border border-orange-500">
-                      <IconNotice />
-                      <p className="text-xs font-bold text-stone-700 line-clamp-2 flex-1">{course.notes}</p>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {course.description && (

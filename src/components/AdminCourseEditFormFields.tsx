@@ -5,7 +5,7 @@ import { ChevronDownIcon } from '@/components/InstructorMobileUI'
 import CoursePhotoGrid from '@/components/CoursePhotoGrid'
 import SuitableAgeSelector from '@/components/SuitableAgeSelector'
 import {
-  LOCATIONS, DESCRIPTION_MAX, NOTES_MAX, MAX_SEATS_OPTIONS, TIME_OPTIONS,
+  LOCATIONS, DESCRIPTION_MAX, MAX_SEATS_OPTIONS, TIME_OPTIONS,
   InstructorMultiSelect, withCurrentValue, type InstructorOption,
 } from '@/components/CourseEditFormFields'
 
@@ -100,8 +100,6 @@ export default function AdminCourseEditFormFields({
   const timeStartOptions = withCurrentValue(TIME_OPTIONS, form.time_start)
   const timeEndOptions = withCurrentValue(TIME_OPTIONS, form.time_end)
   const seatOptions = MAX_SEATS_OPTIONS.includes(form.max_seats) ? MAX_SEATS_OPTIONS : [...MAX_SEATS_OPTIONS, form.max_seats].sort((a, b) => a - b)
-  const notesCount = form.notes.length
-  const notesOver = notesCount > NOTES_MAX
 
   return (
     <div className="space-y-4">
@@ -207,18 +205,6 @@ export default function AdminCourseEditFormFields({
           selectedIds={form.instructor_ids}
           onChange={ids => setForm({ ...form, instructor_ids: ids })}
         />
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <label className="text-stone-600 text-sm font-medium">注意事項 <span className="text-stone-400 font-normal">（選填，最多顯示兩行）</span></label>
-          <span className={`text-xs font-medium tabular-nums ${notesOver ? 'text-red-500' : notesCount >= NOTES_MAX * 0.8 ? 'text-orange-500' : 'text-stone-400'}`}>{notesCount} / {NOTES_MAX}</span>
-        </div>
-        <textarea value={form.notes}
-          onChange={e => { const newVal = e.target.value; if (newVal.length <= NOTES_MAX || newVal.length < form.notes.length) setForm({ ...form, notes: newVal }) }}
-          rows={2} placeholder="例：閱覽室內書籍僅供室內閱讀，不可私自帶離。"
-          className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 resize-none transition-colors ${notesOver ? 'border-red-400 focus:ring-red-300 bg-red-50' : 'border-stone-300 focus:ring-orange-300'}`} />
-        {notesOver && <p className="text-red-500 text-xs mt-1">已達字數上限（{NOTES_MAX} 字），請刪減內容</p>}
       </div>
 
       <CoursePhotoGrid

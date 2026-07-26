@@ -7,7 +7,6 @@ import SuitableAgeSelector from '@/components/SuitableAgeSelector'
 
 export const LOCATIONS = ['C 小客廳', 'D 小客廳', '閱覽室 1', '閱覽室 2', '其他']
 export const DESCRIPTION_MAX = 100
-export const NOTES_MAX = 40 // 跟大後台共用同一個上限，卡片上注意事項不做展開功能，全部字數都要能直接顯示完
 export const MAX_SEATS_OPTIONS = [5, 10, 15, 20, 25, 30, 35, 40, 50]
 
 // 上課時間下拉選項：每 30 分鐘一格，06:00~22:00
@@ -135,8 +134,6 @@ type Props = {
 
 // 課程編輯表單欄位（不含外層 modal/page 外框與送出按鈕），供桌機彈窗與手機獨立頁共用
 export default function CourseEditFormFields({ form, setForm, uploadCoursePhoto, instructorOptions = [] }: Props) {
-  const notesCount = form.notes.length
-  const notesOver = notesCount > NOTES_MAX
   const timeStartOptions = withCurrentValue(TIME_OPTIONS, form.time_start)
   const timeEndOptions = withCurrentValue(TIME_OPTIONS, form.time_end)
   const seatOptions = withCurrentSeats(MAX_SEATS_OPTIONS, form.max_seats)
@@ -165,18 +162,6 @@ export default function CourseEditFormFields({ form, setForm, uploadCoursePhoto,
           className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none"
         />
         <p className="text-right text-stone-400 text-xs mt-1">{form.description.length}/{DESCRIPTION_MAX}</p>
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <label className="text-stone-600 text-sm font-medium">注意事項 <span className="text-stone-400 font-normal">（選填，最多顯示兩行）</span></label>
-          <span className={`text-xs font-medium tabular-nums ${notesOver ? 'text-red-500' : notesCount >= NOTES_MAX * 0.8 ? 'text-orange-500' : 'text-stone-400'}`}>{notesCount} / {NOTES_MAX}</span>
-        </div>
-        <textarea value={form.notes}
-          onChange={e => { const newVal = e.target.value; if (newVal.length <= NOTES_MAX || newVal.length < form.notes.length) setForm({ ...form, notes: newVal }) }}
-          rows={2} placeholder="例：閱覽室內書籍僅供室內閱讀，不可私自帶離。"
-          className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 resize-none transition-colors ${notesOver ? 'border-red-400 focus:ring-red-300 bg-red-50' : 'border-stone-300 focus:ring-orange-300'}`} />
-        {notesOver && <p className="text-red-500 text-xs mt-1">已達字數上限（{NOTES_MAX} 字），請刪減內容</p>}
       </div>
 
       <div>
