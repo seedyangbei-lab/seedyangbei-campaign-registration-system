@@ -5,7 +5,7 @@ import { ChevronDownIcon } from '@/components/InstructorMobileUI'
 import CoursePhotoGrid from '@/components/CoursePhotoGrid'
 import SuitableAgeSelector from '@/components/SuitableAgeSelector'
 import {
-  LOCATIONS, DESCRIPTION_MAX, MAX_SEATS_OPTIONS, TIME_OPTIONS,
+  LOCATIONS, DESCRIPTION_MAX, NOTES_MAX, MAX_SEATS_OPTIONS, TIME_OPTIONS,
   InstructorMultiSelect, withCurrentValue, type InstructorOption,
 } from '@/components/CourseEditFormFields'
 
@@ -36,8 +36,6 @@ export const emptyAdminCourseForm: AdminCourseForm = {
   photo_urls: [], instructor_ids: [], category_id: '',
   notes: '', suitable_age: '全年齡', custom_age: '',
 }
-
-const NOTES_MAX = 40
 
 // 活動日期下拉月曆（從 admin/courses/page.tsx 搬過來，不含資料邏輯，供桌機彈窗與手機獨立頁共用）
 export function CalendarPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
