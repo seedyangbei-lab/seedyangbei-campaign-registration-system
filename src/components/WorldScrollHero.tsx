@@ -11,7 +11,7 @@ const DESKTOP_VIDEO_SRC = '/videos/world/gate-scene-v3.mp4'
 const MOBILE_VIDEO_SRC = '/videos/world/gate-scene-mobile.mp4' // 原生 9:16 直式素材，不用再靠模糊背景墊底湊版面
 const VH_MULTIPLIER = 2.2 // 這一幕給多少倍視窗高度的捲動空間，越大代表滾動起來越慢、越細緻
 
-export default function WorldScrollHero() {
+export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: boolean } = {}) {
   const containerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const viewportHRef = useRef(0) // 只在 mount／resize 時更新，滾動時不重算，避免手機工具列跳動造成抖動
@@ -32,13 +32,16 @@ export default function WorldScrollHero() {
   }, [])
 
   useEffect(() => {
+    // mobileOnly：首頁那邊已經用 md:hidden 包住、只在手機寬度掛載，這裡直接鎖 isMobile=true，
+    // 不用再判斷斷點，也不會在桌機寬度時白白多載一支用不到的桌機版影片
+    if (mobileOnly) { setIsMobile(true); return }
     // 768px 對齊 Tailwind 的 md 斷點，跟其他地方（SiteNavbar 等）判斷桌機/手機的邊界一致
     const mq = window.matchMedia('(min-width: 768px)')
     setIsMobile(!mq.matches)
     const onChange = () => setIsMobile(!mq.matches)
     mq.addEventListener('change', onChange)
     return () => mq.removeEventListener('change', onChange)
-  }, [])
+  }, [mobileOnly])
 
   const videoSrc = isMobile ? MOBILE_VIDEO_SRC : DESKTOP_VIDEO_SRC
 

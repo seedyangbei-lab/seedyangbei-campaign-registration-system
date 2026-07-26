@@ -1,7 +1,6 @@
 import { createServerClient } from '@/lib/supabase-server'
-import HeroSection from '@/components/HeroSection'
-import HeroBanner from '@/components/HeroBanner'
 import HeroDesktop from '@/components/HeroDesktop'
+import WorldScrollHero from '@/components/WorldScrollHero'
 import CourseCard from '@/components/CourseCard'
 import GreetingBar from '@/components/GreetingBar'
 import RegistrationSteps from '@/components/RegistrationSteps'
@@ -42,21 +41,22 @@ export default async function HomePage() {
   return (
     <main className="min-h-screen">
       <FirstVisitLoginModal />
-      {/* 手機版 Hero：底圖（固定置頂裝飾背景層）+ KV 插圖橫幅，跟桌機版是兩套完全獨立的設計，
-          只在 md 以下顯示 */}
-      <div className="md:hidden">
-        <HeroSection settings={s} />
-      </div>
       <SiteNavbar siteTitle={s.site_title} />
+
+      {/* 手機版 Hero：Scroll to World 捲動大門動畫，取代原本的底圖＋KV 插圖橫幅。
+          順序照 /world 試看頁驗證過的邏輯：導覽列 > 報名步驟條 > 捲動影片，
+          三段要收在第一個 100vh 裡，WorldScrollHero 內部會量測步驟條實際高度去扣。
+          只在 md 以下顯示，桌機版完全不受影響。 */}
       <div className="md:hidden">
-        <HeroBanner settings={s} />
+        <RegistrationSteps id="world-steps" />
+        <WorldScrollHero mobileOnly />
       </div>
 
-      {/* 桌機版 Hero：左文右圖不對稱佈局，只在 md 以上顯示 */}
+      {/* 桌機版 Hero：左文右圖不對稱佈局，維持原樣不動，只在 md 以上顯示 */}
       <HeroDesktop settings={s} />
-
-      {/* 報名步驟 */}
-      <RegistrationSteps />
+      <div className="hidden md:block">
+        <RegistrationSteps />
+      </div>
 
       <GreetingBar course={activeCourses[0] ? {
         title: activeCourses[0].title,
