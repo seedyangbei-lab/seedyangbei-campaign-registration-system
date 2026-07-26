@@ -336,7 +336,7 @@ function RegisterForm() {
             <div className="flex gap-3 md:gap-4">
               {[{v: true, l: '社宅居民'}, {v: false, l: '非社宅居民'}].map(opt => (
                 <button key={String(opt.v)} type="button" onClick={() => setIsSocialHousing(opt.v)}
-                  className={`flex-1 h-[50px] rounded-[10px] border text-base font-medium transition-colors ${isSocialHousing === opt.v ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-stone-600 border-stone-300'}`}>
+                  className={`flex-1 min-h-[50px] flex items-center justify-center text-center px-2 rounded-[10px] border text-base font-medium transition-colors ${isSocialHousing === opt.v ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-stone-600 border-stone-300'}`}>
                   {opt.l}
                 </button>
               ))}
@@ -352,7 +352,7 @@ function RegisterForm() {
                 <div className="grid grid-cols-4 gap-2">
                   {BUILDINGS.map(b => (
                     <button key={b} type="button" onClick={() => setBuilding(b)}
-                      className={`h-[50px] rounded-[10px] border text-base font-medium transition-colors ${building === b ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-stone-600 border-stone-300'}`}>
+                      className={`min-h-[50px] flex items-center justify-center text-center px-1 rounded-[10px] border text-base font-medium transition-colors ${building === b ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-stone-600 border-stone-300'}`}>
                       {b}
                     </button>
                   ))}
@@ -364,7 +364,7 @@ function RegisterForm() {
                 <div className="grid grid-cols-4 gap-2">
                   {UNIT_NUMBERS.map(n => (
                     <button key={n} type="button" onClick={() => setUnitNumber(n)}
-                      className={`h-[50px] rounded-[10px] border text-base font-medium transition-colors ${unitNumber === n ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-stone-600 border-stone-300'}`}>
+                      className={`min-h-[50px] flex items-center justify-center text-center px-1 rounded-[10px] border text-base font-medium transition-colors ${unitNumber === n ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-stone-600 border-stone-300'}`}>
                       {n}號
                     </button>
                   ))}
@@ -432,7 +432,7 @@ function RegisterForm() {
             <div className="grid grid-cols-3 md:grid-cols-7 gap-2">
               {AGE_GROUPS.map(age => (
                 <button key={age} type="button" onClick={() => setForm({...form, age_group: age})}
-                  className={`h-[50px] rounded-[10px] border text-base transition-colors font-medium ${form.age_group === age ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-stone-600 border-stone-300 hover:border-orange-300'}`}>
+                  className={`min-h-[50px] flex items-center justify-center text-center px-1 rounded-[10px] border text-base transition-colors font-medium ${form.age_group === age ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-stone-600 border-stone-300 hover:border-orange-300'}`}>
                   {age}
                 </button>
               ))}
