@@ -70,11 +70,23 @@ function RegisterForm() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    // 優先從 URL 讀，fallback 從 sessionStorage 讀（LINE 登入後回來的情況）
+    // 讀取順序：URL → sessionStorage（LINE 登入後回來的情況）→ localStorage（最後一層救援）
+    // 加 localStorage 這一層是因為 funnel_logs 觀察到：使用者已經成功登入、進到報名頁，
+    // 幾秒到一分鐘後卻又空手 reload 回 /register（懷疑是 LINE App 內建瀏覽器的重新整理
+    // 行為把網址列 query string 清掉）。sessionStorage 綁定同一個 history entry，
+    // 遇到這種 reload 也可能一起被清空；localStorage 不受影響，撐住最後一道防線
     const urlIds = params.get('courses')?.split(',').filter(Boolean) || []
     const sessionIds = sessionStorage.getItem('pending_courses')?.split(',').filter(Boolean) || []
-    const ids = urlIds.length > 0 ? urlIds : sessionIds
+    const localIds = localStorage.getItem('pending_courses')?.split(',').filter(Boolean) || []
+    const ids = urlIds.length > 0 ? urlIds : (sessionIds.length > 0 ? sessionIds : localIds)
+    const recoveredFromLocal = urlIds.length === 0 && sessionIds.length === 0 && localIds.length > 0
     if (ids.length > 0) sessionStorage.removeItem('pending_courses')
+    // localStorage 的救援記錄只在「真的靠它救回來」時清掉；一般路徑（URL/sessionStorage
+    // 就有值）保留不動，避免跟 CourseCard 那邊剛寫入、還沒真正用到的最新選課互相干擾
+    if (recoveredFromLocal) {
+      localStorage.removeItem('pending_courses')
+      logFunnelStep('register_recovered_from_local', ids.join(','))
+    }
     const lineUserParam = params.get('line_user')
     const errParam = params.get('error')
 
@@ -249,6 +261,7 @@ function RegisterForm() {
         if (regErr && regErr.code !== '23505') throw regErr
       }
      logFunnelStep('register_success', courseIds.join(','))
+      localStorage.removeItem('pending_courses') // 報名完成，救援記錄的任務結束，清掉避免之後誤觸發
       if (tutorialStep === '3') {
         // 教學導覽走到這一步固定跳頁到 /register-success，才能接續教學的第 4 步
         saveTutorialStep('4')

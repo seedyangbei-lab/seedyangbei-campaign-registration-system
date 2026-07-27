@@ -327,6 +327,12 @@ export default function CourseCard({ courses, categories }: {
     if (tutorialStep === '2') saveTutorialStep('3')
     const ids = selected.join(',')
     logFunnelStep('select_course', ids)
+    // 額外寫進 localStorage（不只 sessionStorage）—— 觀察到 funnel_logs 有多筆
+    // 「已成功走完 LINE 登入、進到報名頁，幾秒到一分鐘後卻又空手 reload 回 /register」
+    // 的案例（register_guard_fail），研判是 LINE App 內建瀏覽器的重新整理／返回行為
+    // 有機率把網址列的 query string 清掉。localStorage 不綁定單次 history entry，
+    // 重新整理後還在，可以當作最後一層救援，避免使用者被硬彈回首頁、選課記錄整個消失
+    localStorage.setItem('pending_courses', ids)
     try {
       const stored = localStorage.getItem('line_user')
       if (stored) {
