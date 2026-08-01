@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
-import { BUILDINGS, UNIT_NUMBERS, FLOORS, SUB_UNITS, formatRoomNumber } from '@/lib/address'
+import { BUILDINGS, UNIT_NUMBERS, SUB_UNITS, getFloors, formatRoomNumber } from '@/lib/address'
 
 type ExistingUser = { id: string; name: string; room_number: string; line_id?: string | null }
 type CreatedReg = { id: string; status: string; is_walk_in: boolean; users: ExistingUser }
@@ -311,7 +311,7 @@ export default function WalkInRegistrationModal({
                       <div className="flex-1 min-w-0 flex flex-col gap-1">
                         <p className="text-xs text-stone-500">棟別</p>
                         <div className="relative">
-                          <select value={building} onChange={e => setBuilding(e.target.value)}
+                          <select value={building} onChange={e => { setBuilding(e.target.value); setFloor('') }}
                             className="w-full appearance-none px-3 py-2 rounded-md border border-stone-200 text-xs bg-white text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300">
                             <option value="">請選擇</option>
                             {BUILDINGS.map(b => <option key={b} value={b}>{b}</option>)}
@@ -338,7 +338,7 @@ export default function WalkInRegistrationModal({
                           <select value={floor} onChange={e => setFloor(e.target.value)}
                             className="w-full appearance-none px-3 py-2 rounded-md border border-stone-200 text-xs bg-white text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300">
                             <option value="">請選擇</option>
-                            {FLOORS.map(f => <option key={f} value={f}>{f}</option>)}
+                            {getFloors(building).map(f => <option key={f} value={f}>{f}</option>)}
                           </select>
                           <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
                         </div>

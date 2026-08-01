@@ -11,7 +11,7 @@ import TutorialTooltip from '@/components/TutorialTooltip'
 import TutorialSkipButton from '@/components/TutorialSkipButton'
 import SiteNavbar from '@/components/SiteNavbar'
 import Link from 'next/link'
-import { BUILDINGS, UNIT_NUMBERS, FLOORS, SUB_UNITS } from '@/lib/address'
+import { BUILDINGS, UNIT_NUMBERS, SUB_UNITS, getFloors } from '@/lib/address'
 
 const DEMO_COURSE_DISPLAY = { id: DEMO_COURSE_ID, title: '範例課程（僅供教學示範）', date: new Date().toISOString().split('T')[0], time_start: '10:00', time_end: '12:00', location: '示範地點' }
 
@@ -364,7 +364,7 @@ function RegisterForm() {
                 <label className="text-sm text-stone-500">棟別</label>
                 <div className="grid grid-cols-4 gap-2">
                   {BUILDINGS.map(b => (
-                    <button key={b} type="button" onClick={() => setBuilding(b)}
+                    <button key={b} type="button" onClick={() => { setBuilding(b); setFloor('') }}
                       className={`min-h-[50px] flex items-center justify-center text-center px-1 rounded-[10px] border text-base font-medium transition-colors ${building === b ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-stone-600 border-stone-300'}`}>
                       {b}
                     </button>
@@ -391,7 +391,7 @@ function RegisterForm() {
                     <select required value={floor} onChange={e => setFloor(e.target.value)}
                       className="w-full appearance-none border border-stone-200 rounded-lg pl-4 pr-9 py-3 text-lg text-stone-800 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
                       <option value="">請選擇樓層</option>
-                      {FLOORS.map(f => <option key={f} value={f}>{f}</option>)}
+                      {getFloors(building).map(f => <option key={f} value={f}>{f}</option>)}
                     </select>
                     <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                   </div>
