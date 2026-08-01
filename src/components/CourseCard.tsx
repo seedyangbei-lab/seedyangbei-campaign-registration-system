@@ -230,9 +230,18 @@ export default function CourseCard({ courses, categories }: {
   const startTutorialStep1 = () => {
     saveTutorialStep('1')
     setTutorialStepState('1')
-    // Hero 區塊較高，第一屏看不到課程列表，教學開始時直接捲動過去
+    // 手機版 Hero 現在是 scroll-driven 影片（VH_MULTIPLIER=2.2，將近 2.2 倍螢幕高），
+    // 畫面在捲動途中大部分還是暗色。如果用平滑捲動，會變成教學一開始長達一兩秒
+    // 卡在黑畫面慢慢往下滑，容易讓使用者誤會系統卡住、不知道要往下滑。
+    // 改成直接「跳」到課程區塊、不要捲動動畫——html 上有全域 scroll-behavior: smooth
+    // （見 globals.css，給 CTA 錨點連結用），這裡用 inline style 暫時蓋掉再還原，
+    // 才不會影響其他地方原本的平滑捲動效果
     setTimeout(() => {
-      document.getElementById('courses')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      const html = document.documentElement
+      const prevScrollBehavior = html.style.scrollBehavior
+      html.style.scrollBehavior = 'auto'
+      document.getElementById('courses')?.scrollIntoView({ behavior: 'auto', block: 'start' })
+      html.style.scrollBehavior = prevScrollBehavior
     }, 300)
   }
 
