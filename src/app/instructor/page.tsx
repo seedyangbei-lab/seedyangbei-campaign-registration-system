@@ -55,7 +55,9 @@ function InstructorPortal() {
   const [coursesLoading, setCoursesLoading] = useState(true)
   const [reportStatuses, setReportStatuses] = useState<Record<string, 'due' | 'submitted' | 'overdue'>>({})
   const [reportDeadlineDays, setReportDeadlineDays] = useState(7)
-  const [openCheckinCount, setOpenCheckinCount] = useState(0)
+  const [openCheckinEvents, setOpenCheckinEvents] = useState<{ id: string; title: string }[]>([])
+  const [openCheckinCheckedIds, setOpenCheckinCheckedIds] = useState<Set<string>>(new Set())
+  const [quickCheckinLoading, setQuickCheckinLoading] = useState(false)
 
   const [courseTab, setCourseTab] = useState<'active' | 'ended'>('active')
   const [filterMonth, setFilterMonth] = useState('')
@@ -130,7 +132,7 @@ function InstructorPortal() {
       setProfileForm({ name: data.name || '', bio: data.bio || '', avatar_url: data.avatar_url || '', phone: data.phone || '', line_id: data.line_id || '' })
       setStatus('ready')
       fetchCourses(data.id)
-      fetchOpenCheckinCount()
+      fetchOpenCheckinEvents(data.id)
       const { data: roster } = await supabase.from('instructors').select('id, name').eq('is_active', true).order('name')
       setAllInstructors(roster || [])
     } else {
@@ -138,12 +140,35 @@ function InstructorPortal() {
     }
   }
 
-  // 活動簽到入口用：算現在正處於簽到期間內的活動數量，顯示在首頁的入口卡片上
-  const fetchOpenCheckinCount = async () => {
+  // 活動簽到入口用：抓現在正處於簽到期間內的活動，顯示在首頁的入口卡片上。
+  // 只抓「開放中」的活動（不含未開始／已結束），剛好只有一場時可以直接在首頁一鍵簽到，
+  // 不用多跳一頁——這是用量最高的情境（同時間通常只有一場共識會），優先做順手
+  const fetchOpenCheckinEvents = async (instructorId: string) => {
     const nowIso = new Date().toISOString()
-    const { count } = await supabase.from('checkin_events').select('id', { count: 'exact', head: true })
+    const { data: ev } = await supabase.from('checkin_events').select('id, title')
       .lte('checkin_start_at', nowIso).gte('checkin_end_at', nowIso)
-    setOpenCheckinCount(count || 0)
+    const list = ev || []
+    setOpenCheckinEvents(list)
+    if (list.length > 0) {
+      const { data: recs } = await supabase.from('checkin_records').select('event_id')
+        .eq('instructor_id', instructorId).in('event_id', list.map(e => e.id))
+      setOpenCheckinCheckedIds(new Set((recs || []).map((r: any) => r.event_id)))
+    } else {
+      setOpenCheckinCheckedIds(new Set())
+    }
+  }
+
+  const handleQuickCheckin = async (eventId: string) => {
+    if (!instructor || quickCheckinLoading) return
+    setQuickCheckinLoading(true)
+    const { error } = await supabase.from('checkin_records').insert({
+      event_id: eventId, instructor_id: instructor.id, method: 'self',
+    })
+    // 23505 = unique constraint violation，代表已經簽到過（例如連點兩下），不算真的失敗
+    if (!error || error.code === '23505') {
+      setOpenCheckinCheckedIds(prev => new Set(prev).add(eventId))
+    }
+    setQuickCheckinLoading(false)
   }
 
   const fetchCourses = async (instructorId: string) => {
@@ -474,25 +499,56 @@ function InstructorPortal() {
           onEdit={() => setShowProfileModal(true)}
         />
 
-        {/* 活動簽到入口：種子戶共識會／活動打卡簽到，開放中的活動數量會顯示紅點角標，讓人一眼注意到 */}
+        {/* 活動簽到入口：種子戶共識會／活動打卡簽到。
+            剛好只有一場開放中且還沒簽到時，右側直接放「簽到」按鈕，點了立刻簽到、不跳頁；
+            點卡片本身（除了簽到按鈕以外的地方）還是會進活動簽到頁，可以看其他場次。
+            同時有兩場以上開放中時無法用一顆按鈕代表，維持跳頁讓使用者自己選 */}
         <div className="px-4 pt-4 md:px-0 md:pt-6">
-          <button
-            onClick={() => router.push('/instructor/checkin')}
-            className="w-full flex items-center justify-between gap-3 bg-white border border-stone-200 rounded-2xl px-4 py-3.5 hover:border-orange-300 transition-colors"
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 shrink-0">
-                <CheckSquareIcon className="text-orange-500" />
+          {(() => {
+            const singleOpen = openCheckinEvents.length === 1 ? openCheckinEvents[0] : null
+            const singleChecked = singleOpen ? openCheckinCheckedIds.has(singleOpen.id) : false
+            return (
+              <div
+                onClick={() => router.push('/instructor/checkin')}
+                role="button"
+                tabIndex={0}
+                className="w-full flex items-center justify-between gap-3 bg-white border border-stone-200 rounded-2xl px-4 py-3.5 hover:border-orange-300 transition-colors cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 shrink-0">
+                    <CheckSquareIcon className="text-orange-500" />
+                  </div>
+                  <div className="text-left min-w-0">
+                    <p className="text-sm font-bold text-stone-700">活動簽到</p>
+                    <p className="text-xs text-stone-400 truncate">
+                      {singleOpen
+                        ? (singleChecked ? `已簽到「${singleOpen.title}」` : `${singleOpen.title}．開放簽到中`)
+                        : openCheckinEvents.length > 1
+                          ? `現在有 ${openCheckinEvents.length} 場活動開放簽到`
+                          : '共識會／活動打卡簽到'}
+                    </p>
+                  </div>
+                </div>
+                {singleOpen ? (
+                  singleChecked ? (
+                    <span className="shrink-0 flex items-center gap-1 text-green-600 text-xs font-medium whitespace-nowrap">
+                      <CheckSquareIcon className="text-green-600" />已簽到
+                    </span>
+                  ) : (
+                    <button
+                      onClick={e => { e.stopPropagation(); handleQuickCheckin(singleOpen.id) }}
+                      disabled={quickCheckinLoading}
+                      className="shrink-0 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white text-xs font-medium px-3.5 py-2 rounded-lg transition-colors whitespace-nowrap"
+                    >
+                      {quickCheckinLoading ? '簽到中...' : '簽到'}
+                    </button>
+                  )
+                ) : openCheckinEvents.length > 1 ? (
+                  <span className="shrink-0 min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold">{openCheckinEvents.length}</span>
+                ) : null}
               </div>
-              <div className="text-left min-w-0">
-                <p className="text-sm font-bold text-stone-700">活動簽到</p>
-                <p className="text-xs text-stone-400 truncate">{openCheckinCount > 0 ? `現在有 ${openCheckinCount} 場活動開放簽到` : '共識會／活動打卡簽到'}</p>
-              </div>
-            </div>
-            {openCheckinCount > 0 && (
-              <span className="shrink-0 min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold">{openCheckinCount}</span>
-            )}
-          </button>
+            )
+          })()}
         </div>
 
         <div className="px-4 pt-6 md:px-0 md:pt-6 flex flex-col gap-4 md:gap-6">
