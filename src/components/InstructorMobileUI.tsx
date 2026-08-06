@@ -336,7 +336,7 @@ export function InstructorCourseCard({
                 : 'bg-white hover:bg-stone-50 border border-stone-300 text-stone-600'
             }`}>
               <ReportIcon />
-              {reportStatus === 'submitted' ? '查看成果報告' : reportStatus === 'overdue' ? '成果報告（已逾期）' : '填寫成果報告'}
+              {reportStatus === 'submitted' ? '查看成果報告' : reportStatus === 'overdue' ? '報告逾期' : '填寫成果報告'}
             </button>
           )}
         </div>
