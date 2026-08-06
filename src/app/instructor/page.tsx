@@ -9,7 +9,7 @@ import AttendeeCheckItem from '@/components/AttendeeCheckItem'
 import {
   InstructorNavbar, InstructorProfileCard, InstructorTitle, InstructorTabBar,
   InstructorCourseCard, InstructorMonthFilter, InstructorProfileEditModal,
-  CloseIcon, IssueReportFab,
+  CloseIcon, IssueReportFab, CheckSquareIcon,
 } from '@/components/InstructorMobileUI'
 import IssueReportModal from '@/components/IssueReportModal'
 import { MobileRegistrationCard, MobilePagination } from '@/components/AdminMobileUI'
@@ -55,6 +55,7 @@ function InstructorPortal() {
   const [coursesLoading, setCoursesLoading] = useState(true)
   const [reportStatuses, setReportStatuses] = useState<Record<string, 'due' | 'submitted' | 'overdue'>>({})
   const [reportDeadlineDays, setReportDeadlineDays] = useState(7)
+  const [openCheckinCount, setOpenCheckinCount] = useState(0)
 
   const [courseTab, setCourseTab] = useState<'active' | 'ended'>('active')
   const [filterMonth, setFilterMonth] = useState('')
@@ -129,11 +130,20 @@ function InstructorPortal() {
       setProfileForm({ name: data.name || '', bio: data.bio || '', avatar_url: data.avatar_url || '', phone: data.phone || '', line_id: data.line_id || '' })
       setStatus('ready')
       fetchCourses(data.id)
+      fetchOpenCheckinCount()
       const { data: roster } = await supabase.from('instructors').select('id, name').eq('is_active', true).order('name')
       setAllInstructors(roster || [])
     } else {
       setStatus('not_bound')
     }
+  }
+
+  // 活動簽到入口用：算現在正處於簽到期間內的活動數量，顯示在首頁的入口卡片上
+  const fetchOpenCheckinCount = async () => {
+    const nowIso = new Date().toISOString()
+    const { count } = await supabase.from('checkin_events').select('id', { count: 'exact', head: true })
+      .lte('checkin_start_at', nowIso).gte('checkin_end_at', nowIso)
+    setOpenCheckinCount(count || 0)
   }
 
   const fetchCourses = async (instructorId: string) => {
@@ -463,6 +473,27 @@ function InstructorPortal() {
           courseCount={courses.length}
           onEdit={() => setShowProfileModal(true)}
         />
+
+        {/* 活動簽到入口：種子戶共識會／活動打卡簽到，開放中的活動數量會顯示紅點角標，讓人一眼注意到 */}
+        <div className="px-4 pt-4 md:px-0 md:pt-6">
+          <button
+            onClick={() => router.push('/instructor/checkin')}
+            className="w-full flex items-center justify-between gap-3 bg-white border border-stone-200 rounded-2xl px-4 py-3.5 hover:border-orange-300 transition-colors"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 shrink-0">
+                <CheckSquareIcon className="text-orange-500" />
+              </div>
+              <div className="text-left min-w-0">
+                <p className="text-sm font-bold text-stone-700">活動簽到</p>
+                <p className="text-xs text-stone-400 truncate">{openCheckinCount > 0 ? `現在有 ${openCheckinCount} 場活動開放簽到` : '共識會／活動打卡簽到'}</p>
+              </div>
+            </div>
+            {openCheckinCount > 0 && (
+              <span className="shrink-0 min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold">{openCheckinCount}</span>
+            )}
+          </button>
+        </div>
 
         <div className="px-4 pt-6 md:px-0 md:pt-6 flex flex-col gap-4 md:gap-6">
           <InstructorTitle
