@@ -557,26 +557,27 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
             </div>
           </div>
 
-          {/* 儲存設定 / 變更圖片 */}
-          <div className="shrink-0 px-4 pb-3 flex gap-3">
-            <button onClick={handleSaveSettings}
-              className="flex-1 h-9 rounded-lg border border-stone-300 bg-white text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors">
-              {savedFlash ? '已儲存！' : '儲存設定'}
-            </button>
+          {/* 變更圖片 */}
+          <div className="shrink-0 px-4 pb-3">
             <button onClick={()=>setShowPhotoPicker(true)}
-              className="flex-1 h-9 rounded-lg border text-sm font-medium transition-colors"
+              className="w-full h-9 rounded-lg border text-sm font-medium transition-colors"
               style={{ background:'#fff7ed', borderColor:'#fed7aa', color:'#ea580c' }}>
               變更圖片
             </button>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
           </div>
 
-          {/* 完成！匯出 PNG */}
-          <div className="shrink-0 border-t border-stone-200 px-4 py-4">
+          {/* 匯出 PNG（次要）／完成！儲存檔案（主要） */}
+          <div className="shrink-0 border-t border-stone-200 px-4 py-4 flex gap-3">
             <button onClick={handleExport} disabled={isExporting}
-              className="w-full py-2.5 rounded-lg text-sm font-medium tracking-wide text-white transition-opacity disabled:opacity-60"
+              className="shrink-0 px-5 h-10 rounded-lg border text-sm font-medium transition-colors disabled:opacity-60"
+              style={{ background:'#fff7ed', borderColor:'#fed7aa', color:'#ea580c' }}>
+              {isExporting ? '產生中...' : '匯出 PNG'}
+            </button>
+            <button onClick={handleSaveSettings}
+              className="flex-1 h-10 rounded-lg text-sm font-medium tracking-wide text-white transition-opacity"
               style={{ background:'#f97316' }}>
-              {isExporting ? '產生中...' : '完成！匯出 PNG'}
+              {savedFlash ? '已儲存！' : '完成！儲存檔案'}
             </button>
           </div>
         </div>
