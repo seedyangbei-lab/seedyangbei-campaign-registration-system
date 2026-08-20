@@ -601,16 +601,17 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
         </div>
       )}
 
-      {/* sticky 底部：儲存設定 ＋ 完成！匯出 PNG */}
-      <div className="fixed bottom-0 inset-x-0 z-30 bg-white rounded-t-2xl shadow-[0px_-3px_4px_0px_rgba(0,0,0,0.08)] p-4 flex gap-3">
-        <button onClick={handleSaveSettings}
-          className="shrink-0 w-[110px] h-[50px] rounded-[10px] border border-stone-300 bg-white text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors">
-          {savedFlash ? '已儲存！' : '儲存設定'}
-        </button>
+      {/* sticky 底部：匯出 PNG（次要）＋ 完成！儲存檔案（主要） */}
+      <div className="fixed bottom-0 inset-x-0 z-30 bg-white rounded-t-2xl shadow-[0px_-3px_4px_0px_rgba(0,0,0,0.08)] p-4 flex gap-2.5">
         <button onClick={handleExport} disabled={isExporting}
-          className="flex-1 h-[50px] rounded-[10px] text-base font-medium text-white transition-opacity disabled:opacity-60"
+          className="flex-1 h-[50px] rounded-[10px] border text-base font-medium transition-colors disabled:opacity-60"
+          style={{ background:'#fff7ed', borderColor:'#fed7aa', color:'#ea580c' }}>
+          {isExporting ? '產生中...' : '匯出 PNG'}
+        </button>
+        <button onClick={handleSaveSettings}
+          className="flex-1 h-[50px] rounded-[10px] text-base font-medium text-white transition-opacity"
           style={{ background:'#f97316' }}>
-          {isExporting ? '產生中...' : '完成！匯出 PNG'}
+          {savedFlash ? '已儲存！' : '完成！儲存檔案'}
         </button>
       </div>
     </div>
