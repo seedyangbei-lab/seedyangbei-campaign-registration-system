@@ -2,7 +2,7 @@
 
 import JSZip from 'jszip'
 import {
-  PosterCourseData, ExportPosterParams, renderPosterBlob, loadAllGoogleFonts,
+  PosterCourseData, ExportPosterParams, renderPosterBlob, loadAllGoogleFonts, SCHEMES,
   DotShape, DotCoverage, DotArrangement,
   POSTER_SETTINGS_STORAGE_KEY, fetchGlobalPosterSettings,
 } from '@/components/posterEditor/shared'
@@ -13,6 +13,7 @@ import {
 // 讀取失敗（離線等）才退回本機快取，最後才是預設值。
 
 interface SavedPosterSettings {
+  schemeId: string
   customBg: string
   dotShape: DotShape; dotCustomChar: string; dotColor: string
   dotOpacity: number; dotSize: number; dotDensity: number
@@ -38,6 +39,7 @@ const EN_FONT_VALUES = [
 
 function normalizeSavedSettings(s: any, defaults: SavedPosterSettings): SavedPosterSettings {
   return {
+    schemeId: typeof s.schemeId === 'string' ? s.schemeId : defaults.schemeId,
     customBg: typeof s.customBg === 'string' ? s.customBg : defaults.customBg,
     dotShape: typeof s.dotShape === 'string' ? s.dotShape : defaults.dotShape,
     dotCustomChar: typeof s.dotCustomChar === 'string' ? s.dotCustomChar : defaults.dotCustomChar,
@@ -62,6 +64,7 @@ function normalizeSavedSettings(s: any, defaults: SavedPosterSettings): SavedPos
 
 async function loadSavedPosterSettings(): Promise<SavedPosterSettings> {
   const defaults: SavedPosterSettings = {
+    schemeId: SCHEMES[0].id,
     customBg: '',
     dotShape: 'circle', dotCustomChar: '央', dotColor: '', dotOpacity: 30, dotSize: 6,
     dotDensity: 50, dotCoverage: 'photo', dotArrangement: 'grid',
@@ -117,7 +120,7 @@ function safeFileName(s: string) {
 export async function exportMonthlyPosters(courses: MonthlyPosterCourse[], month: string): Promise<MonthlyPosterExportResult> {
   loadAllGoogleFonts()
   const settings = await loadSavedPosterSettings()
-  const activeBg = settings.customBg || DEFAULT_SCHEME_BG
+  const activeBg = settings.customBg || SCHEMES.find(s => s.id === settings.schemeId)?.bg || DEFAULT_SCHEME_BG
   const tc = settings.textColorOverride || textCol(activeBg)
   const enTc = settings.enTextColorOverride || tc
   const dotOn = settings.dotShape !== 'none'
