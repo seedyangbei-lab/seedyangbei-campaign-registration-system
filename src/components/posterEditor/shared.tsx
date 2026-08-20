@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createClient } from '@/lib/supabase'
 
 // ── 課程海報編輯器：桌機版／手機版共用的常數與繪製邏輯 ──────────────────────────────
 // （色彩研究、字體清單、Canvas 繪製演算法只維護這一份，避免兩版分岔）
@@ -73,6 +74,32 @@ export const EN_FONTS = [
 // 字體大小 dropdown 選項（手機版用；桌機版仍為滑桿，數值互通）
 export const ZH_SIZE_OPTIONS = [13, 15, 17, 19, 21, 24, 28]
 export const EN_SIZE_OPTIONS = [7, 8, 9, 10, 11, 12, 14]
+
+// ── 海報「儲存設定」跨裝置同步 ─────────────────────────────────────────────────
+// localStorage 只是本機快取，講師在自己裝置按下「完成！儲存檔案」時同時寫入 site_settings，
+// 讓中台批次匯出（exportMonthlyPosters）與講師換裝置重新打開編輯器時，都能讀到最新設定。
+export const POSTER_SETTINGS_STORAGE_KEY = 'yangbei-poster-settings:global'
+const POSTER_SETTINGS_DB_KEY = 'poster_settings_global'
+
+export async function fetchGlobalPosterSettings(): Promise<Record<string, any> | null> {
+  try {
+    const supabase = createClient()
+    const { data, error } = await supabase.from('site_settings').select('value').eq('key', POSTER_SETTINGS_DB_KEY).maybeSingle()
+    if (error || !data?.value) return null
+    return JSON.parse(data.value)
+  } catch (_e) {
+    return null
+  }
+}
+
+export async function saveGlobalPosterSettings(payload: Record<string, any>): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase.from('site_settings').upsert(
+    { key: POSTER_SETTINGS_DB_KEY, value: JSON.stringify(payload), updated_at: new Date().toISOString() },
+    { onConflict: 'key' }
+  )
+  if (error) throw error
+}
 
 // Load all Google Fonts once (no hooks in loops)
 export function loadAllGoogleFonts() {
