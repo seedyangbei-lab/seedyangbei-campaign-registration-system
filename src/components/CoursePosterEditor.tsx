@@ -5,7 +5,7 @@ import {
   PosterCourseData, lum, textCol, SCHEMES, ZH_FONTS, EN_FONTS, loadAllGoogleFonts,
   DotShape, DotCoverage, DotArrangement, DOT_SHAPES, DotPatternSvg,
   POSTER_W, POSTER_H, PHOTO_H, INFO_PAD, TITLE_WEIGHT, EN_WEIGHT,
-  exportPosterPNG, MinusIcon, PlusIcon, SliderRow, sliderTrackStyle, ColorPickerDropdown, SizeSelect, ZH_SIZE_OPTIONS, EN_SIZE_OPTIONS, FontSelectDropdown,
+  exportPosterPNG, MinusIcon, PlusIcon, SliderRow, sliderTrackStyle, ColorPickerDropdown, ZH_SIZE_OPTIONS, EN_SIZE_OPTIONS, FontSelectDropdown,
 } from './posterEditor/shared'
 
 type CourseData = PosterCourseData
@@ -264,7 +264,12 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                     </div>
                     <div className="min-w-0">
                       <p className="text-[11px] text-stone-500 mb-1">字級大小</p>
-                      <SizeSelect value={zhFontSize} options={ZH_SIZE_OPTIONS} unit="px" onChange={setZhFontSize} />
+                      <div className="flex items-center gap-1.5">
+                        <input type="range" min={ZH_SIZE_OPTIONS[0]} max={ZH_SIZE_OPTIONS[ZH_SIZE_OPTIONS.length-1]} step={1} value={zhFontSize}
+                          onChange={e=>setZhFontSize(parseInt(e.target.value))}
+                          className="poster-slider flex-1 min-w-0 accent-orange-500 h-5" style={sliderTrackStyle(zhFontSize, ZH_SIZE_OPTIONS[0], ZH_SIZE_OPTIONS[ZH_SIZE_OPTIONS.length-1])} />
+                        <span className="text-[11px] font-medium text-orange-600 shrink-0">{zhFontSize}px</span>
+                      </div>
                     </div>
                   </div>
                   {textColorOverride && <button onClick={()=>setTextColorOverride('')} className="text-[10px] text-stone-400 hover:text-orange-500 transition-colors mt-1.5">重設自動配色</button>}
@@ -287,7 +292,12 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                     </div>
                     <div className="min-w-0">
                       <p className="text-[11px] text-stone-500 mb-1">字級大小</p>
-                      <SizeSelect value={enFontSize} options={EN_SIZE_OPTIONS} unit="px" onChange={setEnFontSize} />
+                      <div className="flex items-center gap-1.5">
+                        <input type="range" min={EN_SIZE_OPTIONS[0]} max={EN_SIZE_OPTIONS[EN_SIZE_OPTIONS.length-1]} step={1} value={enFontSize}
+                          onChange={e=>setEnFontSize(parseInt(e.target.value))}
+                          className="poster-slider flex-1 min-w-0 accent-orange-500 h-5" style={sliderTrackStyle(enFontSize, EN_SIZE_OPTIONS[0], EN_SIZE_OPTIONS[EN_SIZE_OPTIONS.length-1])} />
+                        <span className="text-[11px] font-medium text-orange-600 shrink-0">{enFontSize}px</span>
+                      </div>
                     </div>
                   </div>
                   {enTextColorOverride && <button onClick={()=>setEnTextColorOverride('')} className="text-[10px] text-stone-400 hover:text-orange-500 transition-colors mt-1.5">重設自動配色</button>}
@@ -560,7 +570,7 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
           {/* 變更圖片 */}
           <div className="shrink-0 px-4 pb-3">
             <button onClick={()=>setShowPhotoPicker(true)}
-              className="w-full h-9 rounded-lg border text-sm font-medium transition-colors"
+              className="w-full h-9 rounded-lg border text-base font-medium transition-colors"
               style={{ background:'#fff7ed', borderColor:'#fed7aa', color:'#ea580c' }}>
               變更圖片
             </button>
@@ -568,14 +578,13 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
           </div>
 
           {/* 匯出 PNG（次要）／完成！儲存檔案（主要） */}
-          <div className="shrink-0 border-t border-stone-200 px-4 py-4 flex gap-3">
+          <div className="shrink-0 border-t border-stone-200 px-4 py-6 flex gap-2.5">
             <button onClick={handleExport} disabled={isExporting}
-              className="shrink-0 px-5 h-10 rounded-lg border text-sm font-medium transition-colors disabled:opacity-60"
-              style={{ background:'#fff7ed', borderColor:'#fed7aa', color:'#ea580c' }}>
+              className="shrink-0 px-4 h-9 rounded-lg border border-stone-300 bg-white text-base font-medium text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-60">
               {isExporting ? '產生中...' : '匯出 PNG'}
             </button>
             <button onClick={handleSaveSettings}
-              className="flex-1 h-10 rounded-lg text-sm font-medium tracking-wide text-white transition-opacity"
+              className="flex-1 h-9 rounded-lg text-base font-medium tracking-wide text-white transition-opacity"
               style={{ background:'#f97316' }}>
               {savedFlash ? '已儲存！' : '完成！儲存檔案'}
             </button>

@@ -602,9 +602,9 @@ function PosterEditorMobile({ course, photos }: { course: PosterCourseData; phot
       )}
 
       {/* sticky 底部：匯出 PNG（次要）＋ 完成！儲存檔案（主要） */}
-      <div className="fixed bottom-0 inset-x-0 z-30 bg-white rounded-t-2xl shadow-[0px_-3px_4px_0px_rgba(0,0,0,0.08)] p-4 flex gap-3">
+      <div className="fixed bottom-0 inset-x-0 z-30 bg-white rounded-t-2xl shadow-[0px_-3px_4px_0px_rgba(0,0,0,0.08)] p-4 flex gap-2.5">
         <button onClick={handleExport} disabled={isExporting}
-          className="shrink-0 w-[110px] h-[50px] rounded-[10px] border text-sm font-medium transition-colors disabled:opacity-60"
+          className="flex-1 h-[50px] rounded-[10px] border text-base font-medium transition-colors disabled:opacity-60"
           style={{ background:'#fff7ed', borderColor:'#fed7aa', color:'#ea580c' }}>
           {isExporting ? '產生中...' : '匯出 PNG'}
         </button>
