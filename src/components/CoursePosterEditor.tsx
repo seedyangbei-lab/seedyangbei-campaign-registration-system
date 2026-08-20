@@ -118,13 +118,16 @@ export default function CoursePosterEditor({ course, instructorId, initialImage,
         const blob = await (await fetch(imgSrc)).blob()
         const filename = `course-photos/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`
         const { error: upErr } = await supabase.storage.from('images').upload(filename, blob, { upsert: true, contentType: blob.type || 'image/jpeg' })
-        if (upErr) return
+        if (upErr) { console.error('[poster] photo upload failed', upErr); return }
         const { data: urlData } = supabase.storage.from('images').getPublicUrl(filename)
         finalUrl = urlData.publicUrl
       }
       const others = (photos || []).filter(p => p !== finalUrl && p !== imgSrc)
-      await supabase.from('courses').update({ photo_urls: [finalUrl, ...others] }).eq('id', course.id)
-    } catch (_e) { /* 照片同步失敗不阻擋樣式儲存，靜默略過 */ }
+      const { error: updateErr } = await supabase.from('courses').update({ photo_urls: [finalUrl, ...others] }).eq('id', course.id)
+      if (updateErr) console.error('[poster] photo_urls update failed', updateErr)
+    } catch (e) {
+      console.error('[poster] persistSelectedPhoto threw', e) // 照片同步失敗不阻擋樣式儲存，只記錄不中斷
+    }
   }
 
   const handleSaveSettings = async () => {
@@ -140,7 +143,8 @@ export default function CoursePosterEditor({ course, instructorId, initialImage,
       await Promise.all([saveInstructorPosterSettings(instructorId, payload), persistSelectedPhoto()])
       setSavedFlash(true)
       setTimeout(() => setSavedFlash(false), 1500)
-    } catch (_e) {
+    } catch (e) {
+      console.error('[poster] handleSaveSettings failed', e)
       alert('儲存失敗，請確認網路連線後再試一次')
     } finally {
       setSavingSettings(false)

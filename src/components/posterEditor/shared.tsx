@@ -89,9 +89,11 @@ export async function fetchInstructorPosterSettings(instructorId: string): Promi
   try {
     const supabase = createClient()
     const { data, error } = await supabase.from('instructors').select('poster_settings').eq('id', instructorId).maybeSingle()
-    if (error || !data?.poster_settings) return null
+    if (error) { console.error('[poster] fetchInstructorPosterSettings failed', error); return null }
+    if (!data?.poster_settings) return null
     return data.poster_settings
-  } catch (_e) {
+  } catch (e) {
+    console.error('[poster] fetchInstructorPosterSettings threw', e)
     return null
   }
 }
@@ -100,7 +102,7 @@ export async function saveInstructorPosterSettings(instructorId: string, payload
   if (!instructorId) throw new Error('missing instructorId')
   const supabase = createClient()
   const { error } = await supabase.from('instructors').update({ poster_settings: payload }).eq('id', instructorId)
-  if (error) throw error
+  if (error) { console.error('[poster] saveInstructorPosterSettings failed', error); throw error }
 }
 
 // 批次匯出用：一次查多位講師的已儲存設定，避免每堂課各查一次
@@ -110,13 +112,15 @@ export async function fetchInstructorsPosterSettings(instructorIds: string[]): P
   try {
     const supabase = createClient()
     const { data, error } = await supabase.from('instructors').select('id, poster_settings').in('id', ids)
-    if (error || !data) return {}
+    if (error) { console.error('[poster] fetchInstructorsPosterSettings failed', error); return {} }
+    if (!data) return {}
     const map: Record<string, Record<string, any>> = {}
     for (const row of data) {
       if (row.poster_settings) map[row.id] = row.poster_settings
     }
     return map
-  } catch (_e) {
+  } catch (e) {
+    console.error('[poster] fetchInstructorsPosterSettings threw', e)
     return {}
   }
 }
