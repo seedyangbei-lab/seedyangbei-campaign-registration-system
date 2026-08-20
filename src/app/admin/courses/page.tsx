@@ -56,6 +56,9 @@ export default function CoursesPage() {
   const [scheduleExportSignal, setScheduleExportSignal] = useState(0)
   const [reportExportModalOpen, setReportExportModalOpen] = useState(false)
   const [reportExportMonth, setReportExportMonth] = useState('')
+  const [posterExportModalOpen, setPosterExportModalOpen] = useState(false)
+  const [posterExportMonth, setPosterExportMonth] = useState('')
+  const [posterExporting, setPosterExporting] = useState(false)
   const supabase = createClient()
   const router = useRouter()
 
@@ -213,6 +216,21 @@ export default function CoursesPage() {
     }
   }
 
+  const handleBatchExportPosters = async (month: string) => {
+    setPosterExporting(true)
+    try {
+      const { exportMonthlyPosters } = await import('@/lib/exportMonthlyPosters')
+      const { exportedCount, skippedCount } = await exportMonthlyPosters(courses, month)
+      if (exportedCount === 0) { alert('該月份內沒有可匯出的課程海報（課程需至少有一張照片）'); return }
+      alert(`已匯出 ${exportedCount} 張課程海報${skippedCount > 0 ? `，其中 ${skippedCount} 堂課因尚未上傳照片而略過` : ''}`)
+      setPosterExportModalOpen(false)
+    } catch (e: any) {
+      alert('匯出失敗：' + (e?.message || '請稍後再試'))
+    } finally {
+      setPosterExporting(false)
+    }
+  }
+
   const uploadCoursePhoto = async (blob: Blob): Promise<string | null> => {
     const filename = `course-photos/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`
     const { data, error } = await supabase.storage.from('images').upload(filename, blob, { upsert: true, contentType: 'image/jpeg' })
@@ -298,6 +316,9 @@ export default function CoursesPage() {
   const isExpired = (course: any) => new Date(`${course.date}T${course.time_end}`) < now
   const endedCourses = courses.filter((c: any) => isExpired(c))
   const availableMonths = Array.from(new Set(endedCourses.map((c: any) => c.date?.slice(0, 7)).filter(Boolean))).sort().reverse() as string[]
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  // 海報匯出以「全部課程」（不限已結束／開放中）取月份，因為海報通常是活動開始前就要準備好
+  const posterAvailableMonths = Array.from(new Set(courses.map((c: any) => c.date?.slice(0, 7)).filter(Boolean))).sort().reverse() as string[]
   const displayCourses = courseTab === 'active'
     ? courses.filter((c: any) => c.is_active && !isExpired(c))
     : endedCourses.filter((c: any) => filterMonth ? c.date?.startsWith(filterMonth) : true)
@@ -367,6 +388,10 @@ export default function CoursesPage() {
                           className="w-full text-left px-4 py-2.5 text-sm text-stone-600 hover:bg-stone-50 transition-colors">
                           匯出成果報告
                         </button>
+                        <button onClick={() => { setExportMenuOpen(false); setPosterExportMonth(currentMonth); setPosterExportModalOpen(true) }}
+                          className="w-full text-left px-4 py-2.5 text-sm text-stone-600 hover:bg-stone-50 transition-colors">
+                          匯出當月海報
+                        </button>
                       </div>
                     </>
                   )}
@@ -388,6 +413,10 @@ export default function CoursesPage() {
                       <button onClick={() => { setMobileActionsOpen(false); setReportExportMonth(''); setReportExportModalOpen(true) }}
                         className="w-full text-left px-4 py-2.5 text-sm text-stone-600 hover:bg-stone-50 transition-colors">
                         匯出成果報告
+                      </button>
+                      <button onClick={() => { setMobileActionsOpen(false); setPosterExportMonth(currentMonth); setPosterExportModalOpen(true) }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-stone-600 hover:bg-stone-50 transition-colors">
+                        匯出當月海報
                       </button>
                       <button onClick={() => { setMobileActionsOpen(false); setMainTab('categories') }}
                         className="w-full text-left px-4 py-2.5 text-sm text-stone-600 hover:bg-stone-50 transition-colors">
@@ -968,6 +997,47 @@ export default function CoursesPage() {
               <button onClick={() => handleBatchExportReports(reportExportMonth)} disabled={batchExporting}
                 className="w-full flex items-center justify-center gap-1.5 text-sm bg-orange-500 hover:bg-orange-600 text-white px-3 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50">
                 {batchExporting ? '匯出中...' : '開始匯出'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {posterExportModalOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+          onClick={e => { if (e.target === e.currentTarget && !posterExporting) setPosterExportModalOpen(false) }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="flex items-center justify-between p-6 border-b border-stone-200">
+              <h3 className="font-bold text-stone-800">匯出當月海報</h3>
+              <button onClick={() => setPosterExportModalOpen(false)} disabled={posterExporting} className="p-2 hover:bg-stone-100 rounded-xl disabled:opacity-40">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-stone-400">選擇月份，會把該月份內每堂課的海報打包成一個 zip（每堂課一張 PNG，使用海報編輯器裡最後一次「儲存設定」的樣式；尚未上傳照片的課程會略過）。</p>
+              <div>
+                <label className="text-xs font-medium text-stone-500 mb-2 block">月份</label>
+                {posterAvailableMonths.length === 0 ? <p className="text-stone-400 text-sm">目前尚無課程</p> : (
+                  <div className="grid grid-cols-3 gap-2">
+                    <button onClick={() => setPosterExportMonth('')}
+                      className={`py-2.5 rounded-lg border text-xs font-medium transition-colors ${posterExportMonth === '' ? 'bg-orange-500 text-white border-orange-500' : 'text-stone-600 border-stone-200 hover:border-orange-300'}`}>
+                      全部
+                    </button>
+                    {posterAvailableMonths.map(m => {
+                      const [y, mo] = m.split('-')
+                      return (
+                        <button key={m} onClick={() => setPosterExportMonth(m)}
+                          className={`py-2.5 rounded-lg border text-xs font-medium transition-colors ${posterExportMonth === m ? 'bg-orange-500 text-white border-orange-500' : 'text-stone-600 border-stone-200 hover:border-orange-300'}`}>
+                          {y}/{parseInt(mo)}月
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+              <button onClick={() => handleBatchExportPosters(posterExportMonth)} disabled={posterExporting || posterAvailableMonths.length === 0}
+                className="w-full flex items-center justify-center gap-1.5 text-sm bg-orange-500 hover:bg-orange-600 text-white px-3 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50">
+                {posterExporting ? '匯出中...' : '開始匯出'}
               </button>
             </div>
           </div>

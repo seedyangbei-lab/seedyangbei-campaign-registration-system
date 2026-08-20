@@ -321,7 +321,9 @@ export interface ExportPosterParams {
   locFontSize: number; borderFontSize: number; titleGap: number
 }
 
-export async function exportPosterPNG(p: ExportPosterParams) {
+// 純繪製邏輯：只負責把海報畫到一張 canvas 上並回傳，不處理下載／分享。
+// 單張匯出（exportPosterPNG）與批次匯出（renderPosterBlob）共用這份邏輯，避免分岔。
+export async function renderPosterCanvas(p: ExportPosterParams): Promise<HTMLCanvasElement> {
   await document.fonts.ready
   const SCALE=8  // 匯出解析度倍率（提高輸出品質；210×297 單位 × 8 = 1680×2376px）
   const canvas=document.createElement('canvas')
@@ -411,6 +413,19 @@ export async function exportPosterPNG(p: ExportPosterParams) {
   }
   ctx.restore()
 
+  return canvas
+}
+
+// 把 canvas 轉成 PNG Blob（批次匯出／打包 zip 用；不觸發下載或分享）
+export async function renderPosterBlob(p: ExportPosterParams): Promise<Blob> {
+  const canvas = await renderPosterCanvas(p)
+  const blob: Blob | null = await new Promise(resolve => canvas.toBlob(b => resolve(b), 'image/png'))
+  if (!blob) throw new Error('canvas toBlob failed')
+  return blob
+}
+
+export async function exportPosterPNG(p: ExportPosterParams) {
+  const canvas = await renderPosterCanvas(p)
   const filename = `${p.course.title||'poster'}.png`
   const blob: Blob | null = await new Promise(resolve => canvas.toBlob(b => resolve(b), 'image/png'))
   if (!blob) throw new Error('canvas toBlob failed')
