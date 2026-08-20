@@ -4,13 +4,13 @@ import JSZip from 'jszip'
 import {
   PosterCourseData, ExportPosterParams, renderPosterBlob, loadAllGoogleFonts, SCHEMES,
   DotShape, DotCoverage, DotArrangement,
-  POSTER_SETTINGS_STORAGE_KEY, fetchGlobalPosterSettings,
+  fetchInstructorsPosterSettings,
 } from '@/components/posterEditor/shared'
 
-// 海報編輯器「儲存設定」用的全域樣式（scheme／字體／裝飾點……）。
-// 講師按下「完成！儲存檔案」時會同步寫入 site_settings（見 shared.tsx 的 saveGlobalPosterSettings），
-// 這裡優先讀雲端最新版本，讓中台批次匯出即使跟講師不同裝置／瀏覽器也能拿到最新樣式；
-// 讀取失敗（離線等）才退回本機快取，最後才是預設值。
+// 海報編輯器「儲存設定」是每位講師各自獨立的（見 shared.tsx 的 fetchInstructorsPosterSettings／
+// saveInstructorPosterSettings，存在 instructors.poster_settings）。批次匯出時依每堂課的講師
+// （instructor_ids[0]）分別套用該講師自己儲存的樣式，講師之間不會互相覆蓋；
+// 講師若從未儲存過設定，該堂課的海報就套用預設樣式。
 
 interface SavedPosterSettings {
   schemeId: string
@@ -62,27 +62,47 @@ function normalizeSavedSettings(s: any, defaults: SavedPosterSettings): SavedPos
   }
 }
 
-async function loadSavedPosterSettings(): Promise<SavedPosterSettings> {
-  const defaults: SavedPosterSettings = {
-    schemeId: SCHEMES[0].id,
-    customBg: '',
-    dotShape: 'circle', dotCustomChar: '央', dotColor: '', dotOpacity: 30, dotSize: 6,
-    dotDensity: 50, dotCoverage: 'photo', dotArrangement: 'grid',
-    textColorOverride: '', enTextColorOverride: '',
-    borderOn: true, borderText: 'YANGBEI COMMUNITY · SEED COURSE · ',
-    zhFontValue: ZH_FONT_VALUES[0], enFontValue: EN_FONT_VALUES[0],
-    zhFontSize: 17, enFontSize: 9, letterSpacingPct: 2, lineSpacingMult: 1.5,
-  }
+const DEFAULT_POSTER_SETTINGS: SavedPosterSettings = {
+  schemeId: SCHEMES[0].id,
+  customBg: '',
+  dotShape: 'circle', dotCustomChar: '央', dotColor: '', dotOpacity: 30, dotSize: 6,
+  dotDensity: 50, dotCoverage: 'photo', dotArrangement: 'grid',
+  textColorOverride: '', enTextColorOverride: '',
+  borderOn: true, borderText: 'YANGBEI COMMUNITY · SEED COURSE · ',
+  zhFontValue: ZH_FONT_VALUES[0], enFontValue: EN_FONT_VALUES[0],
+  zhFontSize: 17, enFontSize: 9, letterSpacingPct: 2, lineSpacingMult: 1.5,
+}
 
-  const cloud = await fetchGlobalPosterSettings()
-  if (cloud) return normalizeSavedSettings(cloud, defaults)
+interface ResolvedPosterStyle {
+  activeBg: string; tc: string; enTc: string; dotOn: boolean; dotFill: string; iconColor: string
+  dotShape: DotShape; dotCustomChar: string; dotOpacity: number; dotSize: number; dotDensity: number
+  dotCoverage: DotCoverage; dotArrangement: DotArrangement
+  borderOn: boolean; borderText: string
+  enFontValue: string; zhFontValue: string; zhFontSize: number; enFontSize: number
+  zhLetterPx: number; enLetterPx: number; locFontSize: number; borderFontSize: number; titleGap: number
+}
 
-  try {
-    const raw = localStorage.getItem(POSTER_SETTINGS_STORAGE_KEY)
-    if (!raw) return defaults
-    return normalizeSavedSettings(JSON.parse(raw), defaults)
-  } catch (_e) {
-    return defaults
+function resolvePosterStyle(raw: any): ResolvedPosterStyle {
+  const settings = normalizeSavedSettings(raw || {}, DEFAULT_POSTER_SETTINGS)
+  const activeBg = settings.customBg || SCHEMES.find(s => s.id === settings.schemeId)?.bg || DEFAULT_SCHEME_BG
+  const tc = settings.textColorOverride || textCol(activeBg)
+  const enTc = settings.enTextColorOverride || tc
+  return {
+    activeBg, tc, enTc,
+    dotOn: settings.dotShape !== 'none',
+    dotFill: settings.dotColor || activeBg,
+    iconColor: settings.dotColor || tc,
+    dotShape: settings.dotShape, dotCustomChar: settings.dotCustomChar,
+    dotOpacity: settings.dotOpacity, dotSize: settings.dotSize, dotDensity: settings.dotDensity,
+    dotCoverage: settings.dotCoverage, dotArrangement: settings.dotArrangement,
+    borderOn: settings.borderOn, borderText: settings.borderText,
+    enFontValue: settings.enFontValue, zhFontValue: settings.zhFontValue,
+    zhFontSize: settings.zhFontSize, enFontSize: settings.enFontSize,
+    zhLetterPx: settings.zhFontSize * (settings.letterSpacingPct / 100),
+    enLetterPx: settings.enFontSize * (settings.letterSpacingPct / 100),
+    locFontSize: Math.max(8, Math.round(settings.zhFontSize * 0.53)),
+    borderFontSize: Math.max(4, +(settings.enFontSize * 0.61).toFixed(1)),
+    titleGap: Math.round(6 * settings.lineSpacingMult),
   }
 }
 
@@ -104,6 +124,7 @@ export interface MonthlyPosterCourse {
   time_end?: string
   location?: string
   instructor_names?: string[]
+  instructor_ids?: string[]
   photo_urls?: string[]
   poster_url?: string | null
 }
@@ -119,22 +140,14 @@ function safeFileName(s: string) {
 
 export async function exportMonthlyPosters(courses: MonthlyPosterCourse[], month: string): Promise<MonthlyPosterExportResult> {
   loadAllGoogleFonts()
-  const settings = await loadSavedPosterSettings()
-  const activeBg = settings.customBg || SCHEMES.find(s => s.id === settings.schemeId)?.bg || DEFAULT_SCHEME_BG
-  const tc = settings.textColorOverride || textCol(activeBg)
-  const enTc = settings.enTextColorOverride || tc
-  const dotOn = settings.dotShape !== 'none'
-  const dotFill = settings.dotColor || activeBg
-  const iconColor = settings.dotColor || tc
-  const zhLetterPx = settings.zhFontSize * (settings.letterSpacingPct / 100)
-  const enLetterPx = settings.enFontSize * (settings.letterSpacingPct / 100)
-  const locFontSize = Math.max(8, Math.round(settings.zhFontSize * 0.53))
-  const borderFontSize = Math.max(4, +(settings.enFontSize * 0.61).toFixed(1))
-  const titleGap = Math.round(6 * settings.lineSpacingMult)
 
   const target = courses
     .filter(c => month ? c.date?.startsWith(month) : true)
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+
+  // 每堂課以「主要講師」（instructor_ids[0]）的已儲存設定為準；一次批次查詢，避免逐堂課各打一次 API
+  const instructorIds = target.map(c => c.instructor_ids?.[0]).filter((id): id is string => !!id)
+  const settingsByInstructor = await fetchInstructorsPosterSettings(instructorIds)
 
   const zip = new JSZip()
   let exportedCount = 0
@@ -144,21 +157,25 @@ export async function exportMonthlyPosters(courses: MonthlyPosterCourse[], month
     const imgSrc = (course.photo_urls && course.photo_urls.length > 0) ? course.photo_urls[0] : (course.poster_url || null)
     if (!imgSrc) { skippedCount++; continue }
 
+    const instructorId = course.instructor_ids?.[0]
+    const style = resolvePosterStyle(instructorId ? settingsByInstructor[instructorId] : null)
+
     const posterCourse: PosterCourseData = {
       id: course.id, title: course.title, date: course.date,
       timeStart: (course.time_start || '').slice(0, 5), timeEnd: (course.time_end || '').slice(0, 5),
       location: course.location, instructor: (course.instructor_names || []).join('、'),
     }
     const params: ExportPosterParams = {
-      course: posterCourse, activeBg, tc, enTc, iconColor,
-      dotFill, dotOn, dotShape: settings.dotShape, dotCustomChar: settings.dotCustomChar,
-      dotOpacity: settings.dotOpacity, dotSize: settings.dotSize, dotDensity: settings.dotDensity,
-      dotCoverage: settings.dotCoverage, dotArrangement: settings.dotArrangement, dotSeed: 42,
-      borderOn: settings.borderOn, borderText: settings.borderText,
+      course: posterCourse, activeBg: style.activeBg, tc: style.tc, enTc: style.enTc, iconColor: style.iconColor,
+      dotFill: style.dotFill, dotOn: style.dotOn, dotShape: style.dotShape, dotCustomChar: style.dotCustomChar,
+      dotOpacity: style.dotOpacity, dotSize: style.dotSize, dotDensity: style.dotDensity,
+      dotCoverage: style.dotCoverage, dotArrangement: style.dotArrangement, dotSeed: 42,
+      borderOn: style.borderOn, borderText: style.borderText,
       imgSrc, imgPos: { x: 0, y: 0 }, imgScale: 1,
-      enFontValue: settings.enFontValue, zhFontValue: settings.zhFontValue,
-      zhFontSize: settings.zhFontSize, enFontSize: settings.enFontSize,
-      zhLetterPx, enLetterPx, locFontSize, borderFontSize, titleGap,
+      enFontValue: style.enFontValue, zhFontValue: style.zhFontValue,
+      zhFontSize: style.zhFontSize, enFontSize: style.enFontSize,
+      zhLetterPx: style.zhLetterPx, enLetterPx: style.enLetterPx,
+      locFontSize: style.locFontSize, borderFontSize: style.borderFontSize, titleGap: style.titleGap,
     }
 
     try {

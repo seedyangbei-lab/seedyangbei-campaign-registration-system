@@ -75,30 +75,50 @@ export const EN_FONTS = [
 export const ZH_SIZE_OPTIONS = [13, 15, 17, 19, 21, 24, 28]
 export const EN_SIZE_OPTIONS = [7, 8, 9, 10, 11, 12, 14]
 
-// ── 海報「儲存設定」跨裝置同步 ─────────────────────────────────────────────────
-// localStorage 只是本機快取，講師在自己裝置按下「完成！儲存檔案」時同時寫入 site_settings，
-// 讓中台批次匯出（exportMonthlyPosters）與講師換裝置重新打開編輯器時，都能讀到最新設定。
-export const POSTER_SETTINGS_STORAGE_KEY = 'yangbei-poster-settings:global'
-const POSTER_SETTINGS_DB_KEY = 'poster_settings_global'
+// ── 海報「儲存設定」跨裝置同步（每位講師各自獨立）────────────────────────────────
+// localStorage 只是本機快取（依講師 id 分開存），講師按下「完成！儲存檔案」時同時寫入
+// instructors.poster_settings，讓中台批次匯出（exportMonthlyPosters）能依每堂課的講師
+// 分別套用該講師自己儲存的樣式，講師換裝置重新打開編輯器時也能讀到自己最新的設定——
+// 不同講師的設定互相獨立，不會因為別人存檔而被覆蓋。
+export function posterSettingsStorageKey(instructorId: string) {
+  return `yangbei-poster-settings:${instructorId}`
+}
 
-export async function fetchGlobalPosterSettings(): Promise<Record<string, any> | null> {
+export async function fetchInstructorPosterSettings(instructorId: string): Promise<Record<string, any> | null> {
+  if (!instructorId) return null
   try {
     const supabase = createClient()
-    const { data, error } = await supabase.from('site_settings').select('value').eq('key', POSTER_SETTINGS_DB_KEY).maybeSingle()
-    if (error || !data?.value) return null
-    return JSON.parse(data.value)
+    const { data, error } = await supabase.from('instructors').select('poster_settings').eq('id', instructorId).maybeSingle()
+    if (error || !data?.poster_settings) return null
+    return data.poster_settings
   } catch (_e) {
     return null
   }
 }
 
-export async function saveGlobalPosterSettings(payload: Record<string, any>): Promise<void> {
+export async function saveInstructorPosterSettings(instructorId: string, payload: Record<string, any>): Promise<void> {
+  if (!instructorId) throw new Error('missing instructorId')
   const supabase = createClient()
-  const { error } = await supabase.from('site_settings').upsert(
-    { key: POSTER_SETTINGS_DB_KEY, value: JSON.stringify(payload), updated_at: new Date().toISOString() },
-    { onConflict: 'key' }
-  )
+  const { error } = await supabase.from('instructors').update({ poster_settings: payload }).eq('id', instructorId)
   if (error) throw error
+}
+
+// 批次匯出用：一次查多位講師的已儲存設定，避免每堂課各查一次
+export async function fetchInstructorsPosterSettings(instructorIds: string[]): Promise<Record<string, Record<string, any>>> {
+  const ids = Array.from(new Set(instructorIds.filter(Boolean)))
+  if (ids.length === 0) return {}
+  try {
+    const supabase = createClient()
+    const { data, error } = await supabase.from('instructors').select('id, poster_settings').in('id', ids)
+    if (error || !data) return {}
+    const map: Record<string, Record<string, any>> = {}
+    for (const row of data) {
+      if (row.poster_settings) map[row.id] = row.poster_settings
+    }
+    return map
+  } catch (_e) {
+    return {}
+  }
 }
 
 // Load all Google Fonts once (no hooks in loops)
@@ -378,11 +398,13 @@ export async function renderPosterCanvas(p: ExportPosterParams): Promise<HTMLCan
   // border text
   if (p.borderOn && p.borderText) drawBorderText(ctx,p.borderText,p.enTc,p.enFontValue,p.borderFontSize,p.enLetterPx,W,PH)
   // SEED COURSE tag — photo zone top-left, 16px from edges
+  // 先鋪一層不透明的底色再疊半透明色，避免邊框英文裝飾（同樣含有「SEED COURSE」字樣）從半透明底色透出，跟標籤文字重疊變成殘影
   const tagText='SEED COURSE'
   ctx.font=`700 7px ${p.enFontValue}`
   const tagW=measureSpaced(ctx,tagText,p.enLetterPx)+14
   const tagBgC = lum(p.activeBg)>0.35 ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.22)'
   const tagBdC = lum(p.activeBg)>0.35 ? 'rgba(0,0,0,0.20)' : 'rgba(255,255,255,0.35)'
+  ctx.fillStyle=p.activeBg; roundRect(ctx,INFO_PAD,INFO_PAD,tagW,14,7); ctx.fill()
   ctx.fillStyle=tagBgC; roundRect(ctx,INFO_PAD,INFO_PAD,tagW,14,7); ctx.fill()
   ctx.strokeStyle=tagBdC; ctx.lineWidth=0.5; roundRect(ctx,INFO_PAD,INFO_PAD,tagW,14,7); ctx.stroke()
   ctx.fillStyle=p.enTc; ctx.textAlign='left'; fillTextSpaced(ctx,tagText,INFO_PAD+7,INFO_PAD+9.5,p.enLetterPx)
