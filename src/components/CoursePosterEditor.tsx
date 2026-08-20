@@ -1,24 +1,26 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { createClient } from '@/lib/supabase'
 import {
   PosterCourseData, lum, textCol, SCHEMES, ZH_FONTS, EN_FONTS, loadAllGoogleFonts,
   DotShape, DotCoverage, DotArrangement, DOT_SHAPES, DotPatternSvg,
   POSTER_W, POSTER_H, PHOTO_H, INFO_PAD, TITLE_WEIGHT, EN_WEIGHT,
   exportPosterPNG, MinusIcon, PlusIcon, SliderRow, sliderTrackStyle, ColorPickerDropdown, ZH_SIZE_OPTIONS, EN_SIZE_OPTIONS, FontSelectDropdown,
-  POSTER_SETTINGS_STORAGE_KEY, fetchGlobalPosterSettings, saveGlobalPosterSettings,
+  posterSettingsStorageKey, fetchInstructorPosterSettings, saveInstructorPosterSettings,
 } from './posterEditor/shared'
 
 type CourseData = PosterCourseData
 
 interface Props {
   course: CourseData
+  instructorId: string
   initialImage?: string | null
   photos?: string[]
   onClose: () => void
 }
 
-export default function CoursePosterEditor({ course, initialImage, photos, onClose }: Props) {
+export default function CoursePosterEditor({ course, instructorId, initialImage, photos, onClose }: Props) {
   const [imgSrc, setImgSrc]     = useState<string|null>(initialImage||null)
   const [imgPos, setImgPos]     = useState({ x:0, y:0 })
   const [imgScale, setImgScale] = useState(1)
@@ -92,17 +94,38 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
   }
 
   useEffect(() => {
+    if (!instructorId) return
     try {
-      const raw = localStorage.getItem(POSTER_SETTINGS_STORAGE_KEY)
+      const raw = localStorage.getItem(posterSettingsStorageKey(instructorId))
       if (raw) applySavedSettings(JSON.parse(raw))
     } catch (_e) { /* ignore malformed cache */ }
-    fetchGlobalPosterSettings().then(cloud => {
+    fetchInstructorPosterSettings(instructorId).then(cloud => {
       if (!cloud) return
       applySavedSettings(cloud)
-      try { localStorage.setItem(POSTER_SETTINGS_STORAGE_KEY, JSON.stringify(cloud)) } catch (_e) { /* ignore */ }
+      try { localStorage.setItem(posterSettingsStorageKey(instructorId), JSON.stringify(cloud)) } catch (_e) { /* ignore */ }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [instructorId])
+
+  // 把目前選定的照片（可能是從課程既有照片挑的，也可能是剛上傳的新照片）存回課程的
+  // photo_urls[0]，讓中台批次匯出讀到的照片跟講師編輯器裡看到的一致，而不是永遠停留在課程原本的第一張照片。
+  const persistSelectedPhoto = async () => {
+    if (!course.id || !imgSrc || imgSrc === (photos && photos[0])) return
+    try {
+      const supabase = createClient()
+      let finalUrl = imgSrc
+      if (imgSrc.startsWith('data:')) {
+        const blob = await (await fetch(imgSrc)).blob()
+        const filename = `course-photos/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`
+        const { error: upErr } = await supabase.storage.from('images').upload(filename, blob, { upsert: true, contentType: blob.type || 'image/jpeg' })
+        if (upErr) return
+        const { data: urlData } = supabase.storage.from('images').getPublicUrl(filename)
+        finalUrl = urlData.publicUrl
+      }
+      const others = (photos || []).filter(p => p !== finalUrl && p !== imgSrc)
+      await supabase.from('courses').update({ photo_urls: [finalUrl, ...others] }).eq('id', course.id)
+    } catch (_e) { /* 照片同步失敗不阻擋樣式儲存，靜默略過 */ }
+  }
 
   const handleSaveSettings = async () => {
     const payload = {
@@ -111,10 +134,10 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
       textColorOverride, enTextColorOverride, borderOn, borderText,
       zhFontIdx, enFontIdx, zhFontSize, enFontSize, letterSpacingPct, lineSpacingMult,
     }
-    try { localStorage.setItem(POSTER_SETTINGS_STORAGE_KEY, JSON.stringify(payload)) } catch (_e) { /* localStorage 不可用時靜默略過 */ }
+    try { localStorage.setItem(posterSettingsStorageKey(instructorId), JSON.stringify(payload)) } catch (_e) { /* localStorage 不可用時靜默略過 */ }
     setSavingSettings(true)
     try {
-      await saveGlobalPosterSettings(payload)
+      await Promise.all([saveInstructorPosterSettings(instructorId, payload), persistSelectedPhoto()])
       setSavedFlash(true)
       setTimeout(() => setSavedFlash(false), 1500)
     } catch (_e) {
@@ -492,11 +515,12 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
                     )}
 
                     {/* SEED COURSE tag — photo zone top-left, 16px from edges */}
+                    {/* 先鋪不透明底色（inset box-shadow）再疊半透明色，避免邊框英文裝飾透出造成文字殘影重疊 */}
                     <div style={{
                       position:'absolute', top:INFO_PAD, left:INFO_PAD, zIndex:10,
                       display:'inline-flex', alignItems:'center',
                       borderRadius:'20px', padding:'2px 7px',
-                      background:tagBg, border:`0.5px solid ${tagBorder}`, color:enTc,
+                      background:activeBg, boxShadow:`inset 0 0 0 999px ${tagBg}`, border:`0.5px solid ${tagBorder}`, color:enTc,
                       fontFamily:enFont.value, fontSize:'7px', letterSpacing:`${enLetterPx}px`, textTransform:'uppercase',
                     }}>SEED COURSE</div>
                   </div>

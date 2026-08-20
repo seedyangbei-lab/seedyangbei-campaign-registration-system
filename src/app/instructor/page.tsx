@@ -844,6 +844,7 @@ function InstructorPortal() {
       {posterEditorCourse && (
         <CoursePosterEditor
           course={posterEditorCourse}
+          instructorId={instructor?.id || ''}
           initialImage={posterInitialImage}
           photos={posterPhotos}
           onClose={() => {
