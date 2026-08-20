@@ -6,6 +6,7 @@ import {
   DotShape, DotCoverage, DotArrangement, DOT_SHAPES, DotPatternSvg,
   POSTER_W, POSTER_H, PHOTO_H, INFO_PAD, TITLE_WEIGHT, EN_WEIGHT,
   exportPosterPNG, MinusIcon, PlusIcon, SliderRow, sliderTrackStyle, ColorPickerDropdown, ZH_SIZE_OPTIONS, EN_SIZE_OPTIONS, FontSelectDropdown,
+  POSTER_SETTINGS_STORAGE_KEY, fetchGlobalPosterSettings, saveGlobalPosterSettings,
 } from './posterEditor/shared'
 
 type CourseData = PosterCourseData
@@ -18,8 +19,6 @@ interface Props {
 }
 
 export default function CoursePosterEditor({ course, initialImage, photos, onClose }: Props) {
-  const storageKey = 'yangbei-poster-settings:global' // 全域共用：只保留「最後一次儲存設定」，不分課程
-
   const [imgSrc, setImgSrc]     = useState<string|null>(initialImage||null)
   const [imgPos, setImgPos]     = useState({ x:0, y:0 })
   const [imgScale, setImgScale] = useState(1)
@@ -57,6 +56,7 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
 
   const [showPhotoPicker, setShowPhotoPicker] = useState(false)
   const [savedFlash, setSavedFlash] = useState(false)
+  const [savingSettings, setSavingSettings] = useState(false)
 
   const [isExporting, setIsExporting] = useState(false)
   const fileRef    = useRef<HTMLInputElement>(null)
@@ -66,48 +66,62 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
   // Load all Google Fonts once on mount — no hooks in loops
   useEffect(() => { loadAllGoogleFonts() }, [])
 
-  // ── 讀取上次「儲存設定」──────────────────────────────────────────────────────
+  // ── 讀取上次「儲存設定」：先讀本機快取即時顯示，再向雲端同步最新版本（跨裝置/跨瀏覽器）──────
+  const applySavedSettings = (s: any) => {
+    if (!s) return
+    if (s.schemeId) { const found = SCHEMES.find(x=>x.id===s.schemeId); if (found) setScheme(found) }
+    if (typeof s.customBg === 'string') setCustomBg(s.customBg)
+    if (typeof s.dotShape === 'string') setDotShape(s.dotShape)
+    if (typeof s.dotCustomChar === 'string') setDotCustomChar(s.dotCustomChar)
+    if (typeof s.dotColor === 'string') setDotColor(s.dotColor)
+    if (typeof s.dotOpacity === 'number') setDotOpacity(s.dotOpacity)
+    if (typeof s.dotSize === 'number') setDotSize(s.dotSize)
+    if (typeof s.dotDensity === 'number') setDotDensity(s.dotDensity)
+    if (typeof s.dotCoverage === 'string') setDotCoverage(s.dotCoverage)
+    if (typeof s.dotArrangement === 'string') setDotArrangement(s.dotArrangement)
+    if (typeof s.textColorOverride === 'string') setTextColorOverride(s.textColorOverride)
+    if (typeof s.enTextColorOverride === 'string') setEnTextColorOverride(s.enTextColorOverride)
+    if (typeof s.borderOn === 'boolean') setBorderOn(s.borderOn)
+    if (typeof s.borderText === 'string') setBorderText(s.borderText)
+    if (typeof s.zhFontIdx === 'number') setZhFontIdx(s.zhFontIdx)
+    if (typeof s.enFontIdx === 'number') setEnFontIdx(s.enFontIdx)
+    if (typeof s.zhFontSize === 'number') setZhFontSize(s.zhFontSize)
+    if (typeof s.enFontSize === 'number') setEnFontSize(s.enFontSize)
+    if (typeof s.letterSpacingPct === 'number') setLetterSpacingPct(s.letterSpacingPct)
+    if (typeof s.lineSpacingMult === 'number') setLineSpacingMult(s.lineSpacingMult)
+  }
+
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(storageKey)
-      if (!raw) return
-      const s = JSON.parse(raw)
-      if (s.schemeId) { const found = SCHEMES.find(x=>x.id===s.schemeId); if (found) setScheme(found) }
-      if (typeof s.customBg === 'string') setCustomBg(s.customBg)
-      if (typeof s.dotShape === 'string') setDotShape(s.dotShape)
-      if (typeof s.dotCustomChar === 'string') setDotCustomChar(s.dotCustomChar)
-      if (typeof s.dotColor === 'string') setDotColor(s.dotColor)
-      if (typeof s.dotOpacity === 'number') setDotOpacity(s.dotOpacity)
-      if (typeof s.dotSize === 'number') setDotSize(s.dotSize)
-      if (typeof s.dotDensity === 'number') setDotDensity(s.dotDensity)
-      if (typeof s.dotCoverage === 'string') setDotCoverage(s.dotCoverage)
-      if (typeof s.dotArrangement === 'string') setDotArrangement(s.dotArrangement)
-      if (typeof s.textColorOverride === 'string') setTextColorOverride(s.textColorOverride)
-      if (typeof s.enTextColorOverride === 'string') setEnTextColorOverride(s.enTextColorOverride)
-      if (typeof s.borderOn === 'boolean') setBorderOn(s.borderOn)
-      if (typeof s.borderText === 'string') setBorderText(s.borderText)
-      if (typeof s.zhFontIdx === 'number') setZhFontIdx(s.zhFontIdx)
-      if (typeof s.enFontIdx === 'number') setEnFontIdx(s.enFontIdx)
-      if (typeof s.zhFontSize === 'number') setZhFontSize(s.zhFontSize)
-      if (typeof s.enFontSize === 'number') setEnFontSize(s.enFontSize)
-      if (typeof s.letterSpacingPct === 'number') setLetterSpacingPct(s.letterSpacingPct)
-      if (typeof s.lineSpacingMult === 'number') setLineSpacingMult(s.lineSpacingMult)
+      const raw = localStorage.getItem(POSTER_SETTINGS_STORAGE_KEY)
+      if (raw) applySavedSettings(JSON.parse(raw))
     } catch (_e) { /* ignore malformed cache */ }
+    fetchGlobalPosterSettings().then(cloud => {
+      if (!cloud) return
+      applySavedSettings(cloud)
+      try { localStorage.setItem(POSTER_SETTINGS_STORAGE_KEY, JSON.stringify(cloud)) } catch (_e) { /* ignore */ }
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async () => {
     const payload = {
       schemeId: scheme.id, customBg,
       dotShape, dotCustomChar, dotColor, dotOpacity, dotSize, dotDensity, dotCoverage, dotArrangement,
       textColorOverride, enTextColorOverride, borderOn, borderText,
       zhFontIdx, enFontIdx, zhFontSize, enFontSize, letterSpacingPct, lineSpacingMult,
     }
+    try { localStorage.setItem(POSTER_SETTINGS_STORAGE_KEY, JSON.stringify(payload)) } catch (_e) { /* localStorage 不可用時靜默略過 */ }
+    setSavingSettings(true)
     try {
-      localStorage.setItem(storageKey, JSON.stringify(payload))
+      await saveGlobalPosterSettings(payload)
       setSavedFlash(true)
       setTimeout(() => setSavedFlash(false), 1500)
-    } catch (_e) { /* localStorage 不可用時靜默略過 */ }
+    } catch (_e) {
+      alert('儲存失敗，請確認網路連線後再試一次')
+    } finally {
+      setSavingSettings(false)
+    }
   }
 
   // ResizeObserver: 直接量測虛線框內側舞台的實際可用尺寸（無需再手動扣除周邊元素高度）
@@ -583,10 +597,10 @@ export default function CoursePosterEditor({ course, initialImage, photos, onClo
               className="shrink-0 px-4 h-9 rounded-lg border border-stone-300 bg-white text-base font-medium text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-60">
               {isExporting ? '產生中...' : '匯出 PNG'}
             </button>
-            <button onClick={handleSaveSettings}
-              className="flex-1 h-9 rounded-lg text-base font-medium tracking-wide text-white transition-opacity"
+            <button onClick={handleSaveSettings} disabled={savingSettings}
+              className="flex-1 h-9 rounded-lg text-base font-medium tracking-wide text-white transition-opacity disabled:opacity-60"
               style={{ background:'#f97316' }}>
-              {savedFlash ? '已儲存！' : '完成！儲存檔案'}
+              {savingSettings ? '儲存中...' : savedFlash ? '已儲存！' : '完成！儲存檔案'}
             </button>
           </div>
         </div>

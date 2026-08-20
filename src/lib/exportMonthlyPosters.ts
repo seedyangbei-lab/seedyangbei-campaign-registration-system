@@ -4,12 +4,13 @@ import JSZip from 'jszip'
 import {
   PosterCourseData, ExportPosterParams, renderPosterBlob, loadAllGoogleFonts,
   DotShape, DotCoverage, DotArrangement,
+  POSTER_SETTINGS_STORAGE_KEY, fetchGlobalPosterSettings,
 } from '@/components/posterEditor/shared'
 
-// 海報編輯器「儲存設定」用的全域樣式（scheme／字體／裝飾點……），
-// 跟 CoursePosterEditor.tsx／instructor/poster-editor 頁面共用同一把 key，
-// 讓講師在中台編輯完海報並按下「儲存設定」後，批次匯出能沿用同一套視覺樣式。
-const STORAGE_KEY = 'yangbei-poster-settings:global'
+// 海報編輯器「儲存設定」用的全域樣式（scheme／字體／裝飾點……）。
+// 講師按下「完成！儲存檔案」時會同步寫入 site_settings（見 shared.tsx 的 saveGlobalPosterSettings），
+// 這裡優先讀雲端最新版本，讓中台批次匯出即使跟講師不同裝置／瀏覽器也能拿到最新樣式；
+// 讀取失敗（離線等）才退回本機快取，最後才是預設值。
 
 interface SavedPosterSettings {
   customBg: string
@@ -35,7 +36,31 @@ const EN_FONT_VALUES = [
   "'DM Sans', sans-serif", "'Bricolage Grotesque', sans-serif",
 ]
 
-function loadSavedPosterSettings(): SavedPosterSettings {
+function normalizeSavedSettings(s: any, defaults: SavedPosterSettings): SavedPosterSettings {
+  return {
+    customBg: typeof s.customBg === 'string' ? s.customBg : defaults.customBg,
+    dotShape: typeof s.dotShape === 'string' ? s.dotShape : defaults.dotShape,
+    dotCustomChar: typeof s.dotCustomChar === 'string' ? s.dotCustomChar : defaults.dotCustomChar,
+    dotColor: typeof s.dotColor === 'string' ? s.dotColor : defaults.dotColor,
+    dotOpacity: typeof s.dotOpacity === 'number' ? s.dotOpacity : defaults.dotOpacity,
+    dotSize: typeof s.dotSize === 'number' ? s.dotSize : defaults.dotSize,
+    dotDensity: typeof s.dotDensity === 'number' ? s.dotDensity : defaults.dotDensity,
+    dotCoverage: typeof s.dotCoverage === 'string' ? s.dotCoverage : defaults.dotCoverage,
+    dotArrangement: typeof s.dotArrangement === 'string' ? s.dotArrangement : defaults.dotArrangement,
+    textColorOverride: typeof s.textColorOverride === 'string' ? s.textColorOverride : defaults.textColorOverride,
+    enTextColorOverride: typeof s.enTextColorOverride === 'string' ? s.enTextColorOverride : defaults.enTextColorOverride,
+    borderOn: typeof s.borderOn === 'boolean' ? s.borderOn : defaults.borderOn,
+    borderText: typeof s.borderText === 'string' ? s.borderText : defaults.borderText,
+    zhFontValue: typeof s.zhFontIdx === 'number' ? (ZH_FONT_VALUES[s.zhFontIdx] || defaults.zhFontValue) : defaults.zhFontValue,
+    enFontValue: typeof s.enFontIdx === 'number' ? (EN_FONT_VALUES[s.enFontIdx] || defaults.enFontValue) : defaults.enFontValue,
+    zhFontSize: typeof s.zhFontSize === 'number' ? s.zhFontSize : defaults.zhFontSize,
+    enFontSize: typeof s.enFontSize === 'number' ? s.enFontSize : defaults.enFontSize,
+    letterSpacingPct: typeof s.letterSpacingPct === 'number' ? s.letterSpacingPct : defaults.letterSpacingPct,
+    lineSpacingMult: typeof s.lineSpacingMult === 'number' ? s.lineSpacingMult : defaults.lineSpacingMult,
+  }
+}
+
+async function loadSavedPosterSettings(): Promise<SavedPosterSettings> {
   const defaults: SavedPosterSettings = {
     customBg: '',
     dotShape: 'circle', dotCustomChar: '央', dotColor: '', dotOpacity: 30, dotSize: 6,
@@ -45,31 +70,14 @@ function loadSavedPosterSettings(): SavedPosterSettings {
     zhFontValue: ZH_FONT_VALUES[0], enFontValue: EN_FONT_VALUES[0],
     zhFontSize: 17, enFontSize: 9, letterSpacingPct: 2, lineSpacingMult: 1.5,
   }
+
+  const cloud = await fetchGlobalPosterSettings()
+  if (cloud) return normalizeSavedSettings(cloud, defaults)
+
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(POSTER_SETTINGS_STORAGE_KEY)
     if (!raw) return defaults
-    const s = JSON.parse(raw)
-    return {
-      customBg: typeof s.customBg === 'string' ? s.customBg : defaults.customBg,
-      dotShape: typeof s.dotShape === 'string' ? s.dotShape : defaults.dotShape,
-      dotCustomChar: typeof s.dotCustomChar === 'string' ? s.dotCustomChar : defaults.dotCustomChar,
-      dotColor: typeof s.dotColor === 'string' ? s.dotColor : defaults.dotColor,
-      dotOpacity: typeof s.dotOpacity === 'number' ? s.dotOpacity : defaults.dotOpacity,
-      dotSize: typeof s.dotSize === 'number' ? s.dotSize : defaults.dotSize,
-      dotDensity: typeof s.dotDensity === 'number' ? s.dotDensity : defaults.dotDensity,
-      dotCoverage: typeof s.dotCoverage === 'string' ? s.dotCoverage : defaults.dotCoverage,
-      dotArrangement: typeof s.dotArrangement === 'string' ? s.dotArrangement : defaults.dotArrangement,
-      textColorOverride: typeof s.textColorOverride === 'string' ? s.textColorOverride : defaults.textColorOverride,
-      enTextColorOverride: typeof s.enTextColorOverride === 'string' ? s.enTextColorOverride : defaults.enTextColorOverride,
-      borderOn: typeof s.borderOn === 'boolean' ? s.borderOn : defaults.borderOn,
-      borderText: typeof s.borderText === 'string' ? s.borderText : defaults.borderText,
-      zhFontValue: typeof s.zhFontIdx === 'number' ? (ZH_FONT_VALUES[s.zhFontIdx] || defaults.zhFontValue) : defaults.zhFontValue,
-      enFontValue: typeof s.enFontIdx === 'number' ? (EN_FONT_VALUES[s.enFontIdx] || defaults.enFontValue) : defaults.enFontValue,
-      zhFontSize: typeof s.zhFontSize === 'number' ? s.zhFontSize : defaults.zhFontSize,
-      enFontSize: typeof s.enFontSize === 'number' ? s.enFontSize : defaults.enFontSize,
-      letterSpacingPct: typeof s.letterSpacingPct === 'number' ? s.letterSpacingPct : defaults.letterSpacingPct,
-      lineSpacingMult: typeof s.lineSpacingMult === 'number' ? s.lineSpacingMult : defaults.lineSpacingMult,
-    }
+    return normalizeSavedSettings(JSON.parse(raw), defaults)
   } catch (_e) {
     return defaults
   }
@@ -108,7 +116,7 @@ function safeFileName(s: string) {
 
 export async function exportMonthlyPosters(courses: MonthlyPosterCourse[], month: string): Promise<MonthlyPosterExportResult> {
   loadAllGoogleFonts()
-  const settings = loadSavedPosterSettings()
+  const settings = await loadSavedPosterSettings()
   const activeBg = settings.customBg || DEFAULT_SCHEME_BG
   const tc = settings.textColorOverride || textCol(activeBg)
   const enTc = settings.enTextColorOverride || tc
