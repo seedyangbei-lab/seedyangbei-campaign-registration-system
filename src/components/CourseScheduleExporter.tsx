@@ -358,7 +358,7 @@ function PreviewPage({
 
   const QrBox = ({ label, color, imgSrc, sub }: { label:string; color:string; imgSrc:string; sub:string }) => (
     <div style={{ background: '#ffffff', borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-      <span style={{ color: color, fontSize: isL?10:9, fontWeight: 800, lineHeight: 1.4 }}>{label}</span>
+      <span style={{ color: '#6b7280', fontSize: isL?10:9, fontWeight: 800, lineHeight: 1.4 }}>{label}</span>
       {imgSrc
         ? <img src={imgSrc} alt="" crossOrigin="anonymous" style={{ width: isL?88:e.pQrSize, height: isL?88:e.pQrSize, objectFit: 'contain', display: 'block' }} />
         : <div style={{ width: isL?88:e.pQrSize, height: isL?88:e.pQrSize, background: '#f3f4f6', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 9, color: '#9ca3af' }}>未上傳</span></div>
@@ -1401,7 +1401,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
           fillRoundRect(qrX, cy, qrBoxW, bh, 10, '#ffffff')
           ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 1
           ctx.beginPath(); ctx.roundRect(qrX, cy, qrBoxW, bh, 10); ctx.stroke()
-          ctx.font = font(9, 800); ctx.fillStyle = qr.color; ctx.textAlign = 'center'
+          ctx.font = font(9, 800); ctx.fillStyle = '#6b7280'; ctx.textAlign = 'center'
           ctx.fillText(qr.label, qrX + qrBoxW/2, cy + 14)
           ctx.textAlign = 'left'
           if (qr.src) {
@@ -1476,7 +1476,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
           fillRoundRect(qrX, qrStartY, qrBoxW, bh, 8, '#ffffff')
           ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 1
           ctx.beginPath(); ctx.roundRect(qrX, qrStartY, qrBoxW, bh, 8); ctx.stroke()
-          ctx.font = font(9, 800); ctx.fillStyle = qr.color; ctx.textAlign = 'center'
+          ctx.font = font(9, 800); ctx.fillStyle = '#6b7280'; ctx.textAlign = 'center'
           ctx.fillText(qr.label, qrX + qrBoxW/2, qrStartY + 13)
           ctx.textAlign = 'left'
           if (qr.src) {
@@ -1574,8 +1574,12 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         } else if (ci === 3) {
           const instructorText = course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name || ''
           if (instructorText) {
-            ctx.font = font(fsInstructor, 700); ctx.fillStyle = e.courseTextColor
-            ctx.fillText(instructorText, col.x + col.w/2, cy + 5)
+            ctx.fillStyle = e.courseTextColor
+            const { lines, lineH } = fitWrappedText(ctx, instructorText, col.w - 8, ROW_H - 8, fsInstructor, 700, 1.25)
+            const startY = cy - ((lines.length - 1) * lineH) / 2
+            lines.forEach((line, li) => {
+              ctx.fillText(line, col.x + col.w/2, startY + li * lineH)
+            })
           }
         } else if (ci === 4) {
           ctx.fillStyle = e.courseTextColor
