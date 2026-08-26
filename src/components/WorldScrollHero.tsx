@@ -21,7 +21,10 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
   const [entered, setEntered] = useState(false) // 進場動畫用：剛載入時是否已經「定位」
   // 現在有兩支原生比例都對的素材（桌機 16:9／手機 9:16），不用再靠「模糊背景墊底＋object-contain」
   // 硬湊版面，直接依斷點切換來源、用 object-cover 滿版顯示即可
-  const [isMobile, setIsMobile] = useState(false)
+  // 初始值直接吃 mobileOnly：首頁那邊 mobileOnly=true 時，第一次 render 就能定案是手機版影片，
+  // 不會像之前那樣先掛上桌機版 src 再馬上被 matchMedia effect 換掉，白白多發一個桌機影片的請求
+  // 跟真正要播的手機影片搶頻寬，拖慢「第一幀畫面出現」的時間。
+  const [isMobile, setIsMobile] = useState(mobileOnly)
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -72,21 +75,28 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
     return () => clearTimeout(t)
   }, [])
 
-  // 直接把網址設成 <video src>，讓瀏覽器自己用 HTTP Range Request 邊下載邊播放／跳轉，
-  // 不用等整支影片抓完才看得到畫面。Vercel 對 /public 底下的靜態檔案有支援 range request，
-  // 之前「靜態主機常常不支援 range request，導致卡在第 0 幀」的疑慮在這裡不成立，
-  // 改回瀏覽器原生載入方式，時間到影片點（time to first frame）會明顯變快。
+  // src 現在直接寫在 JSX 的 <video src={videoSrc}> 上（宣告式），不是等這個 effect 跑完才用
+  // JS 指定。這樣瀏覽器解析 HTML 時內建的 preload scanner 一掃到 <video> 標籤就能提早發出
+  // 請求，不用等 React hydrate、effect 執行才開始下載——這一步就是「一開始跑不出來」的
+  // 主要延遲來源之一。瀏覽器會自己用 HTTP Range Request 邊下載邊播放／跳轉，不用等整支
+  // 影片抓完才看得到畫面（Vercel 對 /public 底下的靜態檔案有支援 range request）。
+  // 這裡只負責掛 loadedmetadata／error 監聽，以及在「來源真的換了」（例如 /world 頁面
+  // 跨斷點切換桌機/手機版素材）時手動呼叫 load() 換片——避免每次 effect 重跑都重新觸發
+  // 一次原本已經在下載中的請求。
   useEffect(() => {
     if (reducedMotion) return
-    setVideoOk(false)
     const el = videoRef.current
     if (!el) return
+    setVideoOk(false)
     const onLoaded = () => setVideoOk(true)
     const onError = () => setVideoOk(false) // 影片還沒生成好，維持佔位色塊
     el.addEventListener('loadedmetadata', onLoaded)
     el.addEventListener('error', onError)
-    el.src = videoSrc
-    el.load()
+    if (!el.currentSrc.endsWith(videoSrc)) {
+      el.load()
+    } else if (el.readyState >= 1) {
+      setVideoOk(true) // 換源前已經有 metadata（例如 bfcache／瀏覽器快取），不用再等一次事件
+    }
     return () => {
       el.removeEventListener('loadedmetadata', onLoaded)
       el.removeEventListener('error', onError)
@@ -169,6 +179,7 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
               不用再靠模糊背景墊底湊版面，直接 object-cover 滿版顯示即可 */}
           <video
             ref={videoRef}
+            src={videoSrc}
             muted
             playsInline
             preload="auto"
