@@ -57,6 +57,13 @@ html, body {
   /* 關掉手機瀏覽器捲到頂/底後繼續拉的「橡皮筋」回彈效果，
      避免導覽列上方在過拉時露出一截空白，視覺上比較不會覺得醜 */
   overscroll-behavior-y: none;
+  /* 關掉 Chrome for Android 的 font boosting（窄欄位文字自動放大演算法）。
+     這是課程卡片在 Android 上文字被裁切的根因：iOS Safari 沒有這個行為，
+     Android Chrome 有，同樣的排版兩邊表現會不一樣。加這行後文字大小完全照我們寫的
+     Tailwind 字級走，不受瀏覽器自作主張的放大影響（使用者系統層級的「放大字體」設定
+     仍然有效，這是合理的無障礙需求，只是不會再被瀏覽器額外加倍）。 */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* CTA 按鈕點擊錨點連結（如 #courses）時走平滑捲動，而不是瞬間跳轉；
