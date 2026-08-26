@@ -85,7 +85,7 @@ function StampSlot({ log, index }: { log?: StampLog; index: number }) {
           )}
         </svg>
       </div>
-      <div className="h-7 flex flex-col items-center justify-start">
+      <div className="min-h-7 flex flex-col items-center justify-start">
         {isStamped && (
           <>
             <p className="text-[10px] text-orange-700 font-medium leading-tight text-center line-clamp-1 w-[84px]">{shortName}</p>

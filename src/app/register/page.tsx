@@ -463,7 +463,7 @@ function RegisterForm() {
 
           <button type="submit"
             disabled={loading || !form.age_group || !lineUser || (isSocialHousing && (!building || !unitNumber || !floor || !subUnit))}
-            className="w-full h-[50px] bg-orange-50 hover:bg-orange-100 disabled:opacity-50 disabled:cursor-not-allowed border border-orange-200 text-orange-600 font-medium rounded-[10px] text-base transition-colors">
+            className="w-full min-h-[50px] flex items-center justify-center bg-orange-50 hover:bg-orange-100 disabled:opacity-50 disabled:cursor-not-allowed border border-orange-200 text-orange-600 font-medium rounded-[10px] text-base transition-colors py-2">
             {loading ? '報名中...' : `確認報名 ${courseIds.length} 堂課程`}
           </button>
         </form>

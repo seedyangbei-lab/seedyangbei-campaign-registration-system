@@ -95,12 +95,12 @@ function SuccessContent() {
           <TutorialTooltip hole={spotlightHole} number={4} text="完成報名！" placement="above" widthClass="whitespace-nowrap" />
           <div className="fixed z-50 left-1/2 -translate-x-1/2 bottom-10 w-full max-w-sm px-4 flex flex-col gap-2">
             <button onClick={finishTutorial}
-              className="w-full h-[50px] flex items-center justify-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-[10px] text-base transition-colors">
+              className="w-full min-h-[50px] flex items-center justify-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-[10px] text-base transition-colors py-2">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               開始報名活動！
             </button>
             <button onClick={replayTutorial}
-              className="w-full h-[50px] flex items-center justify-center gap-1.5 bg-orange-50 border border-orange-200 text-orange-600 font-medium rounded-[10px] text-base transition-colors hover:bg-orange-100">
+              className="w-full min-h-[50px] flex items-center justify-center gap-1.5 bg-orange-50 border border-orange-200 text-orange-600 font-medium rounded-[10px] text-base transition-colors hover:bg-orange-100 py-2">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
               再看一次教學
             </button>

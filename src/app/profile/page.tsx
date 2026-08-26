@@ -199,7 +199,7 @@ function ProfileContent() {
             )}
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <h1 className="text-xl font-bold text-stone-800 truncate">{lineUser.displayName}</h1>
+                <h1 className="text-xl font-bold text-stone-800 break-words">{lineUser.displayName}</h1>
                 <span className="text-sm font-medium px-2 py-0.5 rounded-md flex-shrink-0"
                   style={{ color: tag.color, backgroundColor: tag.bg }}>
                   {tag.label}
@@ -360,7 +360,7 @@ function ProfileContent() {
             return (
               <>
                 {/* Tab：填滿整個寬度，兩個按鈕平分 */}
-                <div className="flex-shrink-0 flex gap-1 p-1 mx-6 mt-4 h-11 bg-stone-100 rounded-xl">
+                <div className="flex-shrink-0 flex gap-1 p-1 mx-6 mt-4 min-h-11 bg-stone-100 rounded-xl">
                   {([['upcoming', '即將開課', upcoming.length], ['past', '已結束', past.length]] as const).map(([t, label, count]) => (
                     <button key={t} onClick={() => setRegTab(t)}
                       className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${regTab === t ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}>
@@ -431,11 +431,11 @@ function ProfileContent() {
                           const dateStr = d ? `${d.getMonth()+1}/${d.getDate()}（${weekdays[d.getDay()]}）` : ''
                           return (
                             <div key={reg.id} className="border border-stone-200 rounded-lg px-4 py-3 flex flex-col gap-2">
-                              <button onClick={() => setSelectedReg(reg)} className="flex items-center gap-2 text-left w-full">
+                              <button onClick={() => setSelectedReg(reg)} className="flex items-start gap-2 text-left w-full">
                                 <span className="w-[26px] h-[26px] rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0 text-orange-600 font-bold text-sm">
                                   {i + 1}
                                 </span>
-                                <span className="font-bold text-stone-800 truncate flex-1 min-w-0">{course?.title}</span>
+                                <span className="font-bold text-stone-800 break-words line-clamp-2 flex-1 min-w-0">{course?.title}</span>
                                 {isPast && (
                                   <span className="text-xs font-medium px-2 py-1 rounded-md bg-stone-100 text-stone-400 flex-shrink-0">已結束</span>
                                 )}
@@ -481,7 +481,7 @@ function ProfileContent() {
                                   {i + 1}
                                 </span>
                                 <div className="min-w-0">
-                                  <p className="font-bold text-base text-stone-800 truncate">{course?.title}</p>
+                                  <p className="font-bold text-base text-stone-800 break-words line-clamp-2">{course?.title}</p>
                                   <div className="flex items-center gap-4 mt-1">
                                     <span className="flex items-center gap-1 text-sm text-stone-600">
                                       <IconClock /> {dateStr} {course?.time_start?.slice(0,5)}–{course?.time_end?.slice(0,5)}
@@ -519,13 +519,13 @@ function ProfileContent() {
           <>
             {/* 電腦版：跟頁面內容一起排列 */}
             <Link href="/"
-              className="hidden md:flex flex-shrink-0 items-center justify-center gap-2 w-full h-[50px] bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-xl transition-colors">
+              className="hidden md:flex flex-shrink-0 items-center justify-center gap-2 w-full min-h-[50px] bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-xl transition-colors">
               繼續報名其他課程
             </Link>
             {/* 手機版：sticky 在畫面底部的 modal 按鈕，左右上角要是圓角 */}
             <div className="md:hidden fixed bottom-0 left-0 right-0 z-20 bg-white p-4 rounded-tl-2xl rounded-tr-2xl" style={{ boxShadow: '0px -3px 4px 0px rgba(0,0,0,0.08)' }}>
               <Link href="/"
-                className="flex items-center justify-center gap-2 w-full h-[50px] bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-[10px] transition-colors">
+                className="flex items-center justify-center gap-2 w-full min-h-[50px] bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-[10px] transition-colors">
                 繼續報名其他課程
               </Link>
             </div>

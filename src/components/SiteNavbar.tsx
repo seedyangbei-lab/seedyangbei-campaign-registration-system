@@ -107,7 +107,7 @@ export default function SiteNavbar({ siteTitle, variant = 'home', onLogout }: Si
           {/* 大頭貼＋名字：手機／電腦版都顯示，內頁跟首頁一致（比照 Figma） */}
           <Link
             href="/profile"
-            className="flex items-center gap-2 h-[34px] bg-white border border-white rounded-xl px-2.5 shadow-[0px_1px_1.5px_rgba(0,0,0,0.1),0px_1px_1px_rgba(0,0,0,0.1)]"
+            className="flex items-center gap-2 min-h-[34px] bg-white border border-white rounded-xl px-2.5 py-1.5 shadow-[0px_1px_1.5px_rgba(0,0,0,0.1),0px_1px_1px_rgba(0,0,0,0.1)]"
           >
             {lineUser.pictureUrl ? (
               <img src={lineUser.pictureUrl} alt="" className="w-5 h-5 rounded-full flex-shrink-0" />
