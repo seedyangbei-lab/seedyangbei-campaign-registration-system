@@ -455,7 +455,7 @@ export default function CourseCard({ courses, categories }: {
               <div className="flex flex-col gap-4 py-4">
                 <div className="px-4">
                   <div className="flex h-[156px] md:h-[172px] border border-stone-200 rounded-xl overflow-hidden">
-                    <div className="relative w-[156px] md:w-[172px] flex-shrink-0">
+                    <div className="relative w-[156px] max-[359px]:w-[120px] md:w-[172px] flex-shrink-0">
                       {photos.length > 0 ? (
                         <CoursePhotoCarousel photos={photos} alt={course.title} />
                       ) : (
