@@ -6,7 +6,7 @@ import {
   ArrowRightIcon, ArrowLeftIcon, CopyIcon, CloseIcon, StatCard,
   SourceBadge, IssueTypeBadge, AnomalyTypeBadge, StatusBadge, getAnomalySubtype,
   STATUS_OPTIONS, SYSTEM_ISSUE_STEPS, FilterSelect, PerPageSelect, PaginationBar,
-  MobileFunnelCard, MobileFunnelArrow,
+  MobileFunnelCard, MobileFunnelArrow, SeverityTag, getAnomalySeverity, explainAnomaly,
 } from '@/components/AdminHealthUI'
 
 type FunnelLog = {
@@ -334,13 +334,20 @@ export default function SystemHealthPage() {
                       <td className="px-2 py-4 overflow-hidden"><SourceBadge source={row.source} /></td>
                       <td className="px-2 py-4 text-stone-400 text-xs whitespace-nowrap overflow-hidden">{formatDT(row.createdAt)}</td>
                       <td className="px-2 py-4 overflow-hidden">
-                        {row.source === 'instructor' ? <IssueTypeBadge issueType={row.data.issue_type} /> : <AnomalyTypeBadge step={row.data.step} detail={row.data.detail} />}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {row.source === 'instructor' ? <IssueTypeBadge issueType={row.data.issue_type} /> : (
+                            <>
+                              <AnomalyTypeBadge step={row.data.step} detail={row.data.detail} />
+                              <SeverityTag severity={getAnomalySeverity(row.data.step, row.data.detail)} />
+                            </>
+                          )}
+                        </div>
                       </td>
                       <td className="px-2 py-4 text-stone-600 text-xs truncate overflow-hidden">
                         {row.source === 'instructor' ? (row.data.instructors?.name ? `講師：${row.data.instructors.name}` : '—') : (row.data.course_ids || '—')}
                       </td>
-                      <td className="px-2 py-4 text-stone-500 text-xs truncate overflow-hidden" title={row.source === 'instructor' ? row.data.description : (row.data.detail ? JSON.stringify(row.data.detail) : '')}>
-                        {row.source === 'instructor' ? row.data.description : (row.data.detail ? JSON.stringify(row.data.detail) : '—')}
+                      <td className="px-2 py-4 text-stone-500 text-xs truncate overflow-hidden" title={row.source === 'instructor' ? row.data.description : explainAnomaly(row.data.step, row.data.detail)}>
+                        {row.source === 'instructor' ? row.data.description : explainAnomaly(row.data.step, row.data.detail)}
                       </td>
                       <td className="px-2 py-4 overflow-hidden">
                         <StatusBadge status={row.data.status} />
@@ -367,7 +374,7 @@ export default function SystemHealthPage() {
                     <SourceBadge source={row.source} />
                     <span className="text-xs text-stone-400">{formatDT(row.createdAt)}</span>
                   </div>
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
                     {row.source === 'instructor' ? (
                       <>
                         <IssueTypeBadge issueType={row.data.issue_type} />
@@ -376,11 +383,14 @@ export default function SystemHealthPage() {
                         </span>
                       </>
                     ) : (
-                      <AnomalyTypeBadge step={row.data.step} detail={row.data.detail} />
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <AnomalyTypeBadge step={row.data.step} detail={row.data.detail} />
+                        <SeverityTag severity={getAnomalySeverity(row.data.step, row.data.detail)} />
+                      </div>
                     )}
                   </div>
                   <p className="text-[11px] text-stone-500 truncate">
-                    {row.source === 'instructor' ? row.data.description : (row.data.detail ? JSON.stringify(row.data.detail) : '—')}
+                    {row.source === 'instructor' ? row.data.description : explainAnomaly(row.data.step, row.data.detail)}
                   </p>
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-stone-600">狀態</span>
@@ -423,7 +433,12 @@ export default function SystemHealthPage() {
             </div>
             <div className="p-6 space-y-5">
               <div className="flex items-center gap-2 flex-wrap">
-                {detailTarget.source === 'instructor' ? <IssueTypeBadge issueType={detailTarget.data.issue_type} /> : <AnomalyTypeBadge step={detailTarget.data.step} detail={detailTarget.data.detail} />}
+                {detailTarget.source === 'instructor' ? <IssueTypeBadge issueType={detailTarget.data.issue_type} /> : (
+                  <>
+                    <AnomalyTypeBadge step={detailTarget.data.step} detail={detailTarget.data.detail} />
+                    <SeverityTag severity={getAnomalySeverity(detailTarget.data.step, detailTarget.data.detail)} />
+                  </>
+                )}
                 <span className="text-xs text-stone-400">{formatDT(detailTarget.createdAt)}</span>
                 {detailTarget.source === 'instructor' && detailTarget.data.instructors?.name && <span className="text-xs text-stone-400">・講師：{detailTarget.data.instructors.name}</span>}
               </div>
@@ -434,20 +449,28 @@ export default function SystemHealthPage() {
                   <p className="text-sm text-stone-700 whitespace-pre-wrap bg-stone-50 rounded-xl p-3">{detailTarget.data.description}</p>
                 </div>
               ) : (
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-sm font-medium text-stone-600">錯誤資訊</p>
-                    <button
-                      onClick={() => handleCopyDetail(detailTarget.data)}
-                      className="flex items-center gap-1 text-xs bg-orange-50 border border-orange-200 text-orange-600 hover:bg-orange-100 px-2 py-1 rounded-md font-medium transition-colors"
-                    >
-                      <CopyIcon />複製資訊
-                    </button>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm font-medium text-stone-600 mb-1.5">系統判讀</p>
+                    <p className="text-sm text-stone-700 leading-relaxed bg-orange-50 border border-orange-100 rounded-xl p-3">
+                      {explainAnomaly(detailTarget.data.step, detailTarget.data.detail)}
+                    </p>
                   </div>
-                  {detailTarget.data.course_ids && <p className="text-xs text-stone-500 mb-1.5">課程：{detailTarget.data.course_ids}</p>}
-                  <pre className="text-xs text-stone-700 whitespace-pre-wrap break-all bg-stone-50 rounded-xl p-3 max-h-64 overflow-y-auto">
-                    {detailTarget.data.detail ? JSON.stringify(detailTarget.data.detail, null, 2) : '—'}
-                  </pre>
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-sm font-medium text-stone-600">原始紀錄<span className="text-xs text-stone-400 font-normal">（如需回報工程師可直接複製）</span></p>
+                      <button
+                        onClick={() => handleCopyDetail(detailTarget.data)}
+                        className="flex items-center gap-1 text-xs bg-orange-50 border border-orange-200 text-orange-600 hover:bg-orange-100 px-2 py-1 rounded-md font-medium transition-colors"
+                      >
+                        <CopyIcon />複製資訊
+                      </button>
+                    </div>
+                    {detailTarget.data.course_ids && <p className="text-xs text-stone-500 mb-1.5">課程：{detailTarget.data.course_ids}</p>}
+                    <pre className="text-xs text-stone-700 whitespace-pre-wrap break-all bg-stone-50 rounded-xl p-3 max-h-64 overflow-y-auto">
+                      {detailTarget.data.detail ? JSON.stringify(detailTarget.data.detail, null, 2) : '—'}
+                    </pre>
+                  </div>
                 </div>
               )}
 
@@ -523,20 +546,35 @@ export default function SystemHealthPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-stone-600">錯誤資訊</span>
-                  <button
-                    onClick={() => handleCopyDetail(detailTarget.data)}
-                    className="flex items-center gap-1.5 text-xs bg-orange-50 border border-orange-200 text-orange-600 px-2.5 py-1.5 rounded-md font-medium transition-colors"
-                  >
-                    <CopyIcon />複製資訊
-                  </button>
+                  <span className="text-sm font-medium text-stone-600">類型</span>
+                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                    <AnomalyTypeBadge step={detailTarget.data.step} detail={detailTarget.data.detail} />
+                    <SeverityTag severity={getAnomalySeverity(detailTarget.data.step, detailTarget.data.detail)} />
+                  </div>
                 </div>
-                {detailTarget.data.course_ids && <p className="text-xs text-stone-500">課程：{detailTarget.data.course_ids}</p>}
-                <pre className="text-xs text-stone-600 whitespace-pre-wrap break-all bg-stone-50 rounded-xl p-3 max-h-64 overflow-y-auto">
-                  {detailTarget.data.detail ? JSON.stringify(detailTarget.data.detail, null, 2) : '—'}
-                </pre>
+                <div className="flex flex-col gap-2">
+                  <span className="text-sm font-medium text-stone-600">系統判讀</span>
+                  <p className="text-sm text-stone-700 leading-relaxed bg-orange-50 border border-orange-100 rounded-xl p-3">
+                    {explainAnomaly(detailTarget.data.step, detailTarget.data.detail)}
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-stone-600">原始紀錄</span>
+                    <button
+                      onClick={() => handleCopyDetail(detailTarget.data)}
+                      className="flex items-center gap-1.5 text-xs bg-orange-50 border border-orange-200 text-orange-600 px-2.5 py-1.5 rounded-md font-medium transition-colors"
+                    >
+                      <CopyIcon />複製資訊
+                    </button>
+                  </div>
+                  {detailTarget.data.course_ids && <p className="text-xs text-stone-500">課程：{detailTarget.data.course_ids}</p>}
+                  <pre className="text-xs text-stone-600 whitespace-pre-wrap break-all bg-stone-50 rounded-xl p-3 max-h-64 overflow-y-auto">
+                    {detailTarget.data.detail ? JSON.stringify(detailTarget.data.detail, null, 2) : '—'}
+                  </pre>
+                </div>
               </div>
             )}
 
