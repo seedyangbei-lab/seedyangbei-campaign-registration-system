@@ -7,6 +7,7 @@ import {
   SourceBadge, IssueTypeBadge, AnomalyTypeBadge, StatusBadge, getAnomalySubtype,
   STATUS_OPTIONS, SYSTEM_ISSUE_STEPS, FilterSelect, PerPageSelect, PaginationBar,
   MobileFunnelCard, MobileFunnelArrow, SeverityTag, getAnomalySeverity, explainAnomaly,
+  SEVERITY_OPTIONS,
 } from '@/components/AdminHealthUI'
 
 type FunnelLog = {
@@ -85,17 +86,19 @@ export default function SystemHealthPage() {
   const [sourceFilter, setSourceFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
+  const [severityFilter, setSeverityFilter] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
   const [detailTarget, setDetailTarget] = useState<HealthRow | null>(null)
   const [pendingStatus, setPendingStatus] = useState<string | null>(null)
   const [statusSaving, setStatusSaving] = useState(false)
+  const [bulkResolving, setBulkResolving] = useState(false)
   const [toast, setToast] = useState('')
   const [zoomImage, setZoomImage] = useState<string | null>(null)
 
   useEffect(() => { fetchData() }, [rangeDays])
-  useEffect(() => { setPage(1) }, [sourceFilter, statusFilter, typeFilter, rangeDays])
+  useEffect(() => { setPage(1) }, [sourceFilter, statusFilter, typeFilter, severityFilter, rangeDays])
   useEffect(() => {
     if (!toast) return
     const t = setTimeout(() => setToast(''), 2000)
@@ -165,11 +168,22 @@ export default function SystemHealthPage() {
         if (getAnomalySubtype(row.data.step, row.data.detail) !== typeFilter) return false
       }
     }
+    // 重要程度篩選只套用在系統偵測事件上：講師回報是人親自寫的內容，本來就該被看到，不受這個篩選影響
+    if (severityFilter && row.source === 'system' && getAnomalySeverity(row.data.step, row.data.detail) !== severityFilter) return false
     return true
-  }), [combinedRows, sourceFilter, statusFilter, typeFilter])
+  }), [combinedRows, sourceFilter, statusFilter, typeFilter, severityFilter])
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize))
   const paginatedRows = filteredRows.slice((page - 1) * pageSize, page * pageSize)
+
+  // 目前篩選結果中，屬於「系統已攔截」且還沒結案的系統偵測事件——這些是可以放心一次批次結案的對象，
+  // 「建議關注」的事件即使出現在篩選結果裡也絕對不會被批次按鈕動到，避免手滑誤結真正需要處理的事件
+  const bulkResolvableIds = useMemo(
+    () => filteredRows
+      .filter(row => row.source === 'system' && row.data.status !== 'resolved' && getAnomalySeverity(row.data.step, row.data.detail) === 'info')
+      .map(row => row.id),
+    [filteredRows]
+  )
 
   const formatDT = (ts: string) => {
     const d = new Date(ts)
@@ -205,6 +219,22 @@ export default function SystemHealthPage() {
     }
     setStatusSaving(false)
     setDetailTarget(null)
+  }
+
+  const handleBulkResolve = async () => {
+    if (bulkResolvableIds.length === 0) return
+    if (!window.confirm(`確定要把這 ${bulkResolvableIds.length} 筆「系統已攔截」事件標記為已解決嗎？`)) return
+    setBulkResolving(true)
+    const { data, error } = await supabase.from('funnel_logs').update({ status: 'resolved' }).in('id', bulkResolvableIds).select('id')
+    if (!error) {
+      const updatedIds = new Set((data || []).map(r => r.id))
+      setFunnelLogs(prev => prev.map(r => updatedIds.has(r.id) ? { ...r, status: 'resolved' } : r))
+      setToast(`已將 ${updatedIds.size} 筆標記為已解決`)
+    } else {
+      console.error('批次標記已解決失敗:', error)
+      setToast('批次更新失敗，請稍後再試')
+    }
+    setBulkResolving(false)
   }
 
   return (
@@ -289,17 +319,32 @@ export default function SystemHealthPage() {
           <h3 className="text-stone-800" style={{ fontSize: '20px', lineHeight: '28px', fontWeight: 400 }}>系統狀態與回報</h3>
         </div>
 
-        {/* 篩選列：來源／狀態／類型 + 每頁筆數，同一列 */}
+        {/* 篩選列：來源／狀態／類型／重要程度 + 每頁筆數，同一列 */}
         <div className="px-4 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div className="grid grid-cols-3 gap-2 md:flex md:items-center md:gap-2 md:flex-wrap">
+          <div className="grid grid-cols-2 gap-2 md:flex md:items-center md:gap-2 md:flex-wrap">
             <FilterSelect value={sourceFilter} onChange={setSourceFilter} placeholder="來源" options={[{ value: 'instructor', label: '講師回報' }, { value: 'system', label: '系統偵測' }]} className="relative w-full md:w-[200px] shrink-0" />
             <FilterSelect value={statusFilter} onChange={setStatusFilter} placeholder="狀態" options={STATUS_OPTIONS} className="relative w-full md:w-[200px] shrink-0" />
             <FilterSelect value={typeFilter} onChange={setTypeFilter} placeholder="類型" options={TYPE_OPTIONS} className="relative w-full md:w-[200px] shrink-0" />
+            <FilterSelect value={severityFilter} onChange={setSeverityFilter} placeholder="重要程度" options={SEVERITY_OPTIONS} className="relative w-full md:w-[200px] shrink-0" />
           </div>
           <div className="hidden md:block">
             <PerPageSelect value={pageSize} onChange={v => { setPageSize(v); setPage(1) }} />
           </div>
         </div>
+
+        {/* 批次結案：目前篩選結果中「系統已攔截」且還沒結案的事件，可以一次全部標記為已解決，不用一筆一筆點進去 */}
+        {bulkResolvableIds.length > 0 && (
+          <div className="px-4 pb-4 -mt-1 flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-xs text-stone-400">目前篩選結果中有 {bulkResolvableIds.length} 筆「系統已攔截」事件尚未結案，這些通常不需要人工處理</p>
+            <button
+              onClick={handleBulkResolve}
+              disabled={bulkResolving}
+              className="shrink-0 flex items-center justify-center text-xs bg-stone-800 hover:bg-stone-700 disabled:opacity-50 text-white px-3 py-2 rounded-md font-medium transition-colors whitespace-nowrap"
+            >
+              {bulkResolving ? '處理中...' : `一鍵標記為已解決（${bulkResolvableIds.length} 筆）`}
+            </button>
+          </div>
+        )}
 
         {loading ? (
           <div className="px-6 py-10 text-center text-stone-400 text-sm">讀取中...</div>

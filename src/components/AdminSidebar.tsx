@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock'
 import { createClient } from '@/lib/supabase'
-import { SYSTEM_ISSUE_STEPS } from '@/components/AdminHealthUI'
+import { SYSTEM_ISSUE_STEPS, getAnomalySeverity } from '@/components/AdminHealthUI'
 
 type IconFn = (size: number) => React.ReactElement
 
@@ -92,15 +92,19 @@ export default function AdminSidebar() {
   const [healthPendingCount, setHealthPendingCount] = useState(0)
   useBodyScrollLock(mobileOpen)
 
-  // 系統健康未讀角標：待處理的講師回報 + 待處理的系統偵測異常事件，合計數量
+  // 系統健康未讀角標：待處理的講師回報（人親自寫的，一律算數）
+  // + 待處理的系統偵測事件中「建議關注」的那些（跟 /admin/health 用同一套 getAnomalySeverity 判斷標準）。
+  // 「系統已攔截」的事件（課程資訊遺失、多數 LINE 登入失敗）不計入，避免角標數字被這類會自動恢復、
+  // 不需要人工處理的事件洗版，讓數字真正反映「有幾件事需要你去看」
   useEffect(() => {
     const fetchHealthPendingCount = async () => {
       const supabase = createClient()
       const [issueRes, funnelRes] = await Promise.all([
         supabase.from('issue_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('funnel_logs').select('id', { count: 'exact', head: true }).eq('status', 'pending').in('step', SYSTEM_ISSUE_STEPS),
+        supabase.from('funnel_logs').select('step, detail').eq('status', 'pending').in('step', SYSTEM_ISSUE_STEPS),
       ])
-      setHealthPendingCount((issueRes.count || 0) + (funnelRes.count || 0))
+      const criticalSystemCount = (funnelRes.data || []).filter(l => getAnomalySeverity(l.step, l.detail) === 'critical').length
+      setHealthPendingCount((issueRes.count || 0) + criticalSystemCount)
     }
     fetchHealthPendingCount()
     const t = setInterval(fetchHealthPendingCount, 30000)
