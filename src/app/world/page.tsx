@@ -4,6 +4,7 @@ import CourseCard from '@/components/CourseCard'
 import SiteNavbar from '@/components/SiteNavbar'
 import RegistrationSteps from '@/components/RegistrationSteps'
 import GreetingBar from '@/components/GreetingBar'
+import { getCourseDisplayRangeEnd } from '@/lib/courseDateRange'
 
 export const revalidate = 60
 export const metadata = { title: '央北社宅 · 滾動世界試看' }
@@ -20,6 +21,7 @@ export default async function WorldPage() {
       .select('*, instructors(id, name, phone, line_id), course_categories(id, name, color)')
       .eq('is_active', true)
       .gte('date', new Date().toISOString().split('T')[0])
+      .lte('date', getCourseDisplayRangeEnd())
       .order('date', { ascending: true })
       .order('time_start', { ascending: true }),
     supabase.from('course_categories').select('*').order('created_at'),
