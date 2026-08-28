@@ -6,6 +6,7 @@ import GreetingBar from '@/components/GreetingBar'
 import RegistrationSteps from '@/components/RegistrationSteps'
 import FirstVisitLoginModal from '@/components/FirstVisitLoginModal'
 import SiteNavbar from '@/components/SiteNavbar'
+import { getCourseDisplayRangeEnd } from '@/lib/courseDateRange'
 
 export const revalidate = 60
 
@@ -17,6 +18,7 @@ export default async function HomePage() {
       .select('*, instructors(id, name, phone, line_id), course_categories(id, name, color)')
       .eq('is_active', true)
       .gte('date', new Date().toISOString().split('T')[0])
+      .lte('date', getCourseDisplayRangeEnd())
       .order('date', { ascending: true })
       .order('time_start', { ascending: true }),
     supabase.from('course_categories').select('*').order('created_at'),
