@@ -163,6 +163,11 @@ export function getAnomalySeverity(step: string, detail: any): AnomalySeverity {
   return 'info'
 }
 
+export const SEVERITY_OPTIONS = [
+  { value: 'critical', label: '建議關注' },
+  { value: 'info', label: '系統已攔截' },
+]
+
 export function SeverityTag({ severity }: { severity: AnomalySeverity }) {
   return severity === 'critical' ? (
     <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-md whitespace-nowrap bg-red-50 text-red-600">建議關注</span>
