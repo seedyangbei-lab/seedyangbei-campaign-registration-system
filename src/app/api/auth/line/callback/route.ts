@@ -33,19 +33,31 @@ function detectFlow(state: string | null): 'instructor_claim' | 'instructor_logi
 }
 
 // 登入失敗／被取消時要導去哪裡：
+// - 講師點邀請連結綁定途中失敗（state 帶 instructorClaim）→ 導回 /instructor/claim，跟 Step 2.5
+//   裡其他 claim 相關錯誤用同一個目的地，讓講師看到「綁定失敗」而不是報名頁
+// - 講師登入中台途中失敗（state 帶 instructorLogin）→ 導回 /instructor，讓講師看到登入按鈕重新嘗試
 // - 報名某堂課途中登入（state 帶 courses）→ 導回 /register，帶著 courses 讓表單知道要顯示哪些課程
 // - 一般居民登入（導覽列、首次訪問彈窗，state 只帶 url，通常是當下那一頁）→ 導回原本那一頁，並帶 error 參數
 //   （這裡以前不管是哪種登入，失敗一律導去 /register；但一般登入的 state.url 常常是首頁，
 //   /register 沒有 courses 資訊時前台會直接判定「課程資訊遺失」整頁彈回首頁，
 //   使用者完全看不到任何錯誤訊息，登入失敗變成「按了沒反應」，這裡改成尊重 state.url）
 // - 都沒有 state（理論上不會發生）→ 保底導去 /register
+//
+// 這一段以前只認得 courses / url 這兩種 state 形狀，講師綁定／登入失敗在 token 交換這種最早期
+// 就出錯時（還沒進到 Step 2.5 專屬的講師分流邏輯），會被這裡的預設值撈走、誤導去 /register，
+// 又因為沒帶 courses 資訊，緊接著在前台又被判定一次「課程資訊遺失」——後台系統健康頁常看到的
+// 「LINE 登入失敗」＋「課程資訊遺失」常常是同一次講師登入失敗連續觸發的兩筆記錄
 function buildFailureRedirect(origin: string, state: string | null, errorCode: string, detail?: string) {
   let targetBase = `${origin}/register`
   let coursesParam = ''
   if (state) {
     try {
       const parsedState = JSON.parse(decodeURIComponent(state))
-      if (parsedState.courses) {
+      if (parsedState.instructorClaim) {
+        targetBase = `${origin}/instructor/claim`
+      } else if (parsedState.instructorLogin) {
+        targetBase = `${origin}/instructor`
+      } else if (parsedState.courses) {
         coursesParam = `&courses=${encodeURIComponent(parsedState.courses)}`
       } else if (parsedState.url && parsedState.url.startsWith('http')) {
         targetBase = parsedState.url
