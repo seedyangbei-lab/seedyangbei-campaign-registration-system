@@ -58,9 +58,12 @@ export default function SiteNavbar({ siteTitle, variant = 'home', onLogout }: Si
     if (loggingInRef.current) return
     loggingInRef.current = true
     setLoginError(null)
-    const registerUrl = `${window.location.origin}/register`
+    // 一般登入（不是為了報名特定課程，例如在首頁、簽到頁點導覽列的登入按鈕）登入完應該留在原本那一頁，
+    // 不能寫死導回 /register——/register 一定要有課程資訊才能顯示表單，一般登入沒帶課程資訊，
+    // 寫死導回去只會讓 callback 判定「課程資訊遺失」、把使用者彈回首頁（見 register_guard_fail）
+    const returnUrl = window.location.href
     const nonce = Math.random().toString(36).slice(2)
-    const statePayload = JSON.stringify({ url: registerUrl, nonce })
+    const statePayload = JSON.stringify({ url: returnUrl, nonce })
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: LINE_CHANNEL_ID,
