@@ -98,6 +98,11 @@ function InstructorPortal() {
   useEffect(() => {
     const lineUserParam = searchParams.get('line_user')
     const notFound = searchParams.get('error') === 'not_instructor'
+    // 邀請連結綁定成功時 callback 會帶 claimed=1 回來，這裡明確跳提示告訴講師「已經綁好了」——
+    // 之前沒有這個提示，講師常常不確定第一次點有沒有生效，會回去 LINE 對話再點一次同一個邀請連結，
+    // 但這時 claim_token 已經被第一次綁定清掉了，第二次就會被判定「邀請連結已失效」
+    // （後台系統健康頁 line_login_fail / claim_token_not_found 常出現的原因之一）
+    const justClaimed = searchParams.get('claimed') === '1'
 
     if (notFound) { setStatus('not_bound'); return }
 
@@ -106,6 +111,7 @@ function InstructorPortal() {
         const parsed = JSON.parse(decodeURIComponent(lineUserParam))
         localStorage.setItem('instructor_line_user', JSON.stringify(parsed))
         lookupInstructor(parsed.lineUserId)
+        if (justClaimed) setToast('已成功綁定講師身份，之後可以直接用這個 LINE 帳號登入')
       } catch { setStatus('not_bound') }
       return
     }

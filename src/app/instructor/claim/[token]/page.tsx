@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 
 const LINE_CHANNEL_ID = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2010077816'
@@ -65,14 +65,35 @@ function ClaimContent() {
           <p className="text-stone-800 font-semibold mb-2">講師身份綁定</p>
           <p className="text-stone-400 text-sm">請點下方按鈕，用你的 LINE 帳號完成綁定。</p>
         </div>
-        <a
-          href={getLineLoginUrl(token)}
-          className="inline-block bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-xl text-sm font-medium transition-colors"
-        >
-          用 LINE 登入完成綁定
-        </a>
+        <ClaimButton token={token} />
       </div>
     </div>
+  )
+}
+
+function ClaimButton({ token }: { token: string }) {
+  // 網路較慢時，使用者常常以為沒反應而重複點擊：這組邀請連結一旦第一次點擊成功綁定，
+  // claim_token 就會被清空，緊接著的第二次點擊會被判定「邀請連結已失效」，變成後台系統健康頁
+  // 常見的誤判來源。href 仍維持靜態產生（不是點擊時才組網址），避免上面提到的瀏覽器預覽機制
+  // 誤觸發；只是額外擋掉「同一頁面內的第二次真人點擊」
+  const clickedRef = useRef(false)
+  const [clicked, setClicked] = useState(false)
+
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (clickedRef.current) { e.preventDefault(); return }
+    clickedRef.current = true
+    setClicked(true)
+  }
+
+  return (
+    <a
+      href={getLineLoginUrl(token)}
+      onClick={handleClick}
+      aria-disabled={clicked}
+      className={`inline-block bg-orange-500 text-white px-6 py-3 rounded-xl text-sm font-medium transition-colors ${clicked ? 'opacity-50 pointer-events-none' : 'hover:bg-orange-600'}`}
+    >
+      {clicked ? '導向 LINE 登入中…' : '用 LINE 登入完成綁定'}
+    </a>
   )
 }
 
