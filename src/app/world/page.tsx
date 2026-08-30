@@ -5,6 +5,7 @@ import SiteNavbar from '@/components/SiteNavbar'
 import RegistrationSteps from '@/components/RegistrationSteps'
 import GreetingBar from '@/components/GreetingBar'
 import { getCourseDisplayRangeEnd } from '@/lib/courseDateRange'
+import { withRegisteredCounts } from '@/lib/courseCapacity'
 
 export const revalidate = 60
 export const metadata = { title: '央北社宅 · 滾動世界試看' }
@@ -15,7 +16,7 @@ export const metadata = { title: '央北社宅 · 滾動世界試看' }
 // 改這裡不會動到首頁的 src/app/page.tsx。
 export default async function WorldPage() {
   const supabase = createServerClient()
-  const [{ data: settings }, { data: courses }, { data: categories }, { data: allInstructors }] = await Promise.all([
+  const [{ data: settings }, { data: courses }, { data: categories }, { data: allInstructors }, { data: registrations }] = await Promise.all([
     supabase.from('site_settings').select('key, value'),
     supabase.from('courses')
       .select('*, instructors(id, name, phone, line_id), course_categories(id, name, color)')
@@ -26,14 +27,15 @@ export default async function WorldPage() {
       .order('time_start', { ascending: true }),
     supabase.from('course_categories').select('*').order('created_at'),
     supabase.from('instructors').select('id, name'),
+    supabase.from('registrations').select('course_id').in('status', ['confirmed', 'attended']),
   ])
 
   const instructorMap = new Map((allInstructors || []).map((i: any) => [i.id, i]))
-  const coursesWithInstructors = (courses || []).map((c: any) => {
+  const coursesWithInstructors = withRegisteredCounts((courses || []).map((c: any) => {
     const ids: string[] = (c.instructor_ids && c.instructor_ids.length > 0) ? c.instructor_ids : (c.instructor_id ? [c.instructor_id] : [])
     const instructors_list = ids.map(id => instructorMap.get(id)).filter(Boolean)
     return { ...c, instructors_list }
-  })
+  }), registrations || [])
 
   const now = new Date()
   const activeCourses = coursesWithInstructors.filter((c: any) => {

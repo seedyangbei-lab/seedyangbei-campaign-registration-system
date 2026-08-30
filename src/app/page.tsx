@@ -7,12 +7,13 @@ import RegistrationSteps from '@/components/RegistrationSteps'
 import FirstVisitLoginModal from '@/components/FirstVisitLoginModal'
 import SiteNavbar from '@/components/SiteNavbar'
 import { getCourseDisplayRangeEnd } from '@/lib/courseDateRange'
+import { withRegisteredCounts } from '@/lib/courseCapacity'
 
 export const revalidate = 60
 
 export default async function HomePage() {
   const supabase = createServerClient()
-  const [{ data: settings }, { data: courses }, { data: categories }, { data: allInstructors }] = await Promise.all([
+  const [{ data: settings }, { data: courses }, { data: categories }, { data: allInstructors }, { data: registrations }] = await Promise.all([
     supabase.from('site_settings').select('key, value'),
     supabase.from('courses')
       .select('*, instructors(id, name, phone, line_id), course_categories(id, name, color)')
@@ -23,15 +24,16 @@ export default async function HomePage() {
       .order('time_start', { ascending: true }),
     supabase.from('course_categories').select('*').order('created_at'),
     supabase.from('instructors').select('id, name'),
+    supabase.from('registrations').select('course_id').in('status', ['confirmed', 'attended']),
   ])
 
   // 合作講師：courses.instructor_ids 是多人陣列，這裡解析成完整姓名清單給 CourseCard 顯示（對照 Figma node 224-11542/128-7754）
   const instructorMap = new Map((allInstructors || []).map((i: any) => [i.id, i]))
-  const coursesWithInstructors = (courses || []).map((c: any) => {
+  const coursesWithInstructors = withRegisteredCounts((courses || []).map((c: any) => {
     const ids: string[] = (c.instructor_ids && c.instructor_ids.length > 0) ? c.instructor_ids : (c.instructor_id ? [c.instructor_id] : [])
     const instructors_list = ids.map(id => instructorMap.get(id)).filter(Boolean)
     return { ...c, instructors_list }
-  })
+  }), registrations || [])
 
   const now = new Date()
   const activeCourses = coursesWithInstructors.filter((c: any) => {

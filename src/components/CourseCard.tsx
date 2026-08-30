@@ -12,6 +12,7 @@ interface Category { id: string; name: string; color: string }
 interface Course {
   id: string; title: string; description: string; date: string
   time_start: string; time_end: string; location: string; max_seats: number
+  registered_count?: number
   poster_url?: string; photo_urls?: string[]; notes?: string; suitable_age?: string
   line_group_url?: string
   instructors?: { id: string; name: string; phone?: string; line_id?: string } | null
@@ -433,9 +434,10 @@ export default function CourseCard({ courses, categories }: {
           const isSelected = selected.includes(course.id)
           const expired = isExpired(course)
           const alreadyRegistered = registeredIds.has(course.id)
+          const isFull = !!course.max_seats && (course.registered_count ?? 0) >= course.max_seats
           // 教學導覽 step1/2 時，只有示範課程可以點選，其餘卡片鎖住不能互動
           const tutorialLocked = (tutorialStep === '1' || tutorialStep === '2') && course.id !== DEMO_COURSE_ID
-          const isDisabled = expired || alreadyRegistered || tutorialLocked
+          const isDisabled = expired || alreadyRegistered || isFull || tutorialLocked
           const photos = getCoursePhotos(course)
           const lineUrl = course.line_group_url || getLineUrl(course.instructors?.line_id)
 
@@ -446,6 +448,7 @@ export default function CourseCard({ courses, categories }: {
               className={`relative rounded-2xl border transition-all overflow-hidden ${
                 alreadyRegistered ? 'opacity-70 cursor-not-allowed border-green-200 bg-green-50/30'
                 : expired ? 'opacity-60 cursor-not-allowed border-stone-200 bg-white'
+                : isFull ? 'opacity-60 cursor-not-allowed border-stone-200 bg-white'
                 : tutorialLocked ? 'cursor-not-allowed border-stone-200 bg-white'
                 : isSelected ? 'border-orange-400 shadow-lg shadow-orange-100 cursor-pointer bg-gradient-to-t from-orange-50/60 to-white'
                 : 'border-stone-200 hover:shadow-md cursor-pointer bg-gradient-to-t from-orange-50/60 to-white'
@@ -480,6 +483,11 @@ export default function CourseCard({ courses, categories }: {
                       {!alreadyRegistered && expired && (
                         <div className="absolute inset-0 bg-stone-900/60 flex items-center justify-center">
                           <span className="text-white text-xs font-bold">報名截止</span>
+                        </div>
+                      )}
+                      {!alreadyRegistered && !expired && isFull && (
+                        <div className="absolute inset-0 bg-stone-900/60 flex items-center justify-center">
+                          <span className="text-white text-xs font-bold">已額滿</span>
                         </div>
                       )}
                     </div>
@@ -556,7 +564,7 @@ export default function CourseCard({ courses, categories }: {
                 <div className="absolute top-[19px] right-[19px] md:top-[25px] md:right-[23px] w-7 h-7 md:w-8 md:h-8 rounded-full bg-green-500 flex items-center justify-center">
                   <IconCheck />
                 </div>
-              ) : !expired && (
+              ) : !expired && !isFull && (
                 <div className={`absolute top-[19px] right-[19px] md:top-[25px] md:right-[23px] w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-orange-500 border-orange-500' : 'border-stone-300 bg-stone-100'}`}>
                   {isSelected && <IconCheck />}
                 </div>
