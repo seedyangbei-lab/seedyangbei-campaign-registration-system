@@ -89,13 +89,16 @@ export default function AdminSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [healthPendingCount, setHealthPendingCount] = useState(0)
+  const [healthCriticalCount, setHealthCriticalCount] = useState(0)
+  const [healthInfoCount, setHealthInfoCount] = useState(0)
   useBodyScrollLock(mobileOpen)
 
-  // 系統健康未讀角標：待處理的講師回報（人親自寫的，一律算數）
-  // + 待處理的系統偵測事件中「建議關注」的那些（跟 /admin/health 用同一套 getAnomalySeverity 判斷標準）。
-  // 「系統已攔截」的事件（課程資訊遺失、多數 LINE 登入失敗）不計入，避免角標數字被這類會自動恢復、
-  // 不需要人工處理的事件洗版，讓數字真正反映「有幾件事需要你去看」
+  // 系統健康未讀角標：分兩級顯示，避免「完全不顯示」讓人誤以為沒有任何新事件。
+  // - 紅色數字：待處理的講師回報（人親自寫的，一律算數）+ 待處理的系統偵測事件中
+  //   「建議關注」的那些（跟 /admin/health 用同一套 getAnomalySeverity 判斷標準），真正需要處理。
+  // - 灰色數字：待處理但屬於「系統已攔截」等級的系統偵測事件（課程資訊遺失、多數 LINE 登入失敗）。
+  //   這類事件會自動恢復、不需要人工處理，所以不佔用紅色警示，但仍要讓你知道「有新事件進來」，
+  //   而不是像之前那樣直接從角標消失、被誤判成沒事。
   useEffect(() => {
     const fetchHealthPendingCount = async () => {
       const supabase = createClient()
@@ -103,13 +106,32 @@ export default function AdminSidebar() {
         supabase.from('issue_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('funnel_logs').select('step, detail').eq('status', 'pending').in('step', SYSTEM_ISSUE_STEPS),
       ])
-      const criticalSystemCount = (funnelRes.data || []).filter(l => getAnomalySeverity(l.step, l.detail) === 'critical').length
-      setHealthPendingCount((issueRes.count || 0) + criticalSystemCount)
+      let critical = 0
+      let info = 0
+      for (const l of funnelRes.data || []) {
+        if (getAnomalySeverity(l.step, l.detail) === 'critical') critical++
+        else info++
+      }
+      setHealthCriticalCount((issueRes.count || 0) + critical)
+      setHealthInfoCount(info)
     }
     fetchHealthPendingCount()
     const t = setInterval(fetchHealthPendingCount, 30000)
     return () => clearInterval(t)
   }, [pathname])
+
+  const healthBadge = healthCriticalCount > 0 ? (
+    <span className="min-w-[20px] h-5 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold leading-none">
+      {healthCriticalCount > 99 ? '99+' : healthCriticalCount}
+    </span>
+  ) : healthInfoCount > 0 ? (
+    <span
+      className="min-w-[20px] h-5 px-1 flex items-center justify-center rounded-full bg-stone-300 text-stone-700 text-[11px] font-bold leading-none"
+      title="有系統已攔截事件，不急但可以看一下"
+    >
+      {healthInfoCount > 99 ? '99+' : healthInfoCount}
+    </span>
+  ) : null
 
   const handleLogout = () => {
     localStorage.removeItem('admin_auth')
@@ -136,11 +158,7 @@ export default function AdminSidebar() {
               >
                 <span className={isActive(item.href) ? 'text-orange-500' : 'text-stone-400'}>{item.icon(20)}</span>
                 <span className="flex-1">{item.label}</span>
-                {item.href === '/admin/health' && healthPendingCount > 0 && (
-                  <span className="min-w-[20px] h-5 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold leading-none">
-                    {healthPendingCount > 99 ? '99+' : healthPendingCount}
-                  </span>
-                )}
+                {item.href === '/admin/health' && healthBadge}
               </Link>
             </li>
           ))}
@@ -187,11 +205,7 @@ export default function AdminSidebar() {
                 >
                   <span className={isActive(item.href) ? 'text-orange-500' : 'text-stone-400'}>{item.icon(18)}</span>
                   <span className="flex-1">{item.label}</span>
-                  {item.href === '/admin/health' && healthPendingCount > 0 && (
-                    <span className="min-w-[20px] h-5 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold leading-none">
-                      {healthPendingCount > 99 ? '99+' : healthPendingCount}
-                    </span>
-                  )}
+                  {item.href === '/admin/health' && healthBadge}
                 </Link>
               </li>
             ))}
