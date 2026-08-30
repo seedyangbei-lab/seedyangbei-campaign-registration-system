@@ -313,13 +313,16 @@ export default function CourseCard({ courses, categories }: {
     return next
   })
 
+  const courseIsFull = (c: Course) => !!c.max_seats && (c.registered_count ?? 0) >= c.max_seats
+
   const filtered = (activeCategory === 'all' ? courses : courses.filter(c => c.course_categories?.id === activeCategory))
     .slice()
     .sort((a, b) => {
-      // 已報名的課程一律排到最下面，其餘依開課日期排序
-      const aRegistered = registeredIds.has(a.id)
-      const bRegistered = registeredIds.has(b.id)
-      if (aRegistered !== bRegistered) return aRegistered ? 1 : -1
+      // 排序順位：可以報名的課程 > 已額滿的課程 > 已報名的課程，同一順位再依開課日期排序
+      const rank = (c: Course) => registeredIds.has(c.id) ? 2 : courseIsFull(c) ? 1 : 0
+      const aRank = rank(a)
+      const bRank = rank(b)
+      if (aRank !== bRank) return aRank - bRank
       const diff = new Date(a.date).getTime() - new Date(b.date).getTime()
       return sortOrder === 'asc' ? diff : -diff
     })
@@ -434,7 +437,7 @@ export default function CourseCard({ courses, categories }: {
           const isSelected = selected.includes(course.id)
           const expired = isExpired(course)
           const alreadyRegistered = registeredIds.has(course.id)
-          const isFull = !!course.max_seats && (course.registered_count ?? 0) >= course.max_seats
+          const isFull = courseIsFull(course)
           // 教學導覽 step1/2 時，只有示範課程可以點選，其餘卡片鎖住不能互動
           const tutorialLocked = (tutorialStep === '1' || tutorialStep === '2') && course.id !== DEMO_COURSE_ID
           const isDisabled = expired || alreadyRegistered || isFull || tutorialLocked
@@ -448,7 +451,7 @@ export default function CourseCard({ courses, categories }: {
               className={`relative rounded-2xl border transition-all overflow-hidden ${
                 alreadyRegistered ? 'opacity-70 cursor-not-allowed border-green-200 bg-green-50/30'
                 : expired ? 'opacity-60 cursor-not-allowed border-stone-200 bg-white'
-                : isFull ? 'opacity-60 cursor-not-allowed border-stone-200 bg-white'
+                : isFull ? 'cursor-not-allowed border-green-200 bg-green-50/30'
                 : tutorialLocked ? 'cursor-not-allowed border-stone-200 bg-white'
                 : isSelected ? 'border-orange-400 shadow-lg shadow-orange-100 cursor-pointer bg-gradient-to-t from-orange-50/60 to-white'
                 : 'border-stone-200 hover:shadow-md cursor-pointer bg-gradient-to-t from-orange-50/60 to-white'
@@ -486,9 +489,12 @@ export default function CourseCard({ courses, categories }: {
                         </div>
                       )}
                       {!alreadyRegistered && !expired && isFull && (
-                        <div className="absolute inset-0 bg-stone-900/60 flex items-center justify-center">
-                          <span className="text-white text-xs font-bold">已額滿</span>
-                        </div>
+                        <>
+                          <div className="absolute inset-0 bg-black/50" />
+                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-green-200 rounded-lg px-2.5 py-2 flex items-center justify-center">
+                            <span className="text-white text-base font-bold whitespace-nowrap">已額滿</span>
+                          </div>
+                        </>
                       )}
                     </div>
 
