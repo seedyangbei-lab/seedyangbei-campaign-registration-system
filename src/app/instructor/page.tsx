@@ -94,6 +94,7 @@ function InstructorPortal() {
   const [rosterConfirmCancelId, setRosterConfirmCancelId] = useState<string | null>(null)
   const [rosterConfirmPermanent, setRosterConfirmPermanent] = useState<string | null>(null)
   const [rosterDeleting, setRosterDeleting] = useState(false)
+  const [rosterExpandedId, setRosterExpandedId] = useState<string | null>(null)
 
   useEffect(() => {
     const lineUserParam = searchParams.get('line_user')
@@ -443,6 +444,7 @@ function InstructorPortal() {
   const openRoster = async (course: any) => {
     setRosterModal(course)
     setRosterPage(1)
+    setRosterExpandedId(null)
     setRosterLoading(true)
     const { data } = await supabase
       .from('registrations')
@@ -789,6 +791,8 @@ function InstructorPortal() {
                       formatDT={formatDT}
                       onCancel={() => setRosterConfirmCancelId(reg.id)}
                       onDelete={() => setRosterConfirmPermanent(reg.id)}
+                      expanded={rosterExpandedId === reg.id}
+                      onToggleExpanded={() => setRosterExpandedId(id => id === reg.id ? null : reg.id)}
                     />
                   ))}
                 </div>

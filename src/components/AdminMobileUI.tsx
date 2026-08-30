@@ -100,15 +100,16 @@ export function FilterBottomSheet({
 
 /* ---------- 報名紀錄卡片：點「詳細資訊」展開手機／房號／年齡／身份，滑順動畫 ---------- */
 export function MobileRegistrationCard({
-  reg, getInitials, formatDT, onCancel, onDelete,
+  reg, getInitials, formatDT, onCancel, onDelete, expanded, onToggleExpanded,
 }: {
   reg: any
   getInitials: (name?: string) => string
   formatDT: (ts: string) => string
   onCancel: () => void
   onDelete: () => void
+  expanded: boolean
+  onToggleExpanded: () => void
 }) {
-  const [expanded, setExpanded] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const status = reg.status as RegStatus
 
@@ -203,13 +204,19 @@ export function MobileRegistrationCard({
                 </div>
               </div>
             </div>
+            {reg.questions && (
+              <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2.5 text-xs text-stone-600">
+                <span className="text-amber-600 font-medium mr-2">課前想說的話</span>
+                {reg.questions}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       <button
         type="button"
-        onClick={() => setExpanded(v => !v)}
+        onClick={onToggleExpanded}
         className="flex items-center justify-center gap-1 border-t border-stone-100 pt-2 pb-1.5 w-full text-[11px] text-stone-500"
       >
         {expanded ? '收起' : '詳細資訊'}

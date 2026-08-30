@@ -24,6 +24,7 @@ export default function AdminDashboard() {
   const [confirmPermanent, setConfirmPermanent] = useState<string | null>(null)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [expandedRegId, setExpandedRegId] = useState<string | null>(null)
   const supabase = createClient()
 
   useEffect(() => { fetchAll() }, [])
@@ -268,6 +269,8 @@ export default function AdminDashboard() {
                 formatDT={formatDT}
                 onCancel={() => setConfirmCancelId(reg.id)}
                 onDelete={() => setConfirmPermanent(reg.id)}
+                expanded={expandedRegId === reg.id}
+                onToggleExpanded={() => setExpandedRegId(id => id === reg.id ? null : reg.id)}
               />
             ))}
           </div>
