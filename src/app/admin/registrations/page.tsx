@@ -18,15 +18,17 @@ export default function RegistrationsPage() {
     if (!selectedCourse) return
     supabase.from('registrations')
       .select('*, users(name, room_number, phone, email, age_group, line_id)')
-      .eq('course_id', selectedCourse).eq('status', 'confirmed')
+      .eq('course_id', selectedCourse).in('status', ['confirmed', 'attended', 'absent'])
       .order('registered_at', { ascending: true })
       .then(({ data }) => setRegistrations(data || []))
   }, [selectedCourse])
 
+  const csvField = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`
+
   const exportCSV = () => {
-    const header = '序號,姓名,房號,手機,Email,LINE ID,年齡區間,是否社宅居民,報名時間'
+    const header = '序號,姓名,房號,手機,Email,LINE ID,年齡區間,是否社宅居民,報名時間,課前想說的話'
     const rows = registrations.map((r, i) =>
-      `${i+1},${r.users?.name},${r.users?.room_number},${r.users?.phone},${r.users?.email},${r.users?.line_id||''},${r.users?.age_group},${r.is_social_housing_resident?'是':'否'},${r.registered_at?.split('T')[0]}`
+      `${i+1},${r.users?.name},${r.users?.room_number},${r.users?.phone},${r.users?.email},${r.users?.line_id||''},${r.users?.age_group},${r.is_social_housing_resident?'是':'否'},${r.registered_at?.split('T')[0]},${csvField(r.questions)}`
     )
     const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv;charset=utf-8;' })
     const a = document.createElement('a')
@@ -71,7 +73,11 @@ export default function RegistrationsPage() {
           {registrations.map((reg, i) => (
             <div key={reg.id} className="bg-white border border-stone-200 rounded-2xl p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-medium text-stone-400 bg-stone-100 px-2 py-1 rounded-lg">#{i + 1}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-stone-400 bg-stone-100 px-2 py-1 rounded-lg">#{i + 1}</span>
+                  {reg.status === 'attended' && <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-lg">已出席</span>}
+                  {reg.status === 'absent' && <span className="text-xs font-medium text-stone-500 bg-stone-100 px-2 py-1 rounded-lg">缺席</span>}
+                </div>
                 <span className="text-xs text-stone-400">{reg.registered_at?.split('T')[0]}</span>
               </div>
               <p className="text-stone-800 font-semibold text-base mb-2">{reg.users?.name}</p>
@@ -90,7 +96,7 @@ export default function RegistrationsPage() {
               </div>
               {reg.questions && (
                 <div className="mt-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-sm text-stone-600">
-                  <span className="text-amber-600 font-medium text-xs mr-2">課前提問</span>
+                  <span className="text-amber-600 font-medium text-xs mr-2">課前想說的話</span>
                   {reg.questions}
                 </div>
               )}
