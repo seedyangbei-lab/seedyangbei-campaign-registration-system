@@ -17,7 +17,7 @@ function BackArrowIcon() {
 const emptyForm: CourseForm = {
   title: '', description: '', date: '', time_start: '', time_end: '',
   location: '', custom_location: '', notes: '', suitable_age: '全年齡', custom_age: '',
-  photos: [], max_seats: 20, co_instructor_ids: [],
+  photos: [], max_seats: 20, co_instructor_ids: [], instructor_mode: 'single',
 }
 
 function buildForm(course: any, mode: 'edit' | 'copy' | 'create', currentInstructorId: string): CourseForm {
@@ -32,6 +32,7 @@ function buildForm(course: any, mode: 'edit' | 'copy' | 'create', currentInstruc
     photos: (course.photo_urls && course.photo_urls.length > 0) ? course.photo_urls : (course.poster_url ? [course.poster_url] : []),
     max_seats: course.max_seats || 20,
     co_instructor_ids: (course.instructor_ids || []).filter((id: string) => id !== currentInstructorId),
+    instructor_mode: course.instructor_mode || 'single',
   }
 }
 
@@ -105,7 +106,7 @@ function EditCoursePageInner() {
       time_start: form.time_start, time_end: form.time_end,
       location, notes: form.notes, suitable_age: suitableAge,
       photo_urls: form.photos, poster_url: form.photos[0] || null, max_seats: form.max_seats,
-      instructor_ids: instructorIds,
+      instructor_ids: instructorIds, instructor_mode: form.instructor_mode,
     }
 
     if (mode === 'edit' && courseRow) {

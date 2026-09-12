@@ -3,6 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { HexColorPicker } from 'react-colorful'
+import { COMMUNITY_HOST_LABEL } from '@/components/CourseEditFormFields'
 
 interface Course {
   id: string; title: string; date: string
@@ -10,7 +11,14 @@ interface Course {
   notes?: string; suitable_age?: string
   instructors?: { name: string } | null
   instructor_names?: string[]
+  instructor_mode?: string | null
   course_categories?: { name: string; color: string } | null
+}
+
+// 央北種子戶聯合主辦的活動，課表上一律顯示固定文字，不顯示落落長的合作講師名單
+function instructorDisplay(course: Course): string {
+  if (course.instructor_mode === 'community') return COMMUNITY_HOST_LABEL
+  return (course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name) || ''
 }
 
 interface Props {
@@ -476,7 +484,7 @@ function PreviewPage({
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 10px', textAlign: 'center' }}><span style={{ fontSize: fsTitle, fontWeight: 700, color: e.courseTextColor, lineHeight: 1.4 }}>{course.title}</span></div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 6px' }}>
-                      {(course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name) && <span style={{ color: e.courseTextColor, fontWeight: 700, fontSize: fsInstructor, lineHeight: 1 }}>{course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name}</span>}
+                      {instructorDisplay(course) && <span style={{ color: e.courseTextColor, fontWeight: 700, fontSize: fsInstructor, lineHeight: 1 }}>{instructorDisplay(course)}</span>}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 6px', textAlign: 'center' }}><span style={{ fontSize: fsLocation, fontWeight: 700, color: e.courseTextColor, lineHeight: 1.4 }}>{course.location}</span></div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', textAlign: 'center' }}><span style={{ fontSize: Math.max(9, fsLocation - 1), fontWeight: 700, color: e.courseTextColor, lineHeight: 1.4 }}>{course.suitable_age||'全年齡'}</span></div>
@@ -1572,7 +1580,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
             ctx.fillText(line, col.x + col.w/2, startY + li * lineH)
           })
         } else if (ci === 3) {
-          const instructorText = course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name || ''
+          const instructorText = instructorDisplay(course)
           if (instructorText) {
             ctx.fillStyle = e.courseTextColor
             const { lines, lineH } = fitWrappedText(ctx, instructorText, col.w - 8, ROW_H - 8, fsInstructor, 700, 1.25)

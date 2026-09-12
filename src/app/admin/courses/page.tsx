@@ -10,6 +10,7 @@ import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import AdminCourseEditFormFields, {
   LOCATIONS, emptyAdminCourseForm, type AdminCourseForm, type AdminCategory,
 } from '@/components/AdminCourseEditFormFields'
+import { COMMUNITY_HOST_LABEL } from '@/components/CourseEditFormFields'
 import type { ExportableReport } from '@/lib/exportCourseReport'
 
 interface Instructor { id: string; name: string }
@@ -121,6 +122,7 @@ export default function CoursesPage() {
       max_seats: course.max_seats,
       photo_urls: (course.photo_urls && course.photo_urls.length > 0) ? course.photo_urls : (course.poster_url ? [course.poster_url] : []),
       instructor_ids: course.instructor_ids || (course.instructor_id ? [course.instructor_id] : []),
+      instructor_mode: course.instructor_mode || 'single',
       category_id: course.category_id || '',
       notes: course.notes || '', suitable_age: agePreset,
       custom_age: agePreset === '其他' ? (course.suitable_age || '') : '',
@@ -140,6 +142,7 @@ export default function CoursesPage() {
       max_seats: course.max_seats,
       photo_urls: (course.photo_urls && course.photo_urls.length > 0) ? course.photo_urls : (course.poster_url ? [course.poster_url] : []),
       instructor_ids: course.instructor_ids || (course.instructor_id ? [course.instructor_id] : []),
+      instructor_mode: course.instructor_mode || 'single',
       category_id: course.category_id || '',
       notes: course.notes || '', suitable_age: agePreset,
       custom_age: agePreset === '其他' ? (course.suitable_age || '') : '',
@@ -253,6 +256,7 @@ export default function CoursesPage() {
       location, max_seats: form.max_seats, photo_urls: form.photo_urls, poster_url: form.photo_urls[0] || null,
       instructor_id: form.instructor_ids[0] || null,
       instructor_ids: form.instructor_ids,
+      instructor_mode: form.instructor_mode,
       category_id: form.category_id || null,
       notes: form.notes || null, suitable_age: suitableAge || '全年齡',
     }
@@ -480,9 +484,11 @@ export default function CoursesPage() {
             )}
             {displayCourses.map((course: any) => {
               const expired = isExpired(course)
-              const displayInstructors = course.instructor_names?.length > 0
-                ? course.instructor_names.join('、')
-                : course.instructors?.name || ''
+              const displayInstructors = course.instructor_mode === 'community'
+                ? COMMUNITY_HOST_LABEL
+                : course.instructor_names?.length > 0
+                  ? course.instructor_names.join('、')
+                  : course.instructors?.name || ''
               return (
                 <div key={course.id}>
                   {/* 手機版：直式卡片（< md） */}

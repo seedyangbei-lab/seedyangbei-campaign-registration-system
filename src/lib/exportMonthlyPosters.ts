@@ -6,6 +6,7 @@ import {
   DotShape, DotCoverage, DotArrangement,
   fetchInstructorsPosterSettings,
 } from '@/components/posterEditor/shared'
+import { COMMUNITY_HOST_LABEL } from '@/components/CourseEditFormFields'
 
 // 海報編輯器「儲存設定」是每位講師各自獨立的（見 shared.tsx 的 fetchInstructorsPosterSettings／
 // saveInstructorPosterSettings，存在 instructors.poster_settings）。批次匯出時依每堂課的講師
@@ -125,6 +126,7 @@ export interface MonthlyPosterCourse {
   location?: string
   instructor_names?: string[]
   instructor_ids?: string[]
+  instructor_mode?: string | null
   photo_urls?: string[]
   poster_url?: string | null
 }
@@ -163,7 +165,8 @@ export async function exportMonthlyPosters(courses: MonthlyPosterCourse[], month
     const posterCourse: PosterCourseData = {
       id: course.id, title: course.title, date: course.date,
       timeStart: (course.time_start || '').slice(0, 5), timeEnd: (course.time_end || '').slice(0, 5),
-      location: course.location, instructor: (course.instructor_names || []).join('、'),
+      location: course.location,
+      instructor: course.instructor_mode === 'community' ? COMMUNITY_HOST_LABEL : (course.instructor_names || []).join('、'),
     }
     const params: ExportPosterParams = {
       course: posterCourse, activeBg: style.activeBg, tc: style.tc, enTc: style.enTc, iconColor: style.iconColor,

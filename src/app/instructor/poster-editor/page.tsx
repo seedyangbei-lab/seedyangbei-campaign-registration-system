@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { COMMUNITY_HOST_LABEL } from '@/components/CourseEditFormFields'
 import {
   PosterCourseData, lum, textCol, SCHEMES_MOBILE, ZH_FONTS, EN_FONTS, ZH_SIZE_OPTIONS, EN_SIZE_OPTIONS, loadAllGoogleFonts,
   DotShape, DotCoverage, DotArrangement, DOT_SHAPES, DotPatternSvg,
@@ -675,10 +676,14 @@ function PosterEditorLoader() {
       const { data: c } = await supabase.from('courses').select('*').eq('id', courseId).maybeSingle()
       if (!c) { setLoading(false); return }
       let instructorName = ''
-      const ids: string[] = (c.instructor_ids && c.instructor_ids.length) ? c.instructor_ids : (c.instructor_id ? [c.instructor_id] : [])
-      if (ids.length) {
-        const { data: instr } = await supabase.from('instructors').select('name').in('id', ids)
-        instructorName = (instr || []).map((i: any) => i.name).filter(Boolean).join('、')
+      if (c.instructor_mode === 'community') {
+        instructorName = COMMUNITY_HOST_LABEL
+      } else {
+        const ids: string[] = (c.instructor_ids && c.instructor_ids.length) ? c.instructor_ids : (c.instructor_id ? [c.instructor_id] : [])
+        if (ids.length) {
+          const { data: instr } = await supabase.from('instructors').select('name').in('id', ids)
+          instructorName = (instr || []).map((i: any) => i.name).filter(Boolean).join('、')
+        }
       }
       setCourse({
         id: c.id, title: c.title, instructor: instructorName, date: c.date,

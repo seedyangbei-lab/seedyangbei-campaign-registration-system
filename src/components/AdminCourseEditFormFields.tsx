@@ -6,7 +6,8 @@ import CoursePhotoGrid from '@/components/CoursePhotoGrid'
 import SuitableAgeSelector from '@/components/SuitableAgeSelector'
 import {
   LOCATIONS, DESCRIPTION_MAX, MAX_SEATS_OPTIONS, TIME_OPTIONS,
-  InstructorMultiSelect, withCurrentValue, type InstructorOption,
+  InstructorMultiSelect, InstructorModeSelector, withCurrentValue,
+  type InstructorOption, type InstructorMode,
 } from '@/components/CourseEditFormFields'
 
 export { LOCATIONS }
@@ -24,6 +25,7 @@ export type AdminCourseForm = {
   max_seats: number
   photo_urls: string[]
   instructor_ids: string[]
+  instructor_mode: InstructorMode
   category_id: string
   notes: string
   suitable_age: string
@@ -33,7 +35,7 @@ export type AdminCourseForm = {
 export const emptyAdminCourseForm: AdminCourseForm = {
   title: '', description: '', date: '', time_start: '', time_end: '',
   location: '', custom_location: '', max_seats: 20,
-  photo_urls: [], instructor_ids: [], category_id: '',
+  photo_urls: [], instructor_ids: [], instructor_mode: 'single', category_id: '',
   notes: '', suitable_age: '全年齡', custom_age: '',
 }
 
@@ -196,16 +198,42 @@ export default function AdminCourseEditFormFields({
         </div>
       </div>
 
-      <div>
-        <label className="block text-stone-600 text-sm font-medium mb-1.5">
-          合作講師 <span className="text-stone-400 font-normal">（選填）</span>
-        </label>
-        <InstructorMultiSelect
-          options={instructorOptions}
-          selectedIds={form.instructor_ids}
-          onChange={ids => setForm({ ...form, instructor_ids: ids })}
-        />
-      </div>
+      <InstructorModeSelector
+        value={form.instructor_mode}
+        onChange={mode => setForm({ ...form, instructor_mode: mode, ...(mode === 'single' ? { instructor_ids: form.instructor_ids.slice(0, 1) } : {}) })}
+      />
+
+      {form.instructor_mode === 'single' && (
+        <div>
+          <label className="block text-stone-600 text-sm font-medium mb-1.5">
+            講師 <span className="text-stone-400 font-normal">（選填）</span>
+          </label>
+          <div className="relative">
+            <select
+              value={form.instructor_ids[0] || ''}
+              onChange={e => setForm({ ...form, instructor_ids: e.target.value ? [e.target.value] : [] })}
+              className="w-full appearance-none border border-stone-300 rounded-xl pl-4 pr-9 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white"
+            >
+              <option value="">不指定</option>
+              {instructorOptions.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+            <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" />
+          </div>
+        </div>
+      )}
+
+      {form.instructor_mode === 'multiple' && (
+        <div>
+          <label className="block text-stone-600 text-sm font-medium mb-1.5">
+            合作講師 <span className="text-stone-400 font-normal">（選填，多選）</span>
+          </label>
+          <InstructorMultiSelect
+            options={instructorOptions}
+            selectedIds={form.instructor_ids}
+            onChange={ids => setForm({ ...form, instructor_ids: ids })}
+          />
+        </div>
+      )}
 
       <CoursePhotoGrid
         photos={form.photo_urls}

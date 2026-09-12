@@ -26,6 +26,7 @@ function buildForm(course: any, mode: 'edit' | 'copy'): AdminCourseForm {
     max_seats: course.max_seats || 20,
     photo_urls: (course.photo_urls && course.photo_urls.length > 0) ? course.photo_urls : (course.poster_url ? [course.poster_url] : []),
     instructor_ids: course.instructor_ids || (course.instructor_id ? [course.instructor_id] : []),
+    instructor_mode: course.instructor_mode || 'single',
     category_id: course.category_id || '',
     notes: course.notes || '', suitable_age: agePreset,
     custom_age: agePreset === '其他' ? (course.suitable_age || '') : '',
@@ -99,6 +100,7 @@ function EditCoursePageInner() {
       location, max_seats: form.max_seats, photo_urls: form.photo_urls, poster_url: form.photo_urls[0] || null,
       instructor_id: form.instructor_ids[0] || null,
       instructor_ids: form.instructor_ids,
+      instructor_mode: form.instructor_mode,
       category_id: form.category_id || null,
       notes: form.notes || null, suitable_age: suitableAge || '全年齡',
     }

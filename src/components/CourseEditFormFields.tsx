@@ -21,6 +21,8 @@ function buildTimeOptions() {
 }
 export const TIME_OPTIONS = buildTimeOptions()
 
+export type InstructorMode = 'single' | 'multiple' | 'community'
+
 export type CourseForm = {
   title: string
   description: string
@@ -35,9 +37,44 @@ export type CourseForm = {
   photos: string[]
   max_seats: number
   co_instructor_ids: string[]
+  instructor_mode: InstructorMode
 }
 
 export type InstructorOption = { id: string; name: string }
+
+// 卡片對外顯示用的固定文字：選「央北種子戶聯合主辦」時，不管合作講師/簽到名單實際填了誰，
+// 對外一律顯示這行字，真正出力的人靠簽到表核實，不靠這個欄位
+export const COMMUNITY_HOST_LABEL = '央北種子戶聯合主辦'
+
+const INSTRUCTOR_MODE_OPTIONS: { value: InstructorMode; label: string }[] = [
+  { value: 'single', label: '單一講師' },
+  { value: 'multiple', label: '多位講師' },
+  { value: 'community', label: COMMUNITY_HOST_LABEL },
+]
+
+// 講師欄位設定：決定課程卡片「講師」要顯示個別姓名還是固定顯示「央北種子戶聯合主辦」，
+// 供中台／後台共用（對應「合作講師」欄位前面新增的模式選擇）
+export function InstructorModeSelector({ value, onChange }: { value: InstructorMode; onChange: (mode: InstructorMode) => void }) {
+  return (
+    <div>
+      <label className="block text-stone-600 text-sm font-medium mb-1.5">講師欄位設定</label>
+      <div className="flex flex-wrap gap-2">
+        {INSTRUCTOR_MODE_OPTIONS.map(opt => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-colors ${
+              value === opt.value ? 'bg-orange-500 border-orange-500 text-white' : 'border-stone-300 text-stone-600 hover:bg-stone-50'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 function XIcon({ className }: { className?: string }) {
   return (
@@ -259,7 +296,12 @@ export default function CourseEditFormFields({ form, setForm, uploadCoursePhoto,
         />
       </div>
 
-      {instructorOptions.length > 0 && (
+      <InstructorModeSelector
+        value={form.instructor_mode}
+        onChange={mode => setForm({ ...form, instructor_mode: mode, ...(mode === 'single' ? { co_instructor_ids: [] } : {}) })}
+      />
+
+      {form.instructor_mode === 'multiple' && instructorOptions.length > 0 && (
         <div>
           <label className="block text-stone-600 text-sm font-medium mb-1.5">
             合作講師 <span className="text-stone-400 font-normal">（可選，多選）</span>

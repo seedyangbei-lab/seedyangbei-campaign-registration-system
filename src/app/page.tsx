@@ -8,6 +8,7 @@ import FirstVisitLoginModal from '@/components/FirstVisitLoginModal'
 import SiteNavbar from '@/components/SiteNavbar'
 import { getCourseDisplayRangeEnd } from '@/lib/courseDateRange'
 import { withRegisteredCounts } from '@/lib/courseCapacity'
+import { COMMUNITY_HOST_LABEL } from '@/components/CourseEditFormFields'
 
 export const revalidate = 60
 
@@ -30,6 +31,11 @@ export default async function HomePage() {
   // 合作講師：courses.instructor_ids 是多人陣列，這裡解析成完整姓名清單給 CourseCard 顯示（對照 Figma node 224-11542/128-7754）
   const instructorMap = new Map((allInstructors || []).map((i: any) => [i.id, i]))
   const coursesWithInstructors = withRegisteredCounts((courses || []).map((c: any) => {
+    // 「央北種子戶聯合主辦」：不管實際填了哪些合作講師/簽到名單，卡片一律顯示固定文字，
+    // 誰真的出力靠現場簽到表核實，不靠這個欄位
+    if (c.instructor_mode === 'community') {
+      return { ...c, instructors_list: [{ id: 'community', name: COMMUNITY_HOST_LABEL }], instructors: null }
+    }
     const ids: string[] = (c.instructor_ids && c.instructor_ids.length > 0) ? c.instructor_ids : (c.instructor_id ? [c.instructor_id] : [])
     const instructors_list = ids.map(id => instructorMap.get(id)).filter(Boolean)
     return { ...c, instructors_list }

@@ -13,7 +13,7 @@ import {
 } from '@/components/InstructorMobileUI'
 import IssueReportModal from '@/components/IssueReportModal'
 import { MobileRegistrationCard, MobilePagination } from '@/components/AdminMobileUI'
-import CourseEditFormFields, { LOCATIONS, DESCRIPTION_MAX } from '@/components/CourseEditFormFields'
+import CourseEditFormFields, { LOCATIONS, DESCRIPTION_MAX, COMMUNITY_HOST_LABEL, type InstructorMode } from '@/components/CourseEditFormFields'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 
 const ROSTER_PAGE_SIZE = 10
@@ -39,6 +39,7 @@ const emptyForm = {
   title: '', description: '', date: '', time_start: '', time_end: '',
   location: '', custom_location: '', notes: '', suitable_age: '全年齡', custom_age: '',
   photos: [] as string[], max_seats: 20, co_instructor_ids: [] as string[],
+  instructor_mode: 'single' as InstructorMode,
 }
 
 const emptyProfileForm = { name: '', bio: '', avatar_url: '', phone: '', line_id: '' }
@@ -291,6 +292,7 @@ function InstructorPortal() {
       photos: (course.photo_urls && course.photo_urls.length > 0) ? course.photo_urls : (course.poster_url ? [course.poster_url] : []),
       max_seats: course.max_seats || 20,
       co_instructor_ids: (course.instructor_ids || []).filter((id: string) => id !== instructor?.id),
+      instructor_mode: course.instructor_mode || 'single',
     })
     setShowModal(true)
   }
@@ -310,6 +312,7 @@ function InstructorPortal() {
       photos: (course.photo_urls && course.photo_urls.length > 0) ? course.photo_urls : (course.poster_url ? [course.poster_url] : []),
       max_seats: course.max_seats || 20,
       co_instructor_ids: (course.instructor_ids || []).filter((id: string) => id !== instructor?.id),
+      instructor_mode: course.instructor_mode || 'single',
     })
     setShowModal(true)
   }
@@ -346,7 +349,7 @@ function InstructorPortal() {
       time_start: form.time_start, time_end: form.time_end,
       location, notes: form.notes, suitable_age: suitableAge,
       photo_urls: form.photos, poster_url: form.photos[0] || null, max_seats: form.max_seats,
-      instructor_ids: instructorIds,
+      instructor_ids: instructorIds, instructor_mode: form.instructor_mode,
     }
 
     if (editTarget) {
@@ -377,7 +380,9 @@ function InstructorPortal() {
       return
     }
     setPosterEditorCourse({
-      id: course.id, title: course.title, instructor: instructor?.name, date: course.date,
+      id: course.id, title: course.title,
+      instructor: course.instructor_mode === 'community' ? COMMUNITY_HOST_LABEL : instructor?.name,
+      date: course.date,
       timeStart: (course.time_start || '').slice(0, 5), timeEnd: (course.time_end || '').slice(0, 5),
       location: course.location, suitableAge: course.suitable_age, notes: course.notes,
     })
