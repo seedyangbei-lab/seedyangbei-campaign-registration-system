@@ -15,6 +15,7 @@ import IssueReportModal from '@/components/IssueReportModal'
 import { MobileRegistrationCard, MobilePagination } from '@/components/AdminMobileUI'
 import CourseEditFormFields, { LOCATIONS, DESCRIPTION_MAX, COMMUNITY_HOST_LABEL, type InstructorMode } from '@/components/CourseEditFormFields'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
+import { staffAuthHeaders } from '@/lib/staffAuthHeaders'
 
 const ROSTER_PAGE_SIZE = 10
 
@@ -424,11 +425,11 @@ function InstructorPortal() {
       const isAttended = reg.status === 'attended'
       const isAbsent = reg.status === 'absent'
       if (shouldAttend && !isAttended) {
-        return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ registrationId: reg.id, courseTitle: attendanceModal.title, lineUserId: reg.users?.line_id || '', action: 'attend' }) })
+        return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json', ...staffAuthHeaders() }, body: JSON.stringify({ registrationId: reg.id, courseTitle: attendanceModal.title, lineUserId: reg.users?.line_id || '', action: 'attend' }) })
       } else if (!shouldAttend && isAttended) {
-        return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ registrationId: reg.id, courseTitle: attendanceModal.title, lineUserId: reg.users?.line_id || '', action: 'unattend' }) })
+        return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json', ...staffAuthHeaders() }, body: JSON.stringify({ registrationId: reg.id, courseTitle: attendanceModal.title, lineUserId: reg.users?.line_id || '', action: 'unattend' }) })
       } else if (!shouldAttend && !isAttended && !isAbsent) {
-        return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ registrationId: reg.id, courseTitle: attendanceModal.title, lineUserId: reg.users?.line_id || '', action: 'mark_absent' }) })
+        return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json', ...staffAuthHeaders() }, body: JSON.stringify({ registrationId: reg.id, courseTitle: attendanceModal.title, lineUserId: reg.users?.line_id || '', action: 'mark_absent' }) })
       }
       return Promise.resolve()
     }))

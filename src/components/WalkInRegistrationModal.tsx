@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { BUILDINGS, UNIT_NUMBERS, SUB_UNITS, getFloors, formatRoomNumber } from '@/lib/address'
+import { staffAuthHeaders } from '@/lib/staffAuthHeaders'
 
 type ExistingUser = { id: string; name: string; room_number: string; line_id?: string | null }
 type CreatedReg = { id: string; status: string; is_walk_in: boolean; users: ExistingUser }
@@ -208,7 +209,7 @@ export default function WalkInRegistrationModal({
       if (userRow.line_id) {
         fetch('/api/attendance', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...staffAuthHeaders() },
           body: JSON.stringify({ registrationId: newReg.id, courseTitle: courseTitle || '', lineUserId: userRow.line_id, action: 'attend' }),
         }).catch(() => {})
       }

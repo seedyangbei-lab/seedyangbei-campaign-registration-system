@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import AttendeeCheckItem from '@/components/AttendeeCheckItem'
 import WalkInRegistrationModal from '@/components/WalkInRegistrationModal'
+import { staffAuthHeaders } from '@/lib/staffAuthHeaders'
 
 function BackArrowIcon() {
   return (
@@ -104,11 +105,11 @@ function AttendancePageInner() {
       const isAttended = reg.status === 'attended'
       const isAbsent = reg.status === 'absent'
       if (shouldAttend && !isAttended) {
-        return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ registrationId: reg.id, courseTitle: course?.title, lineUserId: reg.users?.line_id || '', action: 'attend' }) })
+        return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json', ...staffAuthHeaders() }, body: JSON.stringify({ registrationId: reg.id, courseTitle: course?.title, lineUserId: reg.users?.line_id || '', action: 'attend' }) })
       } else if (!shouldAttend && isAttended) {
-        return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ registrationId: reg.id, courseTitle: course?.title, lineUserId: reg.users?.line_id || '', action: 'unattend' }) })
+        return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json', ...staffAuthHeaders() }, body: JSON.stringify({ registrationId: reg.id, courseTitle: course?.title, lineUserId: reg.users?.line_id || '', action: 'unattend' }) })
       } else if (!shouldAttend && !isAttended && !isAbsent) {
-        return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ registrationId: reg.id, courseTitle: course?.title, lineUserId: reg.users?.line_id || '', action: 'mark_absent' }) })
+        return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json', ...staffAuthHeaders() }, body: JSON.stringify({ registrationId: reg.id, courseTitle: course?.title, lineUserId: reg.users?.line_id || '', action: 'mark_absent' }) })
       }
       return Promise.resolve()
     }))

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { updateUserRoomNumber, updateLineMember } from '@/lib/adminApi'
+import { staffAuthHeaders } from '@/lib/staffAuthHeaders'
 
 type Member = {
   id: string
@@ -316,7 +317,7 @@ export default function MembersPage() {
     setAddPointSaving(true)
     await fetch('/api/attendance', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...staffAuthHeaders() },
       body: JSON.stringify({
         registrationId: null,
         courseTitle: '',

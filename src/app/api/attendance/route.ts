@@ -1,14 +1,39 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyAdminToken } from '@/lib/admin-auth-server'
+import { verifyInstructorToken } from '@/lib/instructor-auth-server'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// 這支 API 後台跟講師中台共用（出席勾選、手動調點），原本完全沒有驗證身份，
+// 任何人送對格式的請求就能任意把某筆報名標記出席/未出席、甚至亂發點數。
 export async function POST(req: NextRequest) {
+  const isAdmin = verifyAdminToken(req.headers.get('x-admin-token'))
+  const instructorId = verifyInstructorToken(req.headers.get('x-instructor-token'))
+  if (!isAdmin && !instructorId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const body = await req.json()
   const { registrationId, courseTitle, lineUserId, action, delta: manualDelta, reason: manualReason } = body
+
+  // 手動加減點是後台專屬功能，沒有課程可以檢查「是不是你的課」，只信任已登入的後台，講師不開放
+  if ((action === 'manual_add' || action === 'manual_deduct') && !isAdmin) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // 講師只能改自己課程底下的報名紀錄的出席狀態，不能亂改別堂課的
+  if (!isAdmin && instructorId && registrationId) {
+    const { data: reg } = await supabase.from('registrations').select('course_id').eq('id', registrationId).maybeSingle()
+    if (!reg) return NextResponse.json({ error: 'Registration not found' }, { status: 404 })
+    const { data: course } = await supabase.from('courses').select('instructor_ids').eq('id', reg.course_id).maybeSingle()
+    if (!course || !(course.instructor_ids || []).includes(instructorId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+  }
 
   // 出席狀態現在分三種：confirmed(未確認，剛報名還沒被講師review) / attended(已出席) / absent(未出席，講師已review但沒出席)
   // - attend：勾選出席，發點數
