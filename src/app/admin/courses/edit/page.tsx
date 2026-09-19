@@ -7,6 +7,7 @@ import AdminCourseEditFormFields, {
   LOCATIONS, emptyAdminCourseForm, type AdminCourseForm, type AdminCategory,
 } from '@/components/AdminCourseEditFormFields'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
+import { createCourse, updateCourse, deleteCourse } from '@/lib/adminCoursesApi'
 
 function BackArrowIcon() {
   return (
@@ -106,11 +107,13 @@ function EditCoursePageInner() {
     }
 
     if (mode === 'edit' && courseRow) {
-      const { error: updateError } = await supabase.from('courses').update(payload).eq('id', courseRow.id)
-      if (updateError) { setError('更新失敗：' + updateError.message); setSaving(false); return }
+      try {
+        await updateCourse(courseRow.id, payload)
+      } catch (e: any) { setError('更新失敗：' + (e?.message || '請稍後再試')); setSaving(false); return }
     } else {
-      const { error: insertError } = await supabase.from('courses').insert({ ...payload, is_active: true })
-      if (insertError) { setError('新增失敗：' + insertError.message); setSaving(false); return }
+      try {
+        await createCourse({ ...payload, is_active: true })
+      } catch (e: any) { setError('新增失敗：' + (e?.message || '請稍後再試')); setSaving(false); return }
     }
 
     setSaving(false)
@@ -121,7 +124,9 @@ function EditCoursePageInner() {
     if (!courseRow) return
     if (!confirm('確定要刪除這個課程嗎？')) return
     setSaving(true)
-    await supabase.from('courses').delete().eq('id', courseRow.id)
+    try {
+      await deleteCourse(courseRow.id)
+    } catch (e: any) { setError('刪除失敗：' + (e?.message || '請稍後再試')); setSaving(false); return }
     setSaving(false)
     router.push('/admin/courses')
   }

@@ -12,6 +12,7 @@ import AdminCourseEditFormFields, {
 } from '@/components/AdminCourseEditFormFields'
 import { COMMUNITY_HOST_LABEL } from '@/components/CourseEditFormFields'
 import type { ExportableReport } from '@/lib/exportCourseReport'
+import { createCourse, updateCourse, deleteCourse } from '@/lib/adminCoursesApi'
 
 interface Instructor { id: string; name: string }
 interface Category { id: string; name: string; color: string }
@@ -158,7 +159,11 @@ export default function CoursesPage() {
   const saveDeadline = async () => {
     if (!deadlineModalCourse || !deadlineInput) return
     setDeadlineSaving(true)
-    await supabase.from('courses').update({ report_deadline_extended_to: deadlineInput }).eq('id', deadlineModalCourse.id)
+    try {
+      await updateCourse(deadlineModalCourse.id, { report_deadline_extended_to: deadlineInput })
+    } catch (e: any) {
+      alert('儲存失敗：' + (e?.message || '請稍後再試'))
+    }
     setDeadlineSaving(false)
     setDeadlineModalCourse(null)
     fetchAll()
@@ -167,7 +172,11 @@ export default function CoursesPage() {
   const clearDeadline = async () => {
     if (!deadlineModalCourse) return
     setDeadlineSaving(true)
-    await supabase.from('courses').update({ report_deadline_extended_to: null }).eq('id', deadlineModalCourse.id)
+    try {
+      await updateCourse(deadlineModalCourse.id, { report_deadline_extended_to: null })
+    } catch (e: any) {
+      alert('儲存失敗：' + (e?.message || '請稍後再試'))
+    }
     setDeadlineSaving(false)
     setDeadlineModalCourse(null)
     fetchAll()
@@ -261,17 +270,26 @@ export default function CoursesPage() {
       notes: form.notes || null, suitable_age: suitableAge || '全年齡',
     }
     if (editTarget) {
-      const { error } = await supabase.from('courses').update(payload).eq('id', editTarget.id)
-      if (error) { alert('更新失敗：' + error.message); setLoading(false); return }
+      try {
+        await updateCourse(editTarget.id, payload)
+      } catch (e: any) { alert('更新失敗：' + (e?.message || '請稍後再試')); setLoading(false); return }
     } else {
-      const { error } = await supabase.from('courses').insert({ ...payload, is_active: true })
-      if (error) { alert('新增失敗：' + error.message); setLoading(false); return }
+      try {
+        await createCourse({ ...payload, is_active: true })
+      } catch (e: any) { alert('新增失敗：' + (e?.message || '請稍後再試')); setLoading(false); return }
     }
     setShowModal(false); await fetchAll(); setLoading(false)
   }
 
-  const toggleActive = async (id: string, current: boolean) => { await supabase.from('courses').update({ is_active: !current }).eq('id', id); fetchAll() }
-  const handleDelete = async (id: string) => { if (!confirm('確定要刪除這個課程嗎？')) return; await supabase.from('courses').delete().eq('id', id); fetchAll() }
+  const toggleActive = async (id: string, current: boolean) => {
+    try { await updateCourse(id, { is_active: !current }) } catch (e: any) { alert('更新失敗：' + (e?.message || '請稍後再試')) }
+    fetchAll()
+  }
+  const handleDelete = async (id: string) => {
+    if (!confirm('確定要刪除這個課程嗎？')) return
+    try { await deleteCourse(id) } catch (e: any) { alert('刪除失敗：' + (e?.message || '請稍後再試')) }
+    fetchAll()
+  }
 
   const openAttendance = async (course: any) => {
     setAttendanceModal(course)
