@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { verifyAdminToken } from '@/lib/admin-auth-server'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,7 +9,7 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('x-admin-token')
-  if (!authHeader) {
+  if (!verifyAdminToken(authHeader)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const body = await req.json()

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { signAdminToken } from '@/lib/admin-auth-server'
 
 export async function POST(req: NextRequest) {
   const { account, password } = await req.json()
@@ -14,8 +15,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '帳號或密碼錯誤' }, { status: 401 })
   }
 
-  const token = `${Date.now()}.${Math.random().toString(36).slice(2)}`
-  const expires = Date.now() + 8 * 60 * 60 * 1000 // 8 小時
+  const { token, expires } = signAdminToken()
 
   return NextResponse.json({ token, expires })
 }
