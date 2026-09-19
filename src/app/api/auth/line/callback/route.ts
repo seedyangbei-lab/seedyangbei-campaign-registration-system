@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
+import { signInstructorToken } from '@/lib/instructor-auth-server'
 
 // 系統健康頁的「LINE 登入失敗」偵測用：server 端沒有 client 端的 funnel_session_id，
 // 用固定 session_id 標記為系統事件，fire-and-forget 失敗也不影響登入流程本身
@@ -193,7 +194,8 @@ export async function GET(request: NextRequest) {
             return NextResponse.redirect(new URL('/instructor/claim?error=invalid', origin))
           }
 
-          const userInfo = encodeURIComponent(JSON.stringify({ lineUserId, displayName, pictureUrl }))
+          const instructorToken = signInstructorToken(matched.id)
+          const userInfo = encodeURIComponent(JSON.stringify({ lineUserId, displayName, pictureUrl, instructorToken }))
           return NextResponse.redirect(new URL(`/instructor?line_user=${userInfo}&claimed=1`, origin))
         }
 
@@ -205,10 +207,11 @@ export async function GET(request: NextRequest) {
             .eq('line_user_id', lineUserId)
             .maybeSingle()
 
-          const userInfo = encodeURIComponent(JSON.stringify({ lineUserId, displayName, pictureUrl }))
           if (!matched) {
             return NextResponse.redirect(new URL('/instructor?error=not_instructor', origin))
           }
+          const instructorToken = signInstructorToken(matched.id)
+          const userInfo = encodeURIComponent(JSON.stringify({ lineUserId, displayName, pictureUrl, instructorToken }))
           return NextResponse.redirect(new URL(`/instructor?line_user=${userInfo}`, origin))
         }
       } catch {
