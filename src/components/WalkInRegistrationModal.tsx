@@ -81,7 +81,7 @@ export default function WalkInRegistrationModal({
     // 所以另外打一支用 service role 查的 API，才能搜到「是 LINE 會員但沒報名過活動」的人
     const [{ data: userRows }, memberRows] = await Promise.all([
       supabase.from('users').select('id, name, room_number, line_id').ilike('name', `%${q}%`).limit(6),
-      fetch(`/api/search-members?q=${encodeURIComponent(q)}`).then(r => r.ok ? r.json() : []).catch(() => []) as Promise<{ line_user_id: string; display_name: string | null; building: string | null; unit_number: string | null; floor_number: string | null }[]>,
+      fetch(`/api/search-members?q=${encodeURIComponent(q)}`, { headers: staffAuthHeaders() }).then(r => r.ok ? r.json() : []).catch(() => []) as Promise<{ line_user_id: string; display_name: string | null; building: string | null; unit_number: string | null; floor_number: string | null }[]>,
     ])
     const userLineIds = new Set((userRows || []).map(u => u.line_id).filter(Boolean))
     const userCandidates: Candidate[] = (userRows || []).map(u => ({
@@ -165,56 +165,29 @@ export default function WalkInRegistrationModal({
     if (pendingList.length === 0) { setError('請先加入至少一位'); return }
     setSaving(true)
 
-    const created: CreatedReg[] = []
-    const failedNames: string[] = []
+    let created: CreatedReg[] = []
+    let failedNames: string[] = []
 
-    for (const p of pendingList) {
-      let userRow: ExistingUser | null = null
-
-      if (p.existingUserId) {
-        userRow = { id: p.existingUserId, name: p.name, room_number: p.roomNumber, line_id: p.lineId }
-      } else if (p.lineMemberId) {
-        // LINE 會員尚未有 users 紀錄：先查一次避免競態重複建檔，查不到才新建
-        const { data: found } = await supabase.from('users').select('id, name, room_number, line_id').eq('line_id', p.lineMemberId).maybeSingle()
-        if (found) {
-          userRow = found
-        } else {
-          const { data: newUser, error: userErr } = await supabase.from('users')
-            .insert({ name: p.name, room_number: p.roomNumber, line_id: p.lineMemberId })
-            .select('id, name, room_number, line_id')
-            .single()
-          if (userErr || !newUser) { failedNames.push(p.name); continue }
-          userRow = newUser
-        }
-      } else {
-        const { data: newUser, error: userErr } = await supabase.from('users')
-          .insert({ name: p.name, room_number: p.roomNumber })
-          .select('id, name, room_number, line_id')
-          .single()
-        if (userErr || !newUser) { failedNames.push(p.name); continue }
-        userRow = newUser
-      }
-
-      const { data: newReg, error: regErr } = await supabase.from('registrations')
-        .insert({
-          user_id: userRow.id, course_id: courseId, status: 'attended',
-          is_social_housing_resident: p.isResident,
-          is_walk_in: true,
-        })
-        .select('id, status, is_walk_in')
-        .single()
-
-      if (regErr || !newReg) { failedNames.push(p.name); continue }
-
-      if (userRow.line_id) {
-        fetch('/api/attendance', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...staffAuthHeaders() },
-          body: JSON.stringify({ registrationId: newReg.id, courseTitle: courseTitle || '', lineUserId: userRow.line_id, action: 'attend' }),
-        }).catch(() => {})
-      }
-
-      created.push({ ...newReg, users: userRow })
+    try {
+      const res = await fetch('/api/walk-in-registration', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...staffAuthHeaders() },
+        body: JSON.stringify({
+          courseId, courseTitle,
+          items: pendingList.map(p => ({
+            name: p.name, roomNumber: p.roomNumber, isResident: p.isResident,
+            existingUserId: p.existingUserId, lineMemberId: p.lineMemberId,
+          })),
+        }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || '新增失敗')
+      created = body.created || []
+      failedNames = body.failedNames || []
+    } catch (e: any) {
+      setError('新增失敗：' + (e?.message || '請稍後再試'))
+      setSaving(false)
+      return
     }
 
     setSaving(false)
