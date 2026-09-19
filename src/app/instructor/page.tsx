@@ -16,7 +16,7 @@ import { MobileRegistrationCard, MobilePagination } from '@/components/AdminMobi
 import CourseEditFormFields, { LOCATIONS, DESCRIPTION_MAX, COMMUNITY_HOST_LABEL, type InstructorMode } from '@/components/CourseEditFormFields'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import { staffAuthHeaders } from '@/lib/staffAuthHeaders'
-import { createInstructorCourse, updateInstructorCourseWithLog } from '@/lib/instructorCoursesApi'
+import { createInstructorCourse, updateInstructorCourseWithLog, cancelInstructorRegistration, deleteInstructorRegistration } from '@/lib/instructorCoursesApi'
 
 const ROSTER_PAGE_SIZE = 10
 
@@ -465,7 +465,11 @@ function InstructorPortal() {
   const handleRosterCancel = async () => {
     if (!rosterConfirmCancelId) return
     setRosterDeleting(true)
-    await supabase.from('registrations').update({ status: 'cancelled' }).eq('id', rosterConfirmCancelId)
+    try {
+      await cancelInstructorRegistration(rosterConfirmCancelId)
+    } catch (e: any) {
+      alert('取消失敗：' + (e?.message || '請稍後再試'))
+    }
     setRosterConfirmCancelId(null)
     if (rosterModal) await openRoster(rosterModal)
     setRosterDeleting(false)
@@ -474,7 +478,11 @@ function InstructorPortal() {
   const handleRosterPermanentDelete = async () => {
     if (!rosterConfirmPermanent) return
     setRosterDeleting(true)
-    await supabase.from('registrations').delete().eq('id', rosterConfirmPermanent)
+    try {
+      await deleteInstructorRegistration(rosterConfirmPermanent)
+    } catch (e: any) {
+      alert('刪除失敗：' + (e?.message || '請稍後再試'))
+    }
     setRosterConfirmPermanent(null)
     if (rosterModal) await openRoster(rosterModal)
     setRosterDeleting(false)

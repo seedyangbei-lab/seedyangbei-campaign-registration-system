@@ -23,3 +23,11 @@ export function updateInstructorCourse(id: string, payload: Record<string, any>)
 export function updateInstructorCourseWithLog(id: string, data: Record<string, any>) {
   return instructorFetch(`/api/instructor/courses/${id}`, { method: 'PATCH', body: JSON.stringify({ logChange: true, data }) })
 }
+
+export function cancelInstructorRegistration(id: string) {
+  return instructorFetch(`/api/instructor/registrations/${id}`, { method: 'PATCH', body: JSON.stringify({ status: 'cancelled' }) })
+}
+
+export function deleteInstructorRegistration(id: string) {
+  return instructorFetch(`/api/instructor/registrations/${id}`, { method: 'DELETE' })
+}
