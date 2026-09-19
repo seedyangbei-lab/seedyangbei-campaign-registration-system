@@ -11,6 +11,7 @@ import {
   exportPosterPNG, MinusIcon, PlusIcon, sliderTrackStyle, SliderRow, ColorPickerDropdown, SizeSelect, FontSelectDropdown,
   posterSettingsStorageKey, fetchInstructorPosterSettings, saveInstructorPosterSettings,
 } from '@/components/posterEditor/shared'
+import { updateInstructorCourse } from '@/lib/instructorCoursesApi'
 
 // ── 小型共用 UI（手機版專用） ──────────────────────────────────────────────────
 function BackArrowIcon() {
@@ -156,8 +157,9 @@ function PosterEditorMobile({ course, photos, instructorId }: { course: PosterCo
         finalUrl = urlData.publicUrl
       }
       const others = photos.filter(p => p !== finalUrl && p !== imgSrc)
-      const { error: updateErr } = await supabase.from('courses').update({ photo_urls: [finalUrl, ...others] }).eq('id', course.id)
-      if (updateErr) console.error('[poster] photo_urls update failed', updateErr)
+      try {
+        await updateInstructorCourse(course.id, { photo_urls: [finalUrl, ...others] })
+      } catch (updateErr) { console.error('[poster] photo_urls update failed', updateErr) }
     } catch (e) {
       console.error('[poster] persistSelectedPhoto threw', e) // 照片同步失敗不阻擋樣式儲存，只記錄不中斷
     }

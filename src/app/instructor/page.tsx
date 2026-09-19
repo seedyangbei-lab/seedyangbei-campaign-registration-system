@@ -16,6 +16,7 @@ import { MobileRegistrationCard, MobilePagination } from '@/components/AdminMobi
 import CourseEditFormFields, { LOCATIONS, DESCRIPTION_MAX, COMMUNITY_HOST_LABEL, type InstructorMode } from '@/components/CourseEditFormFields'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import { staffAuthHeaders } from '@/lib/staffAuthHeaders'
+import { createInstructorCourse, updateInstructorCourseWithLog } from '@/lib/instructorCoursesApi'
 
 const ROSTER_PAGE_SIZE = 10
 
@@ -353,20 +354,16 @@ function InstructorPortal() {
       instructor_ids: instructorIds, instructor_mode: form.instructor_mode,
     }
 
-    if (editTarget) {
-      await supabase.from('course_edit_logs').insert({
-        course_id: editTarget.id,
-        instructor_id: instructor.id,
-        before_data: editTarget,
-        after_data: { ...editTarget, ...payload },
-      })
-      await supabase.from('courses').update(payload).eq('id', editTarget.id)
-    } else {
-      await supabase.from('courses').insert({
-        ...payload,
-        instructor_id: instructor.id,
-        is_active: true,
-      })
+    try {
+      if (editTarget) {
+        await updateInstructorCourseWithLog(editTarget.id, payload)
+      } else {
+        await createInstructorCourse({ ...payload, is_active: true })
+      }
+    } catch (e: any) {
+      alert((editTarget ? '更新失敗：' : '新增失敗：') + (e?.message || '請稍後再試'))
+      setSaving(false)
+      return
     }
 
     setShowModal(false)

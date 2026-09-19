@@ -9,6 +9,7 @@ import {
   exportPosterPNG, MinusIcon, PlusIcon, SliderRow, sliderTrackStyle, ColorPickerDropdown, ZH_SIZE_OPTIONS, EN_SIZE_OPTIONS, FontSelectDropdown,
   posterSettingsStorageKey, fetchInstructorPosterSettings, saveInstructorPosterSettings,
 } from './posterEditor/shared'
+import { updateInstructorCourse } from '@/lib/instructorCoursesApi'
 
 type CourseData = PosterCourseData
 
@@ -123,8 +124,9 @@ export default function CoursePosterEditor({ course, instructorId, initialImage,
         finalUrl = urlData.publicUrl
       }
       const others = (photos || []).filter(p => p !== finalUrl && p !== imgSrc)
-      const { error: updateErr } = await supabase.from('courses').update({ photo_urls: [finalUrl, ...others] }).eq('id', course.id)
-      if (updateErr) console.error('[poster] photo_urls update failed', updateErr)
+      try {
+        await updateInstructorCourse(course.id, { photo_urls: [finalUrl, ...others] })
+      } catch (updateErr) { console.error('[poster] photo_urls update failed', updateErr) }
     } catch (e) {
       console.error('[poster] persistSelectedPhoto threw', e) // 照片同步失敗不阻擋樣式儲存，只記錄不中斷
     }

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import CourseEditFormFields, { LOCATIONS, type CourseForm } from '@/components/CourseEditFormFields'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
+import { createInstructorCourse, updateInstructorCourseWithLog } from '@/lib/instructorCoursesApi'
 
 function BackArrowIcon() {
   return (
@@ -109,20 +110,16 @@ function EditCoursePageInner() {
       instructor_ids: instructorIds, instructor_mode: form.instructor_mode,
     }
 
-    if (mode === 'edit' && courseRow) {
-      await supabase.from('course_edit_logs').insert({
-        course_id: courseRow.id,
-        instructor_id: instructor.id,
-        before_data: courseRow,
-        after_data: { ...courseRow, ...payload },
-      })
-      await supabase.from('courses').update(payload).eq('id', courseRow.id)
-    } else {
-      await supabase.from('courses').insert({
-        ...payload,
-        instructor_id: instructor.id,
-        is_active: true,
-      })
+    try {
+      if (mode === 'edit' && courseRow) {
+        await updateInstructorCourseWithLog(courseRow.id, payload)
+      } else {
+        await createInstructorCourse({ ...payload, is_active: true })
+      }
+    } catch (e: any) {
+      setError((mode === 'edit' ? '更新失敗：' : '新增失敗：') + (e?.message || '請稍後再試'))
+      setSaving(false)
+      return
     }
 
     setSaving(false)
