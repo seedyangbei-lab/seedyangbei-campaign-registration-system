@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { updateUserRoomNumber, updateLineMember } from '@/lib/adminApi'
 
 type Member = {
   id: string
@@ -293,13 +294,17 @@ export default function MembersPage() {
   const handleSave = async () => {
     if (!editMember) return
     setSaving(true)
-    if (editMember.source === 'unbound') {
-      await supabase.from('users').update({ room_number: editForm.room_number || null }).eq('id', editMember.id)
-    } else {
-      await supabase.from('line_members').update({
-        building: editForm.building || null, unit_number: editForm.unit_number || null,
-        floor_number: editForm.floor_number || null, notes: editForm.notes || null,
-      }).eq('id', editMember.id)
+    try {
+      if (editMember.source === 'unbound') {
+        await updateUserRoomNumber(editMember.id, editForm.room_number || null)
+      } else {
+        await updateLineMember(editMember.id, {
+          building: editForm.building || null, unit_number: editForm.unit_number || null,
+          floor_number: editForm.floor_number || null, notes: editForm.notes || null,
+        })
+      }
+    } catch (e: any) {
+      alert('儲存失敗：' + (e?.message || '請稍後再試'))
     }
     setEditMember(null)
     await fetchMembers()

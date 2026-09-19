@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { StatCard, FilterDropdown, SortToggle, IdentityBadge, StatusBadge, PaginationControl, RowActionMenu } from '@/components/AdminUI'
 import { FilterBottomSheet, MobileFilterIconButton, MobileSortIconButton, MobileRegistrationCard, MobilePagination } from '@/components/AdminMobileUI'
+import { cancelRegistration, deleteRegistration } from '@/lib/adminApi'
 
 const PAGE_SIZE = 10
 
@@ -100,7 +101,11 @@ export default function AdminDashboard() {
   const handleCancelRegistration = async () => {
     if (!confirmCancelId) return
     setDeleting(true)
-    await supabase.from('registrations').update({ status: 'cancelled' }).eq('id', confirmCancelId)
+    try {
+      await cancelRegistration(confirmCancelId)
+    } catch (e: any) {
+      alert('取消失敗：' + (e?.message || '請稍後再試'))
+    }
     setConfirmCancelId(null)
     await fetchAll()
     setDeleting(false)
@@ -344,7 +349,11 @@ export default function AdminDashboard() {
               <button
                 onClick={async () => {
                   setDeleting(true)
-                  await supabase.from('registrations').delete().eq('id', confirmPermanent)
+                  try {
+                    await deleteRegistration(confirmPermanent)
+                  } catch (e: any) {
+                    alert('刪除失敗：' + (e?.message || '請稍後再試'))
+                  }
                   setConfirmPermanent(null)
                   await fetchAll(); setDeleting(false)
                 }}
