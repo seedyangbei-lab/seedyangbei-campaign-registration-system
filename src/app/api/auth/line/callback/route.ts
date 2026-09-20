@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
 import { signInstructorToken } from '@/lib/instructor-auth-server'
+import { signResidentToken } from '@/lib/resident-auth-server'
 
 // 系統健康頁的「LINE 登入失敗」偵測用：server 端沒有 client 端的 funnel_session_id，
 // 用固定 session_id 標記為系統事件，fire-and-forget 失敗也不影響登入流程本身
@@ -270,6 +271,7 @@ export async function GET(request: NextRequest) {
       displayName,
       pictureUrl,
       email,
+      residentToken: signResidentToken(lineUserId),
     }))
 
    let redirectUrl = `${origin}/register`

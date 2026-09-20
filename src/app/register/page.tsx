@@ -12,6 +12,7 @@ import TutorialSkipButton from '@/components/TutorialSkipButton'
 import SiteNavbar from '@/components/SiteNavbar'
 import Link from 'next/link'
 import { BUILDINGS, UNIT_NUMBERS, SUB_UNITS, getFloors } from '@/lib/address'
+import { getResidentToken } from '@/lib/resident-auth'
 
 const DEMO_COURSE_DISPLAY = { id: DEMO_COURSE_ID, title: '範例課程（僅供教學示範）', date: new Date().toISOString().split('T')[0], time_start: '10:00', time_end: '12:00', location: '示範地點' }
 
@@ -224,43 +225,27 @@ function RegisterForm() {
     const roomNumber = isSocialHousing
       ? (subUnit === 'none' ? `${building} ${unitNumber}-${floor}F` : `${building} ${unitNumber}-${floor}F-${subUnit}`)
       : '非社宅居民'
-    const lineUserId = lineUser.lineUserId
 
     try {
-      let userId: string
-      const { data: existingByLine } = await supabase
-        .from('users').select('id').eq('line_id', lineUserId).maybeSingle()
-
-      if (existingByLine) {
-        userId = existingByLine.id
-        await supabase.from('users').update({
-          name: form.name, room_number: roomNumber,
-          phone: form.phone.replace(/-/g, ''), age_group: form.age_group,
-          other_community: isSocialHousing ? null : form.other_community,
-        }).eq('id', userId)
-      } else {
-        const { data: newUser, error: userErr } = await supabase.from('users').insert({
-          name: form.name, room_number: roomNumber,
+      const residentToken = getResidentToken()
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-resident-token': residentToken || '' },
+        body: JSON.stringify({
+          courseIds,
+          name: form.name,
           phone: form.phone.replace(/-/g, ''),
-          email: `${lineUserId}@line.user`,
-          line_id: lineUserId, age_group: form.age_group,
-          other_community: isSocialHousing ? null : form.other_community,
-        }).select('id').single()
-        if (userErr) throw userErr
-        userId = newUser.id
-      }
+          ageGroup: form.age_group,
+          questions: form.questions,
+          isSocialHousing,
+          roomNumber,
+          otherCommunity: form.other_community,
+        }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || '報名失敗，請稍後再試')
 
-      for (const courseId of courseIds) {
-        const { error: regErr } = await supabase.from('registrations').insert({
-          user_id: userId, course_id: courseId,
-          questions: form.questions || null,
-          is_social_housing_resident: isSocialHousing,
-          other_community: isSocialHousing ? null : form.other_community,
-          status: 'confirmed',
-        })
-        if (regErr && regErr.code !== '23505') throw regErr
-      }
-     logFunnelStep('register_success', courseIds.join(','))
+      logFunnelStep('register_success', courseIds.join(','))
       localStorage.removeItem('pending_courses') // 報名完成，救援記錄的任務結束，清掉避免之後誤觸發
       if (tutorialStep === '3') {
         // 教學導覽走到這一步固定跳頁到 /register-success，才能接續教學的第 4 步
