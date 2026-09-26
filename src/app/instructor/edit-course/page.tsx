@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase'
 import CourseEditFormFields, { LOCATIONS, type CourseForm } from '@/components/CourseEditFormFields'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import { createInstructorCourse, updateInstructorCourseWithLog } from '@/lib/instructorCoursesApi'
+import { hasValidInstructorToken } from '@/lib/instructor-auth'
 
 function BackArrowIcon() {
   return (
@@ -60,6 +61,7 @@ function EditCoursePageInner() {
     (async () => {
       const stored = typeof window !== 'undefined' ? localStorage.getItem('instructor_line_user') : null
       if (!stored) { router.replace('/instructor'); return }
+      if (!hasValidInstructorToken()) { router.replace('/instructor'); return }
       let lineUserId = ''
       try { lineUserId = JSON.parse(stored).lineUserId } catch { router.replace('/instructor'); return }
 
