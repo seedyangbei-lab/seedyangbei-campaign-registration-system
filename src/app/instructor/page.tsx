@@ -16,6 +16,7 @@ import { MobileRegistrationCard, MobilePagination } from '@/components/AdminMobi
 import CourseEditFormFields, { LOCATIONS, DESCRIPTION_MAX, COMMUNITY_HOST_LABEL, type InstructorMode } from '@/components/CourseEditFormFields'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import { staffAuthHeaders } from '@/lib/staffAuthHeaders'
+import { hasValidInstructorToken, clearInstructorSession } from '@/lib/instructor-auth'
 import { createInstructorCourse, updateInstructorCourseWithLog, cancelInstructorRegistration, deleteInstructorRegistration } from '@/lib/instructorCoursesApi'
 
 const ROSTER_PAGE_SIZE = 10
@@ -52,6 +53,7 @@ function InstructorPortal() {
   const supabase = createClient()
 
   const [status, setStatus] = useState<'checking' | 'not_bound' | 'ready'>('checking')
+  const [sessionExpired, setSessionExpired] = useState(false)
   const [instructor, setInstructor] = useState<any>(null)
   const [courses, setCourses] = useState<any[]>([])
   const [regCounts, setRegCounts] = useState<Record<string, number>>({})
@@ -121,6 +123,13 @@ function InstructorPortal() {
     }
 
     const stored = localStorage.getItem('instructor_line_user')
+    if (stored && !hasValidInstructorToken()) {
+      // 本機還留著登入資料，但憑證已過期／沒有憑證，之後任何儲存都會被 API 拒絕，直接請講師重新登入
+      clearInstructorSession()
+      setSessionExpired(true)
+      setStatus('not_bound')
+      return
+    }
     if (stored) {
       try { lookupInstructor(JSON.parse(stored).lineUserId) }
       catch { setStatus('not_bound') }
@@ -272,7 +281,7 @@ function InstructorPortal() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('instructor_line_user')
+    clearInstructorSession()
     setShowProfileModal(false)
     setInstructor(null)
     setStatus('not_bound')
@@ -363,6 +372,13 @@ function InstructorPortal() {
     } catch (e: any) {
       alert((editTarget ? '更新失敗：' : '新增失敗：') + (e?.message || '請稍後再試'))
       setSaving(false)
+      // 401 時 instructorFetch 已經清掉本機登入狀態，直接切到「登入已過期」畫面讓講師重新登入
+      if (!hasValidInstructorToken()) {
+        setEditTarget(null)
+        setInstructor(null)
+        setSessionExpired(true)
+        setStatus('not_bound')
+      }
       return
     }
 
@@ -496,8 +512,17 @@ function InstructorPortal() {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="max-w-sm text-center">
-          <p className="text-stone-800 font-semibold mb-2">尚未綁定講師身份</p>
-          <p className="text-stone-400 text-sm mb-6">請使用負責人提供的邀請連結完成綁定，或以講師本人的 LINE 帳號登入。</p>
+          {sessionExpired ? (
+            <>
+              <p className="text-stone-800 font-semibold mb-2">登入已過期</p>
+              <p className="text-stone-400 text-sm mb-6">為了保護課程資料，登入狀態有時效限制，請重新用 LINE 登入。</p>
+            </>
+          ) : (
+            <>
+              <p className="text-stone-800 font-semibold mb-2">尚未綁定講師身份</p>
+              <p className="text-stone-400 text-sm mb-6">請使用負責人提供的邀請連結完成綁定，或以講師本人的 LINE 帳號登入。</p>
+            </>
+          )}
           <a href={getLineLoginUrl()} className="inline-block bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-xl text-sm font-medium transition-colors">
             用 LINE 登入
           </a>

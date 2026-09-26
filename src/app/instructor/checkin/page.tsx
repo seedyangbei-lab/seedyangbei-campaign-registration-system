@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { hasValidInstructorToken } from '@/lib/instructor-auth'
 
 interface CheckinEvent {
   id: string
@@ -80,6 +81,7 @@ function CheckinPageInner() {
     (async () => {
       const stored = typeof window !== 'undefined' ? localStorage.getItem('instructor_line_user') : null
       if (!stored) { router.replace('/instructor'); return }
+      if (!hasValidInstructorToken()) { router.replace('/instructor'); return }
       let lineUserId = ''
       try { lineUserId = JSON.parse(stored).lineUserId } catch { router.replace('/instructor'); return }
 

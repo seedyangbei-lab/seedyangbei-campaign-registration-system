@@ -4,6 +4,9 @@ import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { HexColorPicker } from 'react-colorful'
 import { COMMUNITY_HOST_LABEL } from '@/components/CourseEditFormFields'
+import { createRoot } from 'react-dom/client'
+import { flushSync } from 'react-dom'
+import { toCanvas } from 'html-to-image'
 
 interface Course {
   id: string; title: string; date: string
@@ -521,6 +524,86 @@ function PreviewPage({
       </div>
     </div>
   )
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 下載：直接把預覽用的 PreviewPage 截圖成 PNG
+// ═══════════════════════════════════════════════════════════════════
+// 以前下載是另外用 canvas 一筆一筆重畫，換行、字級、欄寬都跟預覽的 HTML 排版各算各的，
+// 內容一長就跑版（例如對象欄位長文字整行疊在一起）。現在改成把同一個 PreviewPage
+// 在畫面外渲染一份，再用 html-to-image 截圖，下載出來的圖就是預覽畫面本身。
+
+const NOTO_WEIGHTS = '300;400;500;700;900'
+
+async function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
+// 截圖是透過 SVG foreignObject 畫出來的，裡面用不到頁面已載入的網頁字型，必須另外內嵌。
+// Noto Sans TC 完整字型拆成上百個檔案，全部內嵌會非常慢；這裡用 Google Fonts 的 text= 參數，
+// 只下載這一頁實際出現的字元，檔案很小。
+async function buildFontEmbedCss(text: string): Promise<string> {
+  const chars = Array.from(new Set(Array.from(text.replace(/\s/g, '') + '0123456789/|:'))).join('')
+  const cssUrl = `https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@${NOTO_WEIGHTS}&text=${encodeURIComponent(chars)}`
+  const css = await (await fetch(cssUrl)).text()
+  const urls = Array.from(new Set(Array.from(css.matchAll(/url\((https:[^)]+)\)/g)).map(m => m[1])))
+  let out = css
+  await Promise.all(urls.map(async u => {
+    const dataUrl = await blobToDataUrl(await (await fetch(u)).blob())
+    out = out.split(u).join(dataUrl)
+  }))
+  return out
+}
+
+async function waitForImages(node: HTMLElement) {
+  const imgs = Array.from(node.querySelectorAll('img'))
+  await Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise<void>(res => {
+    img.addEventListener('load', () => res(), { once: true })
+    img.addEventListener('error', () => res(), { once: true })
+  })))
+  if (document.fonts?.ready) await document.fonts.ready
+}
+
+async function renderPreviewToCanvas(props: React.ComponentProps<typeof PreviewPage>, scale: number): Promise<HTMLCanvasElement> {
+  const isL = props.orientation === 'landscape'
+  const W = isL ? A4L_W : A4P_W
+  const H = isL ? A4L_H : A4P_H
+  const host = document.createElement('div')
+  host.style.cssText = `position:fixed;left:-${W + H + 1000}px;top:0;width:${W}px;height:${H}px;pointer-events:none;`
+  document.body.appendChild(host)
+  const root = createRoot(host)
+  try {
+    flushSync(() => root.render(<PreviewPage {...props} />))
+    const node = host.firstElementChild as HTMLElement
+    await waitForImages(node)
+    let fontEmbedCSS: string | undefined
+    try { fontEmbedCSS = await buildFontEmbedCss(node.textContent || '') }
+    catch (err) { console.warn('schedule export: font embed failed', err) }
+    // html-to-image 預設會把每個元素算好的 width/height 當成固定 px 寫死在複製品上，
+    // 但截圖時字的寬度會有些微差異，本來剛好放得下的文字（例如「閱覽室 2」）就會被擠到換行。
+    // 這裡排除這幾個尺寸屬性，讓截圖依原本的排版規則重新排，行內樣式裡明確寫的寬高仍會保留。
+    const SIZE_PROPS = new Set(['width', 'height', 'inline-size', 'block-size'])
+    const includeStyleProperties = Array.from(getComputedStyle(node)).filter(prop => !SIZE_PROPS.has(prop))
+    const opts = {
+      includeStyleProperties,
+      pixelRatio: scale, width: W, height: H, cacheBust: false,
+      // 某張外部圖片抓不到時用透明圖代替，不要讓整張下載失敗
+      imagePlaceholder: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+      style: { boxShadow: 'none' },
+      ...(fontEmbedCSS ? { fontEmbedCSS } : { skipFonts: true }),
+    }
+    // Safari 第一次畫 foreignObject 時常常漏掉圖片，先暖身畫一次再取第二次的結果
+    await toCanvas(node, opts)
+    return await toCanvas(node, opts)
+  } finally {
+    root.unmount()
+    host.remove()
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1685,11 +1768,20 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
     const { year, month } = toROC(selectedMonth + '-01')
     const label = orient === 'landscape' ? '橫式' : '直式'
     const isL = orient === 'landscape'
-    const canvas = document.createElement('canvas')
 
     for (let pg = 0; pg < totalPages; pg++) {
-      const pageCourses = monthCourses.slice(pg * rowsPerPage, (pg + 1) * rowsPerPage)
-      await drawScheduleCanvas(canvas, pageCourses, isL, year, month, pg, totalPages, editor, scale)
+      let canvas: HTMLCanvasElement
+      try {
+        canvas = await renderPreviewToCanvas({
+          monthCourses, selectedMonth, rowsPerPage, orientation: orient, editor, pageIdx: pg, totalPages,
+        }, scale)
+      } catch (err) {
+        // 截圖失敗（例如外部圖片不允許跨網域讀取）時退回舊的 canvas 重畫，至少還能下載
+        console.warn('schedule export: snapshot failed, falling back to canvas redraw', err)
+        canvas = document.createElement('canvas')
+        const pageCourses = monthCourses.slice(pg * rowsPerPage, (pg + 1) * rowsPerPage)
+        await drawScheduleCanvas(canvas, pageCourses, isL, year, month, pg, totalPages, editor, scale)
+      }
       const dataUrl = canvas.toDataURL('image/png')
       const link = document.createElement('a')
       link.download = totalPages > 1
@@ -1704,9 +1796,12 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
 
   const handleDownload = async (mode: 'landscape'|'portrait'|'both') => {
     setShowDownloadModal(false); setDownloading(true)
-    if (mode === 'both') { await downloadVariant('landscape', exportScale); await new Promise(r => setTimeout(r, 400)); await downloadVariant('portrait', exportScale) }
-    else await downloadVariant(mode, exportScale)
-    setDownloading(false)
+    try {
+      if (mode === 'both') { await downloadVariant('landscape', exportScale); await new Promise(r => setTimeout(r, 400)); await downloadVariant('portrait', exportScale) }
+      else await downloadVariant(mode, exportScale)
+    } finally {
+      setDownloading(false)
+    }
   }
 
   const reset = () => { setStep('idle'); setCurrentPage(0) }

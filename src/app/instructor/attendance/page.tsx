@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase'
 import AttendeeCheckItem from '@/components/AttendeeCheckItem'
 import WalkInRegistrationModal from '@/components/WalkInRegistrationModal'
 import { staffAuthHeaders } from '@/lib/staffAuthHeaders'
+import { hasValidInstructorToken } from '@/lib/instructor-auth'
 
 function BackArrowIcon() {
   return (
@@ -64,6 +65,7 @@ function AttendancePageInner() {
     setLoading(true)
     const stored = typeof window !== 'undefined' ? localStorage.getItem('instructor_line_user') : null
     if (!stored) { router.replace('/instructor'); return }
+    if (!hasValidInstructorToken()) { router.replace('/instructor'); return }
     try { JSON.parse(stored) } catch { router.replace('/instructor'); return }
 
     const { data: courseRow } = await supabase.from('courses').select('id, title, date').eq('id', courseId).maybeSingle()

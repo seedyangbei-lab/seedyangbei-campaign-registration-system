@@ -1,4 +1,4 @@
-import { getInstructorToken } from './instructor-auth'
+import { getInstructorToken, clearInstructorSession } from './instructor-auth'
 
 async function instructorFetch(path: string, options: RequestInit = {}) {
   const token = getInstructorToken()
@@ -7,6 +7,11 @@ async function instructorFetch(path: string, options: RequestInit = {}) {
     headers: { 'Content-Type': 'application/json', 'x-instructor-token': token || '', ...(options.headers || {}) },
   })
   const body = await res.json().catch(() => ({}))
+  if (res.status === 401) {
+    // 登入憑證過期或不存在：清掉本機登入狀態，讓講師回首頁重新用 LINE 登入
+    clearInstructorSession()
+    throw new Error('登入已過期，請重新用 LINE 登入後再操作')
+  }
   if (!res.ok) throw new Error(body.error || '操作失敗')
   return body
 }
