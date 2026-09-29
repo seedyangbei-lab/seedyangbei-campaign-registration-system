@@ -36,10 +36,10 @@ export type FeedbackDetail = {
 
 function Tile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="bg-white border border-stone-200 rounded-xl px-4 py-3 flex flex-col gap-0.5">
-      <p className="text-xs text-stone-500">{label}</p>
-      <p className="text-2xl font-bold text-stone-800 leading-8">{value}</p>
-      {sub && <p className="text-xs text-stone-400">{sub}</p>}
+    <div className="bg-white border border-stone-200 rounded-xl px-4 py-3 flex flex-col gap-0.5 min-w-0">
+      <p className="text-xs text-stone-600">{label}</p>
+      <p className="text-[26px] font-bold text-orange-600 leading-7">{value}</p>
+      {sub && <p className="text-xs text-stone-500">{sub}</p>}
     </div>
   )
 }
@@ -47,17 +47,17 @@ function Tile({ label, value, sub }: { label: string; value: string; sub?: strin
 function DistributionRows({ q, distribution, count }: { q: ScaleQuestion; distribution: number[]; count: number }) {
   const max = Math.max(1, ...distribution)
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-3 px-2">
       {q.options.map((opt, i) => {
         const n = distribution[i] || 0
         const pct = count ? n / count : 0
         return (
-          <div key={opt} className="flex items-center gap-2 text-sm" title={`${opt}：${n} 人（${formatPercent(pct)}）`}>
-            <span className="w-20 flex-shrink-0 text-stone-600">{opt}</span>
-            <div className="flex-1 h-3 bg-stone-100 rounded">
-              {n > 0 && <div className="h-3 bg-orange-400 rounded" style={{ width: `${(n / max) * 100}%` }} />}
+          <div key={opt} className="flex items-center gap-2 text-sm leading-5" title={`${opt}：${n} 人（${formatPercent(pct)}）`}>
+            <span className="w-[72px] flex-shrink-0 text-[#6b6762]">{opt}</span>
+            <div className="flex-1 min-w-0 h-[10px] bg-[#f3f0ed] rounded-md overflow-hidden">
+              {n > 0 && <div className="h-full bg-orange-500 rounded-md" style={{ width: `${(n / max) * 100}%` }} />}
             </div>
-            <span className="w-20 flex-shrink-0 text-right tabular-nums text-stone-700">{n} 人 · {formatPercent(pct)}</span>
+            <span className="w-[100px] flex-shrink-0 text-right tabular-nums text-stone-800">{n} 人 · {formatPercent(pct)}</span>
           </div>
         )
       })}
@@ -65,10 +65,41 @@ function DistributionRows({ q, distribution, count }: { q: ScaleQuestion; distri
   )
 }
 
+// 各題分布卡（Figma「list/ course feed back」）：
+// 電腦版一題一張、分布永遠展開；手機版題目與分數置中，分布收合在「查看詳情」裡
+function QuestionStatCard({ q, stat, count, defaultOpen }: {
+  q: ScaleQuestion
+  stat?: { average: number | null; distribution: number[] }
+  count: number
+  defaultOpen: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className="bg-white border border-black/[0.06] rounded-2xl shadow-[0px_0px_4px_0px_rgba(0,0,0,0.04),0px_2px_12px_0px_rgba(0,0,0,0.06)] p-4 md:p-6 flex flex-col items-center md:items-stretch gap-3 md:gap-4">
+      <div className="w-full flex flex-col md:flex-row items-center md:items-start gap-3">
+        <p className="md:flex-1 text-sm font-bold leading-[17.5px] text-stone-800 text-center md:text-left break-words">{q.label}</p>
+        <p className="font-bold leading-7 whitespace-nowrap tabular-nums">
+          <span className="text-orange-500 text-[30px] md:text-[22px]">{stat?.average?.toFixed(2) ?? '—'}</span>
+          <span className="text-[#9c9792] text-base md:text-sm"> / 5</span>
+        </p>
+      </div>
+      <div className={`w-full flex-col gap-3 md:gap-4 ${open ? 'flex' : 'hidden'} md:flex`}>
+        <div className="border-t border-[#ebe8e5]" />
+        <DistributionRows q={q} distribution={stat?.distribution || []} count={count} />
+      </div>
+      <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open}
+        className="md:hidden flex items-center gap-1.5 rounded-md text-xs font-medium leading-4 text-orange-500">
+        查看詳情
+        <img src={open ? '/icons/chevron-up.svg' : '/icons/chevron-down.svg'} alt="" width={16} height={16} />
+      </button>
+    </div>
+  )
+}
+
 export function FeedbackSummaryPanel({ summary }: { summary: FeedbackDetail['summary'] }) {
   const { stats } = summary
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Tile label="填寫率" value={formatPercent(summary.responseRate)} sub="已出席者中有填回饋的比例" />
         <Tile label="回收份數／出席人數" value={`${summary.respondedCount} / ${summary.attendedCount}`}
@@ -88,22 +119,10 @@ export function FeedbackSummaryPanel({ summary }: { summary: FeedbackDetail['sum
       {stats.count === 0 ? (
         <div className="bg-white border border-stone-200 rounded-xl p-6 text-center text-sm text-stone-400">目前還沒有可統計的回饋</div>
       ) : (
-        <div className="grid md:grid-cols-2 gap-3">
-          {SCALE_QUESTIONS.map(q => {
-            const s = stats.scale.find(x => x.key === q.key)
-            return (
-              <div key={q.key} className="bg-white border border-stone-200 rounded-xl p-4 flex flex-col gap-3">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-sm font-bold text-stone-800 leading-5">{q.label}</p>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-lg font-bold text-stone-800 leading-6 tabular-nums">{s?.average?.toFixed(2) ?? '—'}<span className="text-xs font-normal text-stone-400"> / 5</span></p>
-                    <p className="text-xs text-stone-500">正向 {formatPercent(s?.positiveRate)}</p>
-                  </div>
-                </div>
-                <DistributionRows q={q} distribution={s?.distribution || []} count={stats.count} />
-              </div>
-            )
-          })}
+        <div className="flex flex-col gap-3">
+          {SCALE_QUESTIONS.map((q, i) => (
+            <QuestionStatCard key={q.key} q={q} stat={stats.scale.find(x => x.key === q.key)} count={stats.count} defaultOpen={i === 0} />
+          ))}
         </div>
       )}
     </div>
@@ -112,7 +131,7 @@ export function FeedbackSummaryPanel({ summary }: { summary: FeedbackDetail['sum
 
 const STATUS_TEXT: Record<string, { text: string; cls: string }> = {
   attended: { text: '已出席', cls: 'bg-green-50 text-green-700' },
-  confirmed: { text: '未點名', cls: 'bg-amber-50 text-amber-700' },
+  confirmed: { text: '未點名', cls: 'bg-amber-100 text-amber-600' },
   absent: { text: '未出席', cls: 'bg-stone-100 text-stone-500' },
 }
 
@@ -169,9 +188,9 @@ export function FeedbackResponseList({
                     className="w-full flex items-center gap-2 px-4 py-3 text-left" aria-expanded={open}>
                     <span className="font-bold text-stone-800">{p.name}</span>
                     {p.room_number && <span className="text-sm text-stone-500">{p.room_number}</span>}
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${st.cls}`}>{st.text}</span>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-md ${st.cls}`}>{st.text}</span>
                     {p.feedback.submitted_by === 'instructor' && (
-                      <span className="text-xs font-medium px-2 py-0.5 rounded bg-blue-50 text-blue-700">講師代填</span>
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-blue-100 text-blue-600">講師代填</span>
                     )}
                     <span className="ml-auto text-xs text-stone-400 flex-shrink-0">{formatDateTime(p.feedback.submitted_at)}</span>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
@@ -200,12 +219,12 @@ export function FeedbackResponseList({
                 <li key={p.registration_id} className="flex items-center gap-2 px-4 py-3">
                   <span className="font-medium text-stone-800">{p.name}</span>
                   {p.room_number && <span className="text-sm text-stone-500">{p.room_number}</span>}
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${st.cls}`}>{st.text}</span>
-                  {p.is_walk_in && <span className="text-xs font-medium px-2 py-0.5 rounded bg-stone-100 text-stone-600">現場報名</span>}
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-md ${st.cls}`}>{st.text}</span>
+                  {p.is_walk_in && <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-stone-200 text-stone-600">現場報名</span>}
                   <span className="ml-auto flex-shrink-0">
                     {!p.has_line && onProxyFill ? (
                       <button onClick={() => onProxyFill(p)}
-                        className="text-xs font-medium px-3 py-1.5 rounded-md bg-orange-50 border border-orange-200 text-orange-600 hover:bg-orange-100 transition-colors">
+                        className="text-xs font-medium px-3 py-1.5 rounded-md bg-orange-100 border border-orange-200 text-orange-600 hover:bg-orange-200 transition-colors">
                         代填
                       </button>
                     ) : !p.has_line ? (

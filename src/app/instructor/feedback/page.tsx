@@ -141,12 +141,13 @@ function FeedbackPageInner() {
           </p>
         </div>
 
-        <FeedbackSummaryPanel summary={detail.summary} />
-
+        {/* 依 Figma：先看誰填了／誰還沒填（方便當場提醒、代填），再看統計 */}
         {!canProxy && detail.window === 'closed' && (
           <p className="text-xs text-stone-500">已超過填寫期限，無法再代填。</p>
         )}
         <FeedbackResponseList participants={detail.participants} onProxyFill={canProxy ? setProxyTarget : undefined} />
+
+        <FeedbackSummaryPanel summary={detail.summary} />
       </div>
 
       {proxyTarget && courseId && (
