@@ -13,7 +13,8 @@ import AdminCourseEditFormFields, {
 import { COMMUNITY_HOST_LABEL } from '@/components/CourseEditFormFields'
 import type { ExportableReport } from '@/lib/exportCourseReport'
 import { createCourse, updateCourse, deleteCourse } from '@/lib/adminCoursesApi'
-import { staffAuthHeaders } from '@/lib/staffAuthHeaders'
+import { staffAuthHeaders, fetchFeedbackCounts } from '@/lib/staffAuthHeaders'
+import AdminCourseFeedbackModal from '@/components/AdminCourseFeedbackModal'
 
 interface Instructor { id: string; name: string }
 interface Category { id: string; name: string; color: string }
@@ -62,6 +63,9 @@ export default function CoursesPage() {
   const [posterExportModalOpen, setPosterExportModalOpen] = useState(false)
   const [posterExportMonth, setPosterExportMonth] = useState('')
   const [posterExporting, setPosterExporting] = useState(false)
+  const [feedbackDoneIds, setFeedbackDoneIds] = useState<Set<string>>(new Set())
+  const [feedbackCounts, setFeedbackCounts] = useState<Record<string, { responded: number; attended: number }>>({})
+  const [feedbackCourse, setFeedbackCourse] = useState<any>(null)
   const supabase = createClient()
   const router = useRouter()
 
@@ -97,6 +101,9 @@ export default function CoursesPage() {
       }
     })
     setCourses(enriched)
+    // 已結束課程的「學員回饋 已填/出席」人數（列表上的按鈕用）
+    const endedIds = enriched.filter((c: any) => new Date(`${c.date}T${c.time_end}`) < new Date()).map((c: any) => c.id)
+    fetchFeedbackCounts(endedIds).then(r => setFeedbackCounts(r.counts))
     setInstructors(instructorsData)
     setCategories(cat || [])
     if (siteSettings) {
@@ -310,6 +317,7 @@ export default function CoursesPage() {
     setAttendanceList(regs || [])
     const attended = new Set((regs || []).filter((r: any) => r.status === 'attended').map((r: any) => r.id))
     setCheckedIds(attended)
+    fetchFeedbackCounts([course.id]).then(r => setFeedbackDoneIds(new Set(r.submitted)))
     setAttendanceLoading(false)
   }
 
@@ -333,6 +341,11 @@ export default function CoursesPage() {
     setAttendanceSaving(false)
     setAttendanceModal(null)
     await fetchAll()
+  }
+
+  const feedbackLabel = (courseId: string) => {
+    const c = feedbackCounts[courseId]
+    return c ? `學員回饋 ${c.responded}/${c.attended}` : '學員回饋'
   }
 
   const now = new Date()
@@ -571,6 +584,10 @@ export default function CoursesPage() {
                               className="flex-1 flex items-center justify-center gap-1.5 text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-3 py-2 rounded-lg transition-colors font-medium">
                               出席紀錄
                             </button>
+                            <button onClick={() => setFeedbackCourse(course)}
+                              className="flex-1 flex items-center justify-center gap-1.5 text-xs bg-white hover:bg-stone-50 text-stone-600 border border-stone-300 px-3 py-2 rounded-lg transition-colors font-medium whitespace-nowrap">
+                              {feedbackLabel(course.id)}
+                            </button>
                             <button onClick={() => openCopy(course)}
                               className="flex-1 flex items-center justify-center gap-1.5 text-xs bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 px-3 py-2 rounded-lg transition-colors font-medium">
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -637,6 +654,10 @@ export default function CoursesPage() {
                           <button onClick={() => openAttendance(course)}
                             className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
                             出席紀錄
+                          </button>
+                          <button onClick={() => setFeedbackCourse(course)}
+                            className="text-xs bg-white hover:bg-stone-50 text-stone-600 border border-stone-300 px-3 py-1.5 rounded-lg transition-colors font-medium whitespace-nowrap">
+                            {feedbackLabel(course.id)}
                           </button>
                           <button onClick={() => openCopy(course)}
                             className="flex items-center gap-1.5 text-xs bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
@@ -737,6 +758,8 @@ export default function CoursesPage() {
         </div>
       )}
 
+      {feedbackCourse && <AdminCourseFeedbackModal course={feedbackCourse} onClose={() => setFeedbackCourse(null)} />}
+
       {/* 出席紀錄彈窗 */}
       {attendanceModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setAttendanceModal(null) }}>
@@ -776,6 +799,7 @@ export default function CoursesPage() {
                           name={reg.users?.name}
                           roomNumber={reg.users?.room_number}
                           badge={reg.is_walk_in ? '現場報到' : undefined}
+                          feedbackDone={feedbackDoneIds.has(reg.id)}
                           onToggle={() => { const next = new Set(checkedIds); checkedIds.has(reg.id) ? next.delete(reg.id) : next.add(reg.id); setCheckedIds(next) }}
                         />
                       ))}

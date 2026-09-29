@@ -278,19 +278,35 @@ type InstructorCourseCardProps = {
   onCopy?: () => void
   onReport?: () => void
   reportStatus?: 'due' | 'submitted' | 'overdue'
-  // 課程開始後才傳：學員回饋（講師可查看、幫沒有 LINE 的學員代填）
+  // 課程開始後才傳：學員回饋（講師可查看、幫沒有 LINE 的學員代填）。
+  // 開課中的課一開始就把「製作海報」換成「學員回饋」（講師通常在課程尾聲帶大家填問卷）
   onFeedback?: () => void
+  feedbackCount?: { responded: number; attended: number }
 }
 
 export function InstructorCourseCard({
   title, date, timeStart, timeEnd, location, ended,
   registered = 0, maxSeats = 0, onEdit, onRoster, onPoster, onAttendance, onCopy, onReport, reportStatus,
-  onFeedback,
+  onFeedback, feedbackCount,
 }: InstructorCourseCardProps) {
   const percent = maxSeats > 0 ? Math.round((registered / maxSeats) * 100) : 0
+  const feedbackButton = (className: string) => (
+    <button onClick={onFeedback} className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-md transition-colors whitespace-nowrap ${className}`}>
+      <FeedbackIcon />學員回饋
+      {feedbackCount && <span className="tabular-nums">{feedbackCount.responded}/{feedbackCount.attended}</span>}
+    </button>
+  )
   return (
     <div className="bg-white border border-stone-200 rounded-xl p-4 flex flex-col gap-4 w-full">
-      <p className="font-bold text-base text-stone-800 leading-6">{title}</p>
+      <div className="flex items-start gap-2">
+        <p className="flex-1 min-w-0 font-bold text-base text-stone-800 leading-6 break-words">{title}</p>
+        {/* 複製課程不屬於課後待辦流程，移到課名右邊；圖示＋文字，講師不必猜圖示意思 */}
+        {ended && onCopy && (
+          <button onClick={onCopy} className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-md border border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-600 text-xs font-medium transition-colors">
+            <CopyIcon />複製
+          </button>
+        )}
+      </div>
 
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-1 text-sm text-stone-600">
@@ -328,18 +344,20 @@ export function InstructorCourseCard({
           <button onClick={onRoster} className="flex-1 flex items-center justify-center gap-1.5 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 text-xs font-medium py-2 rounded-md transition-colors">
             <ListIcon />報名紀錄
           </button>
-          <button onClick={onPoster} className="flex-1 flex items-center justify-center gap-1.5 bg-white hover:bg-stone-50 border border-stone-300 text-stone-600 text-xs font-medium py-2 rounded-md transition-colors">
-            <PosterIcon />製作海報
-          </button>
+          {onFeedback
+            ? feedbackButton('bg-white hover:bg-stone-50 border border-stone-300 text-stone-600')
+            : (
+              <button onClick={onPoster} className="flex-1 flex items-center justify-center gap-1.5 bg-white hover:bg-stone-50 border border-stone-300 text-stone-600 text-xs font-medium py-2 rounded-md transition-colors">
+                <PosterIcon />製作海報
+              </button>
+            )}
         </div>
       ) : (
         <div className="flex gap-2 w-full">
           <button onClick={onAttendance} className="flex-1 flex items-center justify-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium py-2 rounded-md transition-colors">
             <CheckSquareIcon className="text-white" />出席紀錄
           </button>
-          <button onClick={onCopy} className="flex-1 flex items-center justify-center gap-1.5 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 text-xs font-medium py-2 rounded-md transition-colors">
-            <CopyIcon />複製課程
-          </button>
+          {onFeedback && feedbackButton('bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600')}
           {onReport && (
             <button onClick={onReport} className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-md transition-colors ${
               reportStatus === 'overdue'
@@ -351,12 +369,6 @@ export function InstructorCourseCard({
             </button>
           )}
         </div>
-      )}
-
-      {onFeedback && (
-        <button onClick={onFeedback} className="w-full flex items-center justify-center gap-1.5 bg-white hover:bg-stone-50 border border-stone-300 text-stone-600 text-xs font-medium py-2 rounded-md transition-colors">
-          <FeedbackIcon />學員回饋
-        </button>
       )}
     </div>
   )

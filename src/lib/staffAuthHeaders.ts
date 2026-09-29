@@ -11,3 +11,22 @@ export function staffAuthHeaders(): Record<string, string> {
   if (instructorToken) headers['x-instructor-token'] = instructorToken
   return headers
 }
+
+export type FeedbackCounts = { counts: Record<string, { responded: number; attended: number }>; submitted: string[] }
+
+// 課程回饋人數（已填／出席）＋已填回饋的報名 id。讀不到（例如資料表還沒建）就回傳空結果，不影響原本畫面
+export async function fetchFeedbackCounts(courseIds: string[]): Promise<FeedbackCounts> {
+  const empty = { counts: {}, submitted: [] }
+  if (courseIds.length === 0) return empty
+  try {
+    const res = await fetch('/api/feedback-counts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...staffAuthHeaders() },
+      body: JSON.stringify({ courseIds }),
+    })
+    if (!res.ok) return empty
+    return await res.json()
+  } catch {
+    return empty
+  }
+}

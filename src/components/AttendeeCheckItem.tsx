@@ -25,14 +25,16 @@ export function AttendeeStatusBadge({ status }: { status: AttendanceStatus }) {
 // 中台／後台的簽到彈窗、中台出席紀錄手機版全螢幕頁共用同一份，避免各處樣式各自漂移
 // - mode="edit"（預設）：可勾選的出席勾選框，用在編輯出席狀態時（node 470:18028）
 // - mode="view"：不可互動，右側改顯示處理狀態徽章（未確認／已出席／未出席，node 481:19958）
+// - feedbackDone：這位學員已填課程回饋，姓名旁加「已填回饋」標籤（講師帶大家填問卷時，看名單就知道還差誰）
 export default function AttendeeCheckItem({
-  mode = 'edit', checked = false, name, roomNumber, badge, status, onToggle,
+  mode = 'edit', checked = false, name, roomNumber, badge, feedbackDone = false, status, onToggle,
 }: {
   mode?: 'edit' | 'view'
   checked?: boolean
   name?: string
   roomNumber?: string
   badge?: string
+  feedbackDone?: boolean
   status?: AttendanceStatus
   onToggle?: () => void
 }) {
@@ -54,6 +56,7 @@ export default function AttendeeCheckItem({
         <div className="flex items-center gap-1.5">
           <p className="text-sm font-medium text-stone-700 truncate">{name}</p>
           {badge && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 whitespace-nowrap shrink-0">{badge}</span>}
+          {feedbackDone && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-green-50 text-green-700 whitespace-nowrap shrink-0">已填回饋</span>}
         </div>
         <p className="text-xs text-stone-500 truncate">{roomNumber}</p>
       </div>

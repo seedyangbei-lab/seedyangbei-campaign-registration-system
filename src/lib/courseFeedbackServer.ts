@@ -82,3 +82,48 @@ export async function loadCourseFeedbackDetail(supabase: SupabaseClient, courseI
     summary: summarize(participants),
   }
 }
+
+const PAGE = 1000
+
+// Supabase 單次查詢最多回傳 1000 筆，報名／回饋累積起來會超過，分頁撈完整
+export async function fetchAllRows(build: (from: number, to: number) => PromiseLike<{ data: any[] | null; error: any }>) {
+  const rows: any[] = []
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await build(from, from + PAGE - 1)
+    if (error) throw error
+    rows.push(...(data || []))
+    if (!data || data.length < PAGE) break
+  }
+  return rows
+}
+
+// .in() 帶太多 id 會讓網址過長，分批查
+export function chunk<T>(list: T[], size: number): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size))
+  return out
+}
+
+// 課程卡片／列表上的「學員回饋 已填/出席」數字，以及出席名單上「已填回饋」標籤要用的 registration_id。
+// 算法跟 summarize() 一致：分母＝已出席人數，分子＝已出席者中有填的人數。
+export async function loadFeedbackCounts(supabase: SupabaseClient, courseIds: string[]) {
+  const counts: Record<string, { responded: number; attended: number }> = {}
+  const submitted: string[] = []
+  courseIds.forEach(id => { counts[id] = { responded: 0, attended: 0 } })
+
+  for (const part of chunk(courseIds, 150)) {
+    const [regs, feedbacks] = await Promise.all([
+      fetchAllRows((from, to) => supabase.from('registrations')
+        .select('id, course_id').in('course_id', part).eq('status', 'attended').order('id').range(from, to)),
+      fetchAllRows((from, to) => supabase.from('course_feedbacks')
+        .select('registration_id').in('course_id', part).order('id').range(from, to)),
+    ])
+    const done = new Set(feedbacks.map(f => f.registration_id))
+    submitted.push(...feedbacks.map(f => f.registration_id))
+    regs.forEach(r => {
+      counts[r.course_id].attended++
+      if (done.has(r.id)) counts[r.course_id].responded++
+    })
+  }
+  return { counts, submitted }
+}

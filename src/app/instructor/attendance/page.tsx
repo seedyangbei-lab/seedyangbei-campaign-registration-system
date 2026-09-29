@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import AttendeeCheckItem from '@/components/AttendeeCheckItem'
 import WalkInRegistrationModal from '@/components/WalkInRegistrationModal'
-import { staffAuthHeaders } from '@/lib/staffAuthHeaders'
+import { staffAuthHeaders, fetchFeedbackCounts } from '@/lib/staffAuthHeaders'
 import { hasValidInstructorToken } from '@/lib/instructor-auth'
 
 function BackArrowIcon() {
@@ -60,6 +60,7 @@ function AttendancePageInner() {
   const [saving, setSaving] = useState(false)
   const [walkInModalOpen, setWalkInModalOpen] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  const [feedbackDoneIds, setFeedbackDoneIds] = useState<Set<string>>(new Set())
 
   const fetchAttendance = async () => {
     setLoading(true)
@@ -84,6 +85,7 @@ function AttendancePageInner() {
     }
     setList(regs || [])
     setCheckedIds(new Set((regs || []).filter((r: any) => r.status === 'attended').map((r: any) => r.id)))
+    if (courseId) fetchFeedbackCounts([courseId]).then(r => setFeedbackDoneIds(new Set(r.submitted)))
     setLoading(false)
   }
 
@@ -164,6 +166,7 @@ function AttendancePageInner() {
                   name={reg.users?.name}
                   roomNumber={reg.users?.room_number}
                   badge={reg.is_walk_in ? '現場報到' : undefined}
+                  feedbackDone={feedbackDoneIds.has(reg.id)}
                   status={reg.status === 'attended' || reg.status === 'absent' ? reg.status : 'confirmed'}
                 />
               ) : (
@@ -174,6 +177,7 @@ function AttendancePageInner() {
                   name={reg.users?.name}
                   roomNumber={reg.users?.room_number}
                   badge={reg.is_walk_in ? '現場報到' : undefined}
+                  feedbackDone={feedbackDoneIds.has(reg.id)}
                   onToggle={() => {
                     const next = new Set(checkedIds)
                     checkedIds.has(reg.id) ? next.delete(reg.id) : next.add(reg.id)

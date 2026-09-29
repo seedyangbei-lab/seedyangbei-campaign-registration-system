@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { StatCard, FilterDropdown } from '@/components/AdminUI'
-import { FeedbackSummaryPanel, FeedbackResponseList, type FeedbackDetail } from '@/components/CourseFeedbackReport'
-import { getFeedbackOverview, getCourseFeedbackDetail } from '@/lib/adminApi'
-import { useBodyScrollLock } from '@/lib/useBodyScrollLock'
+import AdminCourseFeedbackModal from '@/components/AdminCourseFeedbackModal'
+import type { FeedbackDetail } from '@/components/CourseFeedbackReport'
+import { getFeedbackOverview } from '@/lib/adminApi'
 import { SCALE_QUESTIONS, YESNO_QUESTIONS, COMMENT_LABEL, scaleLabel, formatPercent } from '@/lib/courseFeedback'
 
 type CourseRow = {
@@ -37,10 +37,6 @@ export default function AdminFeedbackPage() {
   const [sortKey, setSortKey] = useState<SortKey>('date')
   const [exporting, setExporting] = useState(false)
   const [detailCourse, setDetailCourse] = useState<CourseRow | null>(null)
-  const [detail, setDetail] = useState<FeedbackDetail | null>(null)
-  const [detailError, setDetailError] = useState('')
-
-  useBodyScrollLock(!!detailCourse)
 
   useEffect(() => {
     getFeedbackOverview()
@@ -75,16 +71,7 @@ export default function AdminFeedbackPage() {
     }
   }, [rows])
 
-  const openDetail = async (c: CourseRow) => {
-    setDetailCourse(c)
-    setDetail(null)
-    setDetailError('')
-    try {
-      setDetail(await getCourseFeedbackDetail(c.id))
-    } catch (e: any) {
-      setDetailError(e?.message || '讀取失敗')
-    }
-  }
+  const openDetail = (c: CourseRow) => setDetailCourse(c)
 
   const exportCSV = async () => {
     setExporting(true)
@@ -212,36 +199,7 @@ export default function AdminFeedbackPage() {
         </>
       )}
 
-      {detailCourse && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-stretch md:items-center justify-center md:p-6"
-          onClick={e => { if (e.target === e.currentTarget) setDetailCourse(null) }}>
-          <div className="bg-[#fafaf9] w-full md:max-w-[960px] md:max-h-[90vh] md:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-            <div className="flex-shrink-0 bg-white flex items-start justify-between gap-3 px-5 py-4 border-b border-stone-200">
-              <div className="min-w-0">
-                <h3 className="text-lg font-bold text-stone-800 break-words">{detailCourse.title}</h3>
-                <p className="text-xs text-stone-500 mt-0.5">
-                  {detailCourse.date} · {(detailCourse.time_start || '').slice(0, 5)}-{(detailCourse.time_end || '').slice(0, 5)} · {detailCourse.location} · 講師：{detailCourse.instructor_names.join('、') || '—'}
-                </p>
-              </div>
-              <button onClick={() => setDetailCourse(null)} aria-label="關閉" className="p-1.5 hover:bg-stone-100 rounded-xl text-stone-400 flex-shrink-0">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-              </button>
-            </div>
-            <div className="flex-1 min-h-0 overflow-y-auto p-5 flex flex-col gap-5">
-              {detailError ? (
-                <p className="text-sm text-red-600 text-center py-10">{detailError}</p>
-              ) : !detail ? (
-                <p className="text-sm text-stone-400 text-center py-10">載入中…</p>
-              ) : (
-                <>
-                  <FeedbackSummaryPanel summary={detail.summary} />
-                  <FeedbackResponseList participants={detail.participants} />
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {detailCourse && <AdminCourseFeedbackModal course={detailCourse} onClose={() => setDetailCourse(null)} />}
     </div>
   )
 }

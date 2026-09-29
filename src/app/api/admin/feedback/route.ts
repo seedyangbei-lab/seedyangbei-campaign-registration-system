@@ -2,30 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
 import { verifyAdminToken } from '@/lib/admin-auth-server'
 import { FEEDBACK_ELIGIBLE_STATUSES, courseStartAt } from '@/lib/courseFeedback'
-import { FEEDBACK_SELECT, summarize, type FeedbackParticipant } from '@/lib/courseFeedbackServer'
+import { FEEDBACK_SELECT, summarize, fetchAllRows, chunk, type FeedbackParticipant } from '@/lib/courseFeedbackServer'
 
 // 後台課程回饋總覽：每一堂已開始的課程的出席人數、回收份數、填寫率與各題統計。
 // ?month=YYYY-MM 只看某個月；&responses=1 另外附上每一份回饋的明細（匯出 CSV 用）。
-
-const PAGE = 1000
-
-// Supabase 單次查詢最多回傳 1000 筆，報名／回饋累積起來會超過，分頁撈完整
-async function fetchAllRows(build: (from: number, to: number) => PromiseLike<{ data: any[] | null; error: any }>) {
-  const rows: any[] = []
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await build(from, from + PAGE - 1)
-    if (error) throw error
-    rows.push(...(data || []))
-    if (!data || data.length < PAGE) break
-  }
-  return rows
-}
-
-function chunk<T>(list: T[], size: number): T[][] {
-  const out: T[][] = []
-  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size))
-  return out
-}
 
 export async function GET(req: NextRequest) {
   if (!verifyAdminToken(req.headers.get('x-admin-token'))) {

@@ -15,7 +15,7 @@ import IssueReportModal from '@/components/IssueReportModal'
 import { MobileRegistrationCard, MobilePagination } from '@/components/AdminMobileUI'
 import CourseEditFormFields, { LOCATIONS, DESCRIPTION_MAX, COMMUNITY_HOST_LABEL, type InstructorMode } from '@/components/CourseEditFormFields'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
-import { staffAuthHeaders } from '@/lib/staffAuthHeaders'
+import { staffAuthHeaders, fetchFeedbackCounts } from '@/lib/staffAuthHeaders'
 import { hasValidInstructorToken, clearInstructorSession } from '@/lib/instructor-auth'
 import { courseStartAt } from '@/lib/courseFeedback'
 import { createInstructorCourse, updateInstructorCourseWithLog, cancelInstructorRegistration, deleteInstructorRegistration } from '@/lib/instructorCoursesApi'
@@ -92,6 +92,8 @@ function InstructorPortal() {
   const [attendanceSaving, setAttendanceSaving] = useState(false)
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const [walkInModalOpen, setWalkInModalOpen] = useState(false)
+  const [feedbackDoneIds, setFeedbackDoneIds] = useState<Set<string>>(new Set())
+  const [feedbackCounts, setFeedbackCounts] = useState<Record<string, { responded: number; attended: number }>>({})
 
   const [rosterModal, setRosterModal] = useState<any>(null)
   const [rosterList, setRosterList] = useState<any[]>([])
@@ -211,6 +213,10 @@ function InstructorPortal() {
       const counts: Record<string, number> = {}
       ;(regs || []).forEach((r: any) => { counts[r.course_id] = (counts[r.course_id] || 0) + 1 })
       setRegCounts(counts)
+
+      // 已開始課程的「學員回饋 已填/出席」人數
+      const startedIds = list.filter((c: any) => courseStartAt(c) <= new Date()).map((c: any) => c.id)
+      fetchFeedbackCounts(startedIds).then(r => setFeedbackCounts(r.counts))
 
       // 成果報告狀態：已提交／未提交待補（依期限判斷是否已逾期）
       const { data: settingRow } = await supabase.from('site_settings').select('value').eq('key', 'report_deadline_days').maybeSingle()
@@ -427,6 +433,7 @@ function InstructorPortal() {
     setAttendanceList(regs || [])
     const attended = new Set((regs || []).filter((r: any) => r.status === 'attended').map((r: any) => r.id))
     setCheckedIds(attended)
+    fetchFeedbackCounts([course.id]).then(r => setFeedbackDoneIds(new Set(r.submitted)))
     setAttendanceLoading(false)
   }
 
@@ -657,6 +664,7 @@ function InstructorPortal() {
                 onReport={isExpired(c) ? () => router.push(`/instructor/report?courseId=${c.id}`) : undefined}
                 reportStatus={reportStatuses[c.id]}
                 onFeedback={courseStartAt(c) <= new Date() ? () => router.push(`/instructor/feedback?courseId=${c.id}`) : undefined}
+                feedbackCount={feedbackCounts[c.id]}
               />
             ))}
           </div>
@@ -763,6 +771,7 @@ function InstructorPortal() {
                           name={reg.users?.name}
                           roomNumber={reg.users?.room_number}
                           badge={reg.is_walk_in ? '現場報到' : undefined}
+                          feedbackDone={feedbackDoneIds.has(reg.id)}
                           onToggle={() => { const next = new Set(checkedIds); checkedIds.has(reg.id) ? next.delete(reg.id) : next.add(reg.id); setCheckedIds(next) }}
                         />
                       ))}
