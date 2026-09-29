@@ -146,36 +146,63 @@ export default function AdminFeedbackPage() {
           <div className="hidden md:block bg-white border border-stone-200 rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-stone-50 text-stone-500 text-xs">
-                <tr>
-                  <th className="text-left font-medium px-4 py-3">日期</th>
-                  <th className="text-left font-medium px-4 py-3">課程</th>
-                  <th className="text-left font-medium px-4 py-3">講師</th>
-                  <th className="text-right font-medium px-4 py-3">出席</th>
-                  <th className="text-right font-medium px-4 py-3">回收</th>
-                  <th className="text-right font-medium px-4 py-3">填寫率</th>
-                  {SCALE_QUESTIONS.map(q => <th key={q.key} className="text-right font-medium px-3 py-3 whitespace-nowrap">{q.shortLabel}</th>)}
-                  <th className="text-right font-medium px-4 py-3 whitespace-nowrap">願意再參與</th>
+                {/* 分組標題：讓「回收狀況」「各題平均」這些數字一眼看得懂是什麼 */}
+                <tr className="border-b border-stone-200/70">
+                  <th colSpan={3} />
+                  <th colSpan={4} className="px-4 pt-3 pb-1.5 text-center font-medium text-stone-400 whitespace-nowrap border-l border-stone-200/70">回收狀況</th>
+                  <th colSpan={SCALE_QUESTIONS.length} className="px-4 pt-3 pb-1.5 text-center font-medium text-stone-400 whitespace-nowrap border-l border-stone-200/70">各題平均（滿分 5）</th>
+                  <th className="px-4 pt-3 pb-1.5 border-l border-stone-200/70" />
+                </tr>
+                <tr className="whitespace-nowrap">
+                  <th className="text-left font-medium px-4 py-2.5">日期</th>
+                  <th className="text-left font-medium px-4 py-2.5">課程</th>
+                  <th className="text-left font-medium px-4 py-2.5">講師</th>
+                  <th className="text-right font-medium px-4 py-2.5 border-l border-stone-200/70">出席</th>
+                  <th className="text-right font-medium px-3 py-2.5" title="出席人數中屬於現場報名的人數">其中現場</th>
+                  <th className="text-right font-medium px-3 py-2.5">回收</th>
+                  <th className="text-left font-medium px-4 py-2.5">填寫率</th>
+                  {SCALE_QUESTIONS.map((q, i) => (
+                    <th key={q.key} className={`text-right font-medium px-3 py-2.5 ${i === 0 ? 'border-l border-stone-200/70' : ''}`}>{q.shortLabel}</th>
+                  ))}
+                  <th className="text-right font-medium px-4 py-2.5 border-l border-stone-200/70">願意再參與</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
                 {rows.map(c => {
                   const s = c.summary
+                  const dash = <span className="text-stone-300">—</span>
+                  const rate = s.responseRate
                   return (
                     <tr key={c.id} onClick={() => openDetail(c)} className="hover:bg-orange-50/50 cursor-pointer">
-                      <td className="px-4 py-3 text-stone-600 whitespace-nowrap">{c.date}</td>
-                      <td className="px-4 py-3 text-stone-800 font-medium max-w-[260px]"><span className="line-clamp-2">{c.title}</span></td>
-                      <td className="px-4 py-3 text-stone-600">{c.instructor_names.join('、') || '—'}</td>
-                      <td className="px-4 py-3 text-right tabular-nums text-stone-700">
-                        {s.attendedCount}{s.walkInCount > 0 && <span className="text-xs text-stone-400">（現場 {s.walkInCount}）</span>}
+                      <td className="px-4 py-3 text-stone-600 whitespace-nowrap tabular-nums">{c.date}</td>
+                      <td className="px-4 py-3 text-stone-800 font-medium min-w-[160px] max-w-[240px]"><span className="line-clamp-2">{c.title}</span></td>
+                      <td className="px-4 py-3 text-stone-600 min-w-[96px] max-w-[200px]" title={c.instructor_names.join('、')}>
+                        <span className="line-clamp-2">{c.instructor_names.join('、') || '—'}</span>
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums text-stone-700">{s.respondedCount}</td>
-                      <td className="px-4 py-3 text-right tabular-nums font-bold text-stone-800">{formatPercent(s.responseRate)}</td>
-                      {SCALE_QUESTIONS.map(q => (
-                        <td key={q.key} className="px-3 py-3 text-right tabular-nums text-stone-700">
-                          {s.stats.scale.find(x => x.key === q.key)?.average?.toFixed(2) ?? '—'}
-                        </td>
-                      ))}
-                      <td className="px-4 py-3 text-right tabular-nums text-stone-700">{formatPercent(s.stats.yesno.find(y => y.key === 'q_rejoin')?.yesRate)}</td>
+                      <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap text-stone-800 font-medium border-l border-stone-100">{s.attendedCount}</td>
+                      <td className="px-3 py-3 text-right tabular-nums whitespace-nowrap text-stone-500">{s.walkInCount > 0 ? s.walkInCount : dash}</td>
+                      <td className="px-3 py-3 text-right tabular-nums whitespace-nowrap text-stone-700">{s.respondedCount}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {rate === null ? dash : (
+                          <div className="flex items-center gap-2" title={`${s.respondedCount} / ${s.attendedCount} 位出席者`}>
+                            <span className="w-10 text-right tabular-nums font-bold text-stone-800">{formatPercent(rate)}</span>
+                            <span className="w-14 h-1.5 rounded-full bg-stone-100 overflow-hidden" aria-hidden="true">
+                              <span className="block h-full rounded-full bg-orange-500" style={{ width: `${Math.round(rate * 100)}%` }} />
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                      {SCALE_QUESTIONS.map((q, i) => {
+                        const avg = s.stats.scale.find(x => x.key === q.key)?.average
+                        return (
+                          <td key={q.key} className={`px-3 py-3 text-right tabular-nums whitespace-nowrap text-stone-700 ${i === 0 ? 'border-l border-stone-100' : ''}`}>
+                            {avg != null ? avg.toFixed(2) : dash}
+                          </td>
+                        )
+                      })}
+                      <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap text-stone-700 border-l border-stone-100">
+                        {s.stats.count ? formatPercent(s.stats.yesno.find(y => y.key === 'q_rejoin')?.yesRate) : dash}
+                      </td>
                     </tr>
                   )
                 })}
@@ -189,10 +216,18 @@ export default function AdminFeedbackPage() {
               <button key={c.id} onClick={() => openDetail(c)} className="bg-white border border-stone-200 rounded-xl p-4 text-left flex flex-col gap-2">
                 <p className="font-bold text-stone-800">{c.title}</p>
                 <p className="text-xs text-stone-500">{c.date} · {c.instructor_names.join('、') || '—'}</p>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-stone-600">回收 {c.summary.respondedCount} / 出席 {c.summary.attendedCount}</span>
-                  <span className="font-bold text-stone-800">{formatPercent(c.summary.responseRate)}</span>
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="text-stone-600 whitespace-nowrap">
+                    回收 {c.summary.respondedCount} / 出席 {c.summary.attendedCount}
+                    {c.summary.walkInCount > 0 && <span className="text-xs text-stone-400 ml-1">其中現場 {c.summary.walkInCount}</span>}
+                  </span>
+                  <span className="font-bold text-stone-800 tabular-nums">{formatPercent(c.summary.responseRate)}</span>
                 </div>
+                {c.summary.responseRate !== null && (
+                  <span className="h-1.5 rounded-full bg-stone-100 overflow-hidden" aria-hidden="true">
+                    <span className="block h-full rounded-full bg-orange-500" style={{ width: `${Math.round((c.summary.responseRate || 0) * 100)}%` }} />
+                  </span>
+                )}
               </button>
             ))}
           </div>
