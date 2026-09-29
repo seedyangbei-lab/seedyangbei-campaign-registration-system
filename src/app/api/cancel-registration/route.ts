@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { courseStartAt } from '@/lib/courseFeedback'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,11 +25,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 
-  // 確認課程尚未開始
+  // 確認課程尚未開始。課程時間存的是台灣當地時間，伺服器跑在 UTC，
+  // 直接 new Date(`${date}T${time}`) 會被當成 UTC 解讀，變成開課後 8 小時內還能取消；
+  // 改用 courseStartAt 明確以 +08:00 解讀
   const course = reg.courses as any
-  if (course) {
-    const startDt = new Date(`${course.date}T${course.time_start}`)
-    if (startDt <= new Date()) {
+  if (course?.date) {
+    if (courseStartAt(course) <= new Date()) {
       return NextResponse.json({ error: 'course_started' }, { status: 400 })
     }
   }
