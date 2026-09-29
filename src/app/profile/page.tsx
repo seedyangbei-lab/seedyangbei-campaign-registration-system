@@ -97,7 +97,7 @@ function ProfileContent() {
       if (!stored) { router.push('/'); return }
       const user = JSON.parse(stored)
       setLineUser(user)
-      fetchHistory(user.lineUserId)
+      fetchHistory()
       fetchFeedbackStatus()
     } catch {
       router.push('/')
@@ -106,46 +106,31 @@ function ProfileContent() {
       .then(({ data }) => { if (data && data.value === 'false') setPointsEnabled(false) })
   }, [])
 
-  const fetchHistory = async (lineUserId: string) => {
+  // 登入憑證過期（或是 resident token 上線前就登入、localStorage 裡根本沒有 token）：
+  // 清掉本機登入狀態回首頁，讓居民重新用 LINE 登入拿新的 token
+  const handleSessionExpired = () => {
+    localStorage.removeItem('line_user')
+    alert('登入已過期，請重新用 LINE 登入')
+    router.push('/')
+  }
+
+  // 本人的報名紀錄、點數、兌換申請、點數紀錄一律走 /api/profile，
+  // 身份由伺服器從 resident token 解出，不再用 anon key 依 localStorage 自稱的 lineUserId 直接查表
+  const fetchHistory = async () => {
     setLoading(true)
-    const { data: user } = await supabase
-      .from('users')
-      .select('id, name, room_number, email, age_group')
-      .eq('line_id', lineUserId)
-      .maybeSingle()
+    const token = getResidentToken()
+    if (!token) { handleSessionExpired(); return }
 
-    if (user) {
-      const { data: regs } = await supabase
-        .from('registrations')
-        .select('*, courses(title, date, time_start, time_end, location, instructors(name))')
-        .eq('user_id', user.id)
-        // 已出席（attended）的也要列出來；講師標記未出席（absent）的則不顯示
-        .in('status', ['confirmed', 'attended'])
-        .order('registered_at', { ascending: false })
-      setRegistrations(regs || [])
-    }
-
-    const memberRes = await fetch(`/api/member-points?line_user_id=${encodeURIComponent(lineUserId)}`)
-    const member = memberRes.ok ? await memberRes.json() : null
-
-    console.log('[profile] lineUserId:', lineUserId, 'member:', member, 'points:', member?.points)
-    if (member) {
-      setMemberPoints(member.points ?? 0)
-      console.log('[profile] setMemberPoints:', member.points ?? 0)
-      const { data: redemptions } = await supabase
-        .from('redemptions')
-        .select('*, reward_items(name, points_required)')
-        .eq('line_member_id', member.id)
-        .order('requested_at', { ascending: false })
-      setMyRedemptions(redemptions || [])
-
-     const { data: logs } = await supabase
-        .from('point_logs')
-        .select('id, delta, reason, created_at')
-        .eq('line_member_id', member.id)
-        .gt('delta', 0)
-        .order('created_at', { ascending: false })
-      setPointLogs(logs || [])
+    const res = await fetch('/api/profile', { headers: { 'x-resident-token': token } })
+    if (res.status === 401) { handleSessionExpired(); return }
+    if (res.ok) {
+      const body = await res.json()
+      setRegistrations(body.registrations || [])
+      if (body.member) {
+        setMemberPoints(body.member.points ?? 0)
+        setMyRedemptions(body.redemptions || [])
+        setPointLogs(body.pointLogs || [])
+      }
     }
 
     const { data: rewards } = await supabase
@@ -179,25 +164,24 @@ function ProfileContent() {
   const handleRedeem = async (reward: any) => {
     if (!lineUser) return
     setRedeeming(true)
-    const { data: member } = await supabase
-      .from('line_members')
-      .select('id, points')
-      .eq('line_user_id', lineUser.lineUserId)
-      .maybeSingle()
-    if (!member || member.points < reward.points_required) {
-      alert('點數不足，無法兌換')
-      setRedeeming(false)
+    const res = await fetch('/api/redeem', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-resident-token': getResidentToken() || '' },
+      body: JSON.stringify({ rewardItemId: reward.id }),
+    })
+    setRedeeming(false)
+    if (res.status === 401) { handleSessionExpired(); return }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      if (err.error === 'insufficient_points') alert('點數不足，無法兌換')
+      else if (err.error === 'already_pending') alert('這個獎勵已經有一筆兌換申請在審核中')
+      else if (err.error === 'reward_unavailable') alert('這個獎勵目前無法兌換')
+      else alert('兌換失敗，請稍後再試')
       return
     }
-    await supabase.from('redemptions').insert({
-      line_member_id: member.id,
-      reward_item_id: reward.id,
-      status: 'pending',
-    })
     setRedeemSuccess(true)
     setShowRedeemModal(false)
-    await fetchHistory(lineUser.lineUserId)
-    setRedeeming(false)
+    await fetchHistory()
     setTimeout(() => setRedeemSuccess(false), 3000)
   }
 
@@ -207,15 +191,16 @@ function ProfileContent() {
     setCancelling(true)
     const res = await fetch('/api/cancel-registration', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ registrationId: cancelTarget.id, lineUserId: lineUser.lineUserId }),
+      headers: { 'Content-Type': 'application/json', 'x-resident-token': getResidentToken() || '' },
+      body: JSON.stringify({ registrationId: cancelTarget.id }),
     })
     setCancelling(false)
+    if (res.status === 401) { handleSessionExpired(); return }
     if (res.ok) {
       setCancelTarget(null)
       setCancelSuccess(true)
       setTimeout(() => setCancelSuccess(false), 3000)
-      fetchHistory(lineUser.lineUserId)
+      fetchHistory()
     } else {
       const err = await res.json()
       if (err.error === 'course_started') alert('課程已開始，無法取消報名')

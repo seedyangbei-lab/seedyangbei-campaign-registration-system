@@ -1,17 +1,22 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@/lib/supabase-server'
 import { courseStartAt } from '@/lib/courseFeedback'
+import { verifyResidentToken } from '@/lib/resident-auth-server'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
+// 居民取消自己的報名。原本只信任 request body 傳來的 lineUserId，任何人帶別人的 lineUserId
+// 就能取消對方的報名；改成身份一律從 x-resident-token 解出來。
 export async function POST(req: NextRequest) {
-  const { registrationId, lineUserId } = await req.json()
-  if (!registrationId || !lineUserId) {
+  const lineUserId = verifyResidentToken(req.headers.get('x-resident-token'))
+  if (!lineUserId) {
+    return NextResponse.json({ error: '登入已過期，請重新用 LINE 登入' }, { status: 401 })
+  }
+
+  const { registrationId } = await req.json().catch(() => ({}))
+  if (!registrationId) {
     return NextResponse.json({ error: 'missing params' }, { status: 400 })
   }
+
+  const supabase = createServerClient()
 
   // 確認這筆報名屬於這個 LINE 用戶
   const { data: reg } = await supabase
