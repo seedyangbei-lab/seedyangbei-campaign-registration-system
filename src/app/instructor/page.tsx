@@ -17,6 +17,7 @@ import CourseEditFormFields, { LOCATIONS, DESCRIPTION_MAX, COMMUNITY_HOST_LABEL,
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import { staffAuthHeaders } from '@/lib/staffAuthHeaders'
 import { hasValidInstructorToken, clearInstructorSession } from '@/lib/instructor-auth'
+import { courseStartAt } from '@/lib/courseFeedback'
 import { createInstructorCourse, updateInstructorCourseWithLog, cancelInstructorRegistration, deleteInstructorRegistration } from '@/lib/instructorCoursesApi'
 
 const ROSTER_PAGE_SIZE = 10
@@ -655,6 +656,7 @@ function InstructorPortal() {
                 onCopy={() => openCopy(c)}
                 onReport={isExpired(c) ? () => router.push(`/instructor/report?courseId=${c.id}`) : undefined}
                 reportStatus={reportStatuses[c.id]}
+                onFeedback={courseStartAt(c) <= new Date() ? () => router.push(`/instructor/feedback?courseId=${c.id}`) : undefined}
               />
             ))}
           </div>

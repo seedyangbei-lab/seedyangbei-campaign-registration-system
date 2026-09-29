@@ -7,6 +7,36 @@ import Link from 'next/link'
 import StampCard from '@/components/StampCard'
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock'
 import SiteNavbar from '@/components/SiteNavbar'
+import { ResidentFeedbackForm } from '@/components/CourseFeedbackForm'
+import { getResidentToken } from '@/lib/resident-auth'
+import { courseStartAt, feedbackWindow } from '@/lib/courseFeedback'
+
+const isMobileViewport = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+
+// 課程開始後就移到「已結束」分頁，同時開放填寫回饋問卷（講師通常在課程尾聲帶大家一起填）
+const hasStarted = (course: any) => !!course?.date && courseStartAt(course) <= new Date()
+
+// 「已結束」每筆報名右側的回饋狀態：可填寫／已填寫／已截止
+function FeedbackAction({ reg, submitted, onOpen }: { reg: any; submitted: boolean; onOpen: () => void }) {
+  if (submitted) {
+    return (
+      <button onClick={onOpen}
+        className="flex items-center gap-1 text-sm font-medium px-3 py-1.5 rounded-md bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 transition-colors flex-shrink-0">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+        已填寫
+      </button>
+    )
+  }
+  if (!reg.courses?.date || feedbackWindow(reg.courses) === 'closed') {
+    return <span className="text-sm font-medium px-3 py-1.5 rounded-md bg-stone-100 text-stone-400 flex-shrink-0">已截止</span>
+  }
+  return (
+    <button onClick={onOpen}
+      className="text-sm font-medium px-3 py-1.5 rounded-md bg-orange-50 border border-orange-200 text-orange-600 hover:bg-orange-100 transition-colors flex-shrink-0">
+      填寫回饋問卷
+    </button>
+  )
+}
 
 function getParticipationTag(count: number) {
   if (count === 0) return { label: '尚未參與', color: '#9ca3af', bg: '#f3f4f6' }
@@ -53,11 +83,13 @@ function ProfileContent() {
   const [redeeming, setRedeeming] = useState(false)
   const [redeemSuccess, setRedeemSuccess] = useState(false)
   const [pointsEnabled, setPointsEnabled] = useState(true)
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState<Set<string>>(new Set())
+  const [feedbackRegId, setFeedbackRegId] = useState<string | null>(null)
   const supabase = createClient()
 
   // 任一彈窗開著時鎖住背景頁面捲動（取消報名確認／課程詳情／兌換確認）。
   // 這行要放在 return null 的 early return 之前，維持 hooks 呼叫順序穩定。
-  useBodyScrollLock(!!cancelTarget || !!selectedReg || showRedeemModal)
+  useBodyScrollLock(!!cancelTarget || !!selectedReg || showRedeemModal || !!feedbackRegId)
 
   useEffect(() => {
     try {
@@ -66,6 +98,7 @@ function ProfileContent() {
       const user = JSON.parse(stored)
       setLineUser(user)
       fetchHistory(user.lineUserId)
+      fetchFeedbackStatus()
     } catch {
       router.push('/')
     }
@@ -86,7 +119,8 @@ function ProfileContent() {
         .from('registrations')
         .select('*, courses(title, date, time_start, time_end, location, instructors(name))')
         .eq('user_id', user.id)
-        .eq('status', 'confirmed')
+        // 已出席（attended）的也要列出來；講師標記未出席（absent）的則不顯示
+        .in('status', ['confirmed', 'attended'])
         .order('registered_at', { ascending: false })
       setRegistrations(regs || [])
     }
@@ -123,6 +157,23 @@ function ProfileContent() {
     setRewardItems(rewards || [])
 
     setLoading(false)
+  }
+
+  // 已填過回饋的報名紀錄（course_feedbacks 不開放前端直接讀，走驗證過的 API）
+  const fetchFeedbackStatus = async () => {
+    const token = getResidentToken()
+    if (!token) return
+    try {
+      const res = await fetch('/api/feedback', { headers: { 'x-resident-token': token } })
+      if (!res.ok) return
+      const body = await res.json()
+      setFeedbackSubmitted(new Set(body.submitted || []))
+    } catch { /* 讀不到就維持預設（顯示可填寫），送出時伺服器仍會擋重複填寫 */ }
+  }
+
+  const openFeedback = (reg: any) => {
+    if (isMobileViewport()) { router.push(`/feedback?registrationId=${reg.id}`); return }
+    setFeedbackRegId(reg.id)
   }
 
   const handleRedeem = async (reward: any) => {
@@ -320,13 +371,9 @@ function ProfileContent() {
             </div>
           ) : (() => {
             const now = new Date()
-            const upcoming = registrations.filter((r: any) =>
-              new Date(r.courses?.date + 'T' + (r.courses?.time_end || '23:59')) >= now
-            ).sort((a: any, b: any) => new Date(a.courses?.date).getTime() - new Date(b.courses?.date).getTime())
+            const upcoming = registrations.filter((r: any) => !hasStarted(r.courses)).sort((a: any, b: any) => new Date(a.courses?.date).getTime() - new Date(b.courses?.date).getTime())
 
-            const past = registrations.filter((r: any) =>
-              new Date(r.courses?.date + 'T' + (r.courses?.time_end || '23:59')) < now
-            ).sort((a: any, b: any) => new Date(b.courses?.date).getTime() - new Date(a.courses?.date).getTime())
+            const past = registrations.filter((r: any) => hasStarted(r.courses)).sort((a: any, b: any) => new Date(b.courses?.date).getTime() - new Date(a.courses?.date).getTime())
 
             // 建立 Dropdown 選項：當年細分月份，去年以前歸年份
             const currentYear = now.getFullYear()
@@ -436,9 +483,6 @@ function ProfileContent() {
                                   {i + 1}
                                 </span>
                                 <span className="font-bold text-stone-800 break-words line-clamp-2 flex-1 min-w-0">{course?.title}</span>
-                                {isPast && (
-                                  <span className="text-xs font-medium px-2 py-1 rounded-md bg-stone-100 text-stone-400 flex-shrink-0">已結束</span>
-                                )}
                               </button>
                               <div className="flex items-center gap-1 text-sm text-stone-500">
                                 <IconClock /> {dateStr} · {course?.time_start?.slice(0,5)}–{course?.time_end?.slice(0,5)}
@@ -449,6 +493,11 @@ function ProfileContent() {
                               {course?.instructors?.name && (
                                 <div className="flex items-center gap-1 text-sm text-stone-500">
                                   <IconPerson /> {course.instructors.name}
+                                </div>
+                              )}
+                              {isPast && (
+                                <div className="flex justify-end border-t border-stone-200 pt-2">
+                                  <FeedbackAction reg={reg} submitted={feedbackSubmitted.has(reg.id)} onOpen={() => openFeedback(reg)} />
                                 </div>
                               )}
                               {!isPast && (
@@ -493,7 +542,7 @@ function ProfileContent() {
                                 </div>
                               </button>
                               {isPast ? (
-                                <span className="text-xs font-medium px-3 py-1.5 rounded-md bg-stone-100 text-stone-400 flex-shrink-0">已結束</span>
+                                <FeedbackAction reg={reg} submitted={feedbackSubmitted.has(reg.id)} onOpen={() => openFeedback(reg)} />
                               ) : (
                                 <button
                                   onClick={() => setCancelTarget(reg)}
@@ -577,7 +626,7 @@ function ProfileContent() {
       {/* 課程詳情彈窗 */}
       {selectedReg && (() => {
         const course = selectedReg.courses
-        const isPast = course?.date ? new Date(course.date + 'T' + (course.time_end || '23:59')) < new Date() : false
+        const isPast = hasStarted(course)
         const d = course?.date ? new Date(course.date + 'T00:00:00') : null
         const weekdays = ['日','一','二','三','四','五','六']
         const dateStr = d ? `${d.getMonth()+1}/${d.getDate()}（${weekdays[d.getDay()]}）` : ''
@@ -651,6 +700,17 @@ function ProfileContent() {
           </div>
         )
       })()}
+      {/* 課程回饋問卷（電腦版彈窗；手機版改跳 /feedback 獨立頁） */}
+      {feedbackRegId && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <ResidentFeedbackForm
+            registrationId={feedbackRegId}
+            variant="modal"
+            onClose={() => setFeedbackRegId(null)}
+            onSubmitted={() => setFeedbackSubmitted(prev => new Set(prev).add(feedbackRegId))}
+          />
+        </div>
+      )}
     {/* 兌換確認彈窗 */}
       {showRedeemModal && selectedReward && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center p-0 md:p-4"

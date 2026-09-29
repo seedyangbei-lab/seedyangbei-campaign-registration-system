@@ -36,3 +36,12 @@ export function cancelInstructorRegistration(id: string) {
 export function deleteInstructorRegistration(id: string) {
   return instructorFetch(`/api/instructor/registrations/${id}`, { method: 'DELETE' })
 }
+
+export function getInstructorCourseFeedback(courseId: string) {
+  return instructorFetch(`/api/instructor/courses/${courseId}/feedback`)
+}
+
+// 講師幫沒有 LINE 帳號的學員代填課程回饋
+export function proxyFillCourseFeedback(courseId: string, registrationId: string, answers: Record<string, any>) {
+  return instructorFetch(`/api/instructor/courses/${courseId}/feedback`, { method: 'POST', body: JSON.stringify({ registrationId, answers }) })
+}

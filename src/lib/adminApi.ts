@@ -28,3 +28,14 @@ export function updateLineMember(id: string, payload: {
 }) {
   return adminFetch(`/api/admin/members/${id}`, { method: 'PATCH', body: JSON.stringify({ table: 'line_members', ...payload }) })
 }
+
+export function getFeedbackOverview(params: { month?: string; responses?: boolean } = {}) {
+  const q = new URLSearchParams()
+  if (params.month) q.set('month', params.month)
+  if (params.responses) q.set('responses', '1')
+  return adminFetch(`/api/admin/feedback${q.toString() ? `?${q}` : ''}`)
+}
+
+export function getCourseFeedbackDetail(courseId: string) {
+  return adminFetch(`/api/admin/feedback/${courseId}`)
+}

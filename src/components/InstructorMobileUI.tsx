@@ -68,6 +68,14 @@ export function CheckSquareIcon({ className }: { className?: string }) {
   )
 }
 
+export function FeedbackIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /><path d="M8 9h8M8 13h5" />
+    </svg>
+  )
+}
+
 export function ReportIcon({ className }: { className?: string }) {
   return (
     <svg className={className} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -270,11 +278,14 @@ type InstructorCourseCardProps = {
   onCopy?: () => void
   onReport?: () => void
   reportStatus?: 'due' | 'submitted' | 'overdue'
+  // 課程開始後才傳：學員回饋（講師可查看、幫沒有 LINE 的學員代填）
+  onFeedback?: () => void
 }
 
 export function InstructorCourseCard({
   title, date, timeStart, timeEnd, location, ended,
   registered = 0, maxSeats = 0, onEdit, onRoster, onPoster, onAttendance, onCopy, onReport, reportStatus,
+  onFeedback,
 }: InstructorCourseCardProps) {
   const percent = maxSeats > 0 ? Math.round((registered / maxSeats) * 100) : 0
   return (
@@ -340,6 +351,12 @@ export function InstructorCourseCard({
             </button>
           )}
         </div>
+      )}
+
+      {onFeedback && (
+        <button onClick={onFeedback} className="w-full flex items-center justify-center gap-1.5 bg-white hover:bg-stone-50 border border-stone-300 text-stone-600 text-xs font-medium py-2 rounded-md transition-colors">
+          <FeedbackIcon />學員回饋
+        </button>
       )}
     </div>
   )
