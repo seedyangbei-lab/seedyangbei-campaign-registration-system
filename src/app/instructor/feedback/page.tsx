@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { hasValidInstructorToken } from '@/lib/instructor-auth'
 import { getInstructorCourseFeedback, proxyFillCourseFeedback } from '@/lib/instructorCoursesApi'
 import { FeedbackSummaryPanel, FeedbackResponseList, type FeedbackDetail } from '@/components/CourseFeedbackReport'
-import { FeedbackQuestions, useFeedbackDraft } from '@/components/CourseFeedbackForm'
+import { FeedbackQuestions, useFeedbackDraft, MISSING_ANSWERS_MESSAGE } from '@/components/CourseFeedbackForm'
 import { formatDeadline } from '@/lib/courseFeedback'
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock'
 
@@ -27,13 +27,17 @@ function ProxyFillModal({ courseId, participant, onClose, onDone }: {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    if (error === MISSING_ANSWERS_MESSAGE && draft.missing.length === 0) setError('')
+  }, [error, draft.missing.length])
+
   const close = () => {
     if (draft.dirty && !window.confirm('代填內容還沒送出，確定要離開嗎？')) return
     onClose()
   }
   const submit = async () => {
     setError('')
-    if (!draft.validate()) { setError('還有題目沒有填寫，請看紅框標示的題目'); return }
+    if (!draft.validate()) { setError(MISSING_ANSWERS_MESSAGE); return }
     setSaving(true)
     try {
       await proxyFillCourseFeedback(courseId, participant.registration_id, draft.answers)

@@ -25,7 +25,8 @@ export async function fetchFeedbackCounts(courseIds: string[]): Promise<Feedback
       body: JSON.stringify({ courseIds }),
     })
     if (!res.ok) return empty
-    return await res.json()
+    const body = await res.json()
+    return { counts: body?.counts || {}, submitted: Array.isArray(body?.submitted) ? body.submitted : [] }
   } catch {
     return empty
   }

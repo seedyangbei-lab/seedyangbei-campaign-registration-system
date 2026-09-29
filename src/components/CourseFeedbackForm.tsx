@@ -131,6 +131,8 @@ export function feedbackToAnswers(f: any): FeedbackAnswers {
   }
 }
 
+export const MISSING_ANSWERS_MESSAGE = '還有題目沒有填寫，請看紅框標示的題目'
+
 // 題目元件＋送出前檢查：未答題目標紅並捲到第一題未答的位置
 export function useFeedbackDraft() {
   const [answers, setAnswers] = useState<FeedbackAnswers>(EMPTY_ANSWERS)
@@ -204,6 +206,11 @@ export function ResidentFeedbackForm({
   const [done, setDone] = useState(false)
   const draft = useFeedbackDraft()
 
+  // 漏填提示在補完所有紅框題目後自動消失，不必再按一次送出
+  useEffect(() => {
+    if (submitError === MISSING_ANSWERS_MESSAGE && draft.missing.length === 0) setSubmitError('')
+  }, [submitError, draft.missing.length])
+
   useEffect(() => {
     let cancelled = false
     const token = getResidentToken()
@@ -230,7 +237,7 @@ export function ResidentFeedbackForm({
 
   const handleSubmit = async () => {
     setSubmitError('')
-    if (!draft.validate()) { setSubmitError('還有題目沒有填寫，請看紅框標示的題目'); return }
+    if (!draft.validate()) { setSubmitError(MISSING_ANSWERS_MESSAGE); return }
     const token = getResidentToken()
     setSubmitting(true)
     try {
