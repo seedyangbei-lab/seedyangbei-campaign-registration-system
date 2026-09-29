@@ -185,16 +185,18 @@ export function FeedbackResponseList({
               return (
                 <li key={p.registration_id} className="bg-white border border-stone-200 rounded-xl">
                   <button onClick={() => setExpanded(open ? null : p.registration_id)}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-left" aria-expanded={open}>
-                    <span className="font-bold text-stone-800">{p.name}</span>
-                    {p.room_number && <span className="text-sm text-stone-500">{p.room_number}</span>}
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-md ${st.cls}`}>{st.text}</span>
+                    className="w-full flex flex-wrap items-center gap-x-2 gap-y-1 px-4 py-3 text-left" aria-expanded={open}>
+                    <span className="font-bold text-stone-800 whitespace-nowrap">{p.name}</span>
+                    {p.room_number && <span className="text-sm text-stone-500 whitespace-nowrap">{p.room_number}</span>}
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-md whitespace-nowrap ${st.cls}`}>{st.text}</span>
                     {p.feedback.submitted_by === 'instructor' && (
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-blue-100 text-blue-600">講師代填</span>
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-md whitespace-nowrap bg-blue-100 text-blue-600">講師代填</span>
                     )}
-                    <span className="ml-auto text-xs text-stone-400 flex-shrink-0">{formatDateTime(p.feedback.submitted_at)}</span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                      className={`text-stone-400 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+                    <span className="ml-auto flex items-center gap-2 flex-shrink-0 text-xs text-stone-400 whitespace-nowrap">
+                      {formatDateTime(p.feedback.submitted_at)}
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                        className={`flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+                    </span>
                   </button>
                   {!open && p.feedback.comment && (
                     <p className="px-4 pb-3 -mt-1 text-sm text-stone-600 line-clamp-2 break-words">「{p.feedback.comment}」</p>
@@ -216,11 +218,11 @@ export function FeedbackResponseList({
             {pending.map(p => {
               const st = STATUS_TEXT[p.status]
               return (
-                <li key={p.registration_id} className="flex items-center gap-2 px-4 py-3">
-                  <span className="font-medium text-stone-800">{p.name}</span>
-                  {p.room_number && <span className="text-sm text-stone-500">{p.room_number}</span>}
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-md ${st.cls}`}>{st.text}</span>
-                  {p.is_walk_in && <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-stone-200 text-stone-600">現場報名</span>}
+                <li key={p.registration_id} className="flex flex-wrap items-center gap-x-2 gap-y-1 px-4 py-3">
+                  <span className="font-medium text-stone-800 whitespace-nowrap">{p.name}</span>
+                  {p.room_number && <span className="text-sm text-stone-500 whitespace-nowrap">{p.room_number}</span>}
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-md whitespace-nowrap ${st.cls}`}>{st.text}</span>
+                  {p.is_walk_in && <span className="text-xs font-medium px-2 py-0.5 rounded-md whitespace-nowrap bg-stone-200 text-stone-600">現場報名</span>}
                   <span className="ml-auto flex-shrink-0">
                     {!p.has_line && onProxyFill ? (
                       <button onClick={() => onProxyFill(p)}
@@ -228,7 +230,7 @@ export function FeedbackResponseList({
                         代填
                       </button>
                     ) : !p.has_line ? (
-                      <span className="text-xs text-stone-400">無 LINE 帳號</span>
+                      <span className="text-xs text-stone-400 whitespace-nowrap">無 LINE 帳號</span>
                     ) : null}
                   </span>
                 </li>

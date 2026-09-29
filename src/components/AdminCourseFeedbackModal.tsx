@@ -49,8 +49,9 @@ export default function AdminCourseFeedbackModal({ course, onClose }: {
             <p className="text-sm text-stone-400 text-center py-10">載入中…</p>
           ) : (
             <>
-              <FeedbackSummaryPanel summary={detail.summary} />
+              {/* 排序與中台學員回饋頁一致：先名單、後統計 */}
               <FeedbackResponseList participants={detail.participants} />
+              <FeedbackSummaryPanel summary={detail.summary} />
             </>
           )}
         </div>
