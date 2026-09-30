@@ -12,7 +12,7 @@ import TutorialSkipButton from '@/components/TutorialSkipButton'
 import SiteNavbar from '@/components/SiteNavbar'
 import Link from 'next/link'
 import { BUILDINGS, UNIT_NUMBERS, SUB_UNITS, getFloors } from '@/lib/address'
-import { getResidentToken } from '@/lib/resident-auth'
+import { getResidentToken, getStoredLineUser } from '@/lib/resident-auth'
 
 const DEMO_COURSE_DISPLAY = { id: DEMO_COURSE_ID, title: '範例課程（僅供教學示範）', date: new Date().toISOString().split('T')[0], time_start: '10:00', time_end: '12:00', location: '示範地點' }
 
@@ -103,10 +103,8 @@ function RegisterForm() {
       } catch {}
     }
     if (!user) {
-      try {
-        const stored = localStorage.getItem('line_user')
-        if (stored) user = JSON.parse(stored)
-      } catch {}
+      // 登入已過期就當作未登入（同時清掉本機登入狀態），畫面會直接顯示 LINE 登入按鈕
+      user = getStoredLineUser()
     }
 
    if (ids.length === 0) {

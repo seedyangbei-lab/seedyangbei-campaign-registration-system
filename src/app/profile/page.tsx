@@ -8,7 +8,7 @@ import StampCard from '@/components/StampCard'
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock'
 import SiteNavbar from '@/components/SiteNavbar'
 import { ResidentFeedbackForm } from '@/components/CourseFeedbackForm'
-import { getResidentToken } from '@/lib/resident-auth'
+import { getResidentToken, getStoredLineUser } from '@/lib/resident-auth'
 import { courseStartAt, feedbackWindow } from '@/lib/courseFeedback'
 
 const isMobileViewport = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
@@ -93,9 +93,9 @@ function ProfileContent() {
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('line_user')
-      if (!stored) { router.push('/'); return }
-      const user = JSON.parse(stored)
+      // 登入已過期就直接回首頁（getStoredLineUser 會一併清掉本機登入狀態）
+      const user = getStoredLineUser()
+      if (!user) { router.push('/'); return }
       setLineUser(user)
       fetchHistory()
       fetchFeedbackStatus()

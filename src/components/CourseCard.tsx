@@ -7,7 +7,7 @@ import { useTutorialRect } from '@/lib/useTutorialRect'
 import TutorialMask from '@/components/TutorialMask'
 import TutorialTooltip from '@/components/TutorialTooltip'
 import TutorialSkipButton from '@/components/TutorialSkipButton'
-import { getResidentToken } from '@/lib/resident-auth'
+import { getResidentToken, getStoredLineUser } from '@/lib/resident-auth'
 
 interface Category { id: string; name: string; color: string }
 interface Course {
@@ -341,9 +341,10 @@ export default function CourseCard({ courses, categories }: {
     // 重新整理後還在，可以當作最後一層救援，避免使用者被硬彈回首頁、選課記錄整個消失
     localStorage.setItem('pending_courses', ids)
     try {
-      const stored = localStorage.getItem('line_user')
-      if (stored) {
-        const user = JSON.parse(stored)
+      // 登入已過期的話 getStoredLineUser 會清掉本機登入狀態，改走下面重新 LINE 登入，
+      // 不會再帶著過期的登入進報名表、填完送出才被擋
+      const user = getStoredLineUser()
+      if (user) {
         window.location.href = `/register?courses=${ids}&line_user=${encodeURIComponent(JSON.stringify(user))}`
         return
       }

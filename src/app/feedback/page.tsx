@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ResidentFeedbackForm } from '@/components/CourseFeedbackForm'
+import { getStoredLineUser } from '@/lib/resident-auth'
 
 // 手機版課程回饋問卷（電腦版在個人頁用彈窗開同一個表單元件）
 function FeedbackContent() {
@@ -13,7 +14,7 @@ function FeedbackContent() {
 
   useEffect(() => {
     try {
-      if (!localStorage.getItem('line_user')) { router.replace('/'); return }
+      if (!getStoredLineUser()) { router.replace('/'); return }
     } catch {
       router.replace('/'); return
     }

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock'
+import { getStoredLineUser } from '@/lib/resident-auth'
 
 const SEEN_KEY = 'yangbei_seen_login_prompt'
 const LINE_CHANNEL_ID = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2010077816'
@@ -59,7 +60,7 @@ export default function FirstVisitLoginModal() {
     try {
       const params = new URLSearchParams(window.location.search)
       if (params.has('line_user')) return
-      if (localStorage.getItem('line_user')) return
+      if (getStoredLineUser()) return
       if (localStorage.getItem(SEEN_KEY) === 'true') return
       const timer = setTimeout(() => {
         setMounted(true)

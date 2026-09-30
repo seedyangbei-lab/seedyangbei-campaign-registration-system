@@ -1,3 +1,5 @@
+import { getStoredLineUser } from './resident-auth'
+
 // 首次登入教學（4 步驟導覽）共用狀態工具
 // step: '1' 選擇課程 -> '2' 前往報名 -> '3' 填寫資料 -> '4' 報名成功
 const STEP_KEY = 'yangbei_onboarding_step'
@@ -31,7 +33,7 @@ export function markTutorialSeen() {
 // 首頁用：判斷是否該自動開始教學（剛用 LINE 登入、且從未看過教學、且目前沒有進行中的步驟）
 export function shouldAutoStartTutorial(): boolean {
   try {
-    if (!localStorage.getItem('line_user')) return false
+    if (!getStoredLineUser()) return false
     if (isTutorialSeen()) return false
     if (getTutorialStep()) return false
     return true
