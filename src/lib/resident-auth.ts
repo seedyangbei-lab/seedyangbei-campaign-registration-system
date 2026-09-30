@@ -1,3 +1,10 @@
+// 居民登入效期 180 天：居民很多是長輩，重新走 LINE 登入對他們是負擔。
+// 拿到居民 token 只能看／改「本人」的報名紀錄，碰不到其他人的資料或後台，所以可以放寬；
+// 另外只要有在使用，前台每天會自動換一張新的 180 天 token（見 refreshResidentTokenIfNeeded），
+// 等於半年內來過一次就不用重新登入。後台／講師端的效期不受影響。
+export const RESIDENT_TOKEN_TTL_MS = 180 * 24 * 60 * 60 * 1000
+const REFRESH_AFTER_MS = 24 * 60 * 60 * 1000 // token 簽出超過一天就在使用時續期，避免每次開頁面都打 API
+
 export function getResidentToken(): string | null {
   try {
     if (typeof localStorage === 'undefined') return null
@@ -52,4 +59,23 @@ export function msUntilResidentLogout(): number | null {
   if (!user) return null
   const expires = residentTokenExpiresAt(user.residentToken)
   return expires === null ? null : Math.max(0, expires - EXPIRY_BUFFER_MS - Date.now())
+}
+
+// 有在使用就續期：token 簽出超過一天，就用目前的 token 向伺服器換一張新的 180 天 token。
+// 伺服器會先驗證舊 token 仍有效才簽新的，所以不會延長已過期或偽造的登入。回傳是否有更新
+export async function refreshResidentTokenIfNeeded(): Promise<boolean> {
+  const user = getStoredLineUser()
+  if (!user) return false
+  const expires = residentTokenExpiresAt(user.residentToken)
+  if (expires === null || expires - Date.now() > RESIDENT_TOKEN_TTL_MS - REFRESH_AFTER_MS) return false
+  try {
+    const res = await fetch('/api/resident/refresh', { method: 'POST', headers: { 'x-resident-token': user.residentToken } })
+    if (!res.ok) return false
+    const { residentToken } = await res.json()
+    if (!residentToken) return false
+    localStorage.setItem('line_user', JSON.stringify({ ...user, residentToken }))
+    return true
+  } catch {
+    return false
+  }
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { getStoredLineUser, msUntilResidentLogout } from '@/lib/resident-auth'
+import { getStoredLineUser, msUntilResidentLogout, refreshResidentTokenIfNeeded } from '@/lib/resident-auth'
 
 const LINE_CHANNEL_ID = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2010077816'
 const LINE_CALLBACK_URL = process.env.NEXT_PUBLIC_LINE_CALLBACK_URL || 'https://yangbei-campaign.vercel.app/api/auth/line/callback'
@@ -29,8 +29,11 @@ export default function SiteNavbar({ siteTitle, variant = 'home', onLogout }: Si
   const [loginError, setLoginError] = useState<string | null>(null)
 
   useEffect(() => {
-    // 登入已過期（或舊登入沒有 token）就當作已登出，getStoredLineUser 會一併清掉本機登入狀態
-    setLineUser(getStoredLineUser())
+    // 登入已過期（或舊登入沒有 token）就當作已登出，getStoredLineUser 會一併清掉本機登入狀態；
+    // 還有效的話順便續期（token 簽出超過一天才會真的打 API）
+    const storedUser = getStoredLineUser()
+    setLineUser(storedUser)
+    if (storedUser) refreshResidentTokenIfNeeded()
     const params = new URLSearchParams(window.location.search)
     const lu = params.get('line_user')
     const err = params.get('error')
@@ -62,8 +65,10 @@ export default function SiteNavbar({ siteTitle, variant = 'home', onLogout }: Si
     }
     const ms = msUntilResidentLogout()
     if (ms === null) { expireNow(); return }
-    // setTimeout 上限約 24.8 天，登入效期只有 12 小時，不會超過
-    const timer = setTimeout(expireNow, ms + 1000)
+    // setTimeout 超過約 24.8 天（2^31-1 毫秒）會溢位變成立刻觸發；登入效期是 180 天，
+    // 離到期還很久時就不排計時器，交給切回頁面時的檢查處理
+    const MAX_TIMEOUT_MS = 2 ** 31 - 1
+    const timer = ms + 1000 <= MAX_TIMEOUT_MS ? setTimeout(expireNow, ms + 1000) : undefined
     const onVisible = () => { if (document.visibilityState === 'visible') expireNow() }
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('focus', expireNow)
