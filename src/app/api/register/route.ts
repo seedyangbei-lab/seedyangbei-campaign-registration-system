@@ -6,6 +6,20 @@ import { verifyResidentToken } from '@/lib/resident-auth-server'
 // 而且 lineUserId 是前端自己宣告的，等於任何人都能冒用別人的 LINE 身份改資料、報名。
 // 這是唯一「隨時都有真人在用、沒有講師/後台登入保護」的公開路徑，改法比照講師/後台：
 // 只信任 x-resident-token 解出來的 lineUserId，不相信 request body 裡任何身份宣告。
+// 報名表單預填：回傳本人上次報名填過的資料（身份從 resident token 解出）。
+// 原本前端用 anon key 依 localStorage 自稱的 lineUserId 直接查 users，任何人都能查別人的姓名、電話、房號。
+export async function GET(req: NextRequest) {
+  const lineUserId = verifyResidentToken(req.headers.get('x-resident-token'))
+  if (!lineUserId) return NextResponse.json(null)
+  const supabase = createServerClient()
+  const { data } = await supabase
+    .from('users')
+    .select('name, room_number, phone, age_group, other_community')
+    .eq('line_id', lineUserId)
+    .maybeSingle()
+  return NextResponse.json(data ?? null)
+}
+
 export async function POST(req: NextRequest) {
   const lineUserId = verifyResidentToken(req.headers.get('x-resident-token'))
   if (!lineUserId) {

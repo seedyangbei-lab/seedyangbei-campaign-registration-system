@@ -162,7 +162,8 @@ function ReportPageInner() {
         setRecordPhotos(existing.photo_urls || [])
       } else {
         setSummary(courseRow.description || '')
-        const { count } = await supabase.from('registrations').select('id', { count: 'exact', head: true })
+        // 只需要人數：查 course_id 欄位計數（registrations 對外只開放 course_id／status 兩個欄位）
+        const { count } = await supabase.from('registrations').select('course_id', { count: 'exact', head: true })
           .eq('course_id', courseId).eq('status', 'attended')
         setParticipantCount(count ?? 0)
       }

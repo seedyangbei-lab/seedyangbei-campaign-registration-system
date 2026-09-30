@@ -55,3 +55,9 @@ export function getMyInstructorProfile() {
 export function updateMyInstructorProfile(payload: Record<string, any>) {
   return instructorFetch('/api/instructor/me', { method: 'PATCH', body: JSON.stringify(payload) })
 }
+
+// 講師自己課程的報名名單（伺服器端會確認這堂課屬於目前登入的講師）
+export function getInstructorCourseRegistrations(courseId: string, statuses: string[], order: 'asc' | 'desc' = 'desc') {
+  const q = new URLSearchParams({ courseId, statuses: statuses.join(','), order })
+  return instructorFetch(`/api/instructor/registrations?${q}`)
+}

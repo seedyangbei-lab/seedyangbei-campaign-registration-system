@@ -18,8 +18,10 @@ import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import { staffAuthHeaders, fetchFeedbackCounts } from '@/lib/staffAuthHeaders'
 import { hasValidInstructorToken, clearInstructorSession } from '@/lib/instructor-auth'
 import { courseStartAt } from '@/lib/courseFeedback'
-import { createInstructorCourse, updateInstructorCourseWithLog, cancelInstructorRegistration, deleteInstructorRegistration } from '@/lib/instructorCoursesApi'
-import { getMyInstructorProfile, updateMyInstructorProfile } from '@/lib/instructorCoursesApi'
+import {
+  createInstructorCourse, updateInstructorCourseWithLog, cancelInstructorRegistration, deleteInstructorRegistration,
+  getMyInstructorProfile, updateMyInstructorProfile, getInstructorCourseRegistrations,
+} from '@/lib/instructorCoursesApi'
 
 const ROSTER_PAGE_SIZE = 10
 
@@ -429,15 +431,13 @@ function InstructorPortal() {
     setAttendanceLoading(true)
     setCheckedIds(new Set())
     setWalkInModalOpen(false)
-    const { data: regs, error } = await supabase
-      .from('registrations')
-      .select('id, status, is_walk_in, users(id, name, room_number, line_id)')
-      .eq('course_id', course.id)
-      .in('status', ['confirmed', 'attended', 'absent'])
-      .order('registered_at')
-    if (error) {
-      console.error('attendance fetch error:', error)
-      alert('讀取報名名單失敗：' + error.message + (error.message.includes('is_walk_in') ? '\n\nsql/2026-07-16_registrations_walk_in.sql 這份遷移可能還沒在 Supabase SQL Editor 執行過。' : ''))
+    // 出席名單含居民個資，走驗證過的講師 API（伺服器會確認這堂課是本人的），不再用 anon key 直接查
+    let regs: any[] = []
+    try {
+      regs = await getInstructorCourseRegistrations(course.id, ['confirmed', 'attended', 'absent'], 'asc')
+    } catch (e: any) {
+      console.error('attendance fetch error:', e)
+      alert('讀取報名名單失敗：' + (e?.message || '請稍後再試'))
     }
     setAttendanceList(regs || [])
     const attended = new Set((regs || []).filter((r: any) => r.status === 'attended').map((r: any) => r.id))
@@ -482,13 +482,13 @@ function InstructorPortal() {
     setRosterPage(1)
     setRosterExpandedId(null)
     setRosterLoading(true)
-    const { data } = await supabase
-      .from('registrations')
-      .select('*, users(name, room_number, phone, age_group, line_id), courses(id, title, date)')
-      .eq('course_id', course.id)
-      .in('status', ['confirmed', 'attended', 'cancelled'])
-      .order('registered_at', { ascending: false })
-    setRosterList(data || [])
+    let data: any[] = []
+    try {
+      data = await getInstructorCourseRegistrations(course.id, ['confirmed', 'attended', 'cancelled'])
+    } catch (e: any) {
+      alert('讀取報名紀錄失敗：' + (e?.message || '請稍後再試'))
+    }
+    setRosterList(data)
     setRosterLoading(false)
   }
 
