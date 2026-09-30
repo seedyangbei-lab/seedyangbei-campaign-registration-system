@@ -13,6 +13,7 @@ import AdminCourseEditFormFields, {
 import { COMMUNITY_HOST_LABEL } from '@/components/CourseEditFormFields'
 import type { ExportableReport } from '@/lib/exportCourseReport'
 import { createCourse, updateCourse, deleteCourse } from '@/lib/adminCoursesApi'
+import { getRegistrations } from '@/lib/adminApi'
 import { staffAuthHeaders, fetchFeedbackCounts } from '@/lib/staffAuthHeaders'
 import AdminCourseFeedbackModal from '@/components/AdminCourseFeedbackModal'
 
@@ -304,15 +305,13 @@ export default function CoursesPage() {
     setAttendanceLoading(true)
     setCheckedIds(new Set())
     setWalkInModalOpen(false)
-    const { data: regs, error } = await supabase
-      .from('registrations')
-      .select('id, status, is_walk_in, users(id, name, room_number, line_id)')
-      .eq('course_id', course.id)
-      .in('status', ['confirmed', 'attended', 'absent'])
-      .order('registered_at')
-    if (error) {
-      console.error('attendance fetch error:', error)
-      alert('讀取報名名單失敗：' + error.message + (error.message.includes('is_walk_in') ? '\n\nsql/2026-07-16_registrations_walk_in.sql 這份遷移可能還沒在 Supabase SQL Editor 執行過。' : ''))
+    // 出席名單含居民個資，走驗證過的後台 API，不再用 anon key 直接查
+    let regs: any[] = []
+    try {
+      regs = await getRegistrations({ courseId: course.id, statuses: ['confirmed', 'attended', 'absent'], order: 'asc' })
+    } catch (e: any) {
+      console.error('attendance fetch error:', e)
+      alert('讀取報名名單失敗：' + (e?.message || '請稍後再試'))
     }
     setAttendanceList(regs || [])
     const attended = new Set((regs || []).filter((r: any) => r.status === 'attended').map((r: any) => r.id))

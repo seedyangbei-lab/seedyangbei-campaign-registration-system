@@ -39,3 +39,25 @@ export function getFeedbackOverview(params: { month?: string; responses?: boolea
 export function getCourseFeedbackDetail(courseId: string) {
   return adminFetch(`/api/admin/feedback/${courseId}`)
 }
+
+export function getMembers() {
+  return adminFetch('/api/admin/members')
+}
+
+export function getRegistrations(params: {
+  courseId?: string; userId?: string; lineUserId?: string
+  statuses?: string[]; view?: 'participation'; order?: 'asc' | 'desc'
+} = {}) {
+  const q = new URLSearchParams()
+  if (params.courseId) q.set('courseId', params.courseId)
+  if (params.userId) q.set('userId', params.userId)
+  if (params.lineUserId) q.set('lineUserId', params.lineUserId)
+  if (params.statuses?.length) q.set('statuses', params.statuses.join(','))
+  if (params.view) q.set('view', params.view)
+  if (params.order) q.set('order', params.order)
+  return adminFetch(`/api/admin/registrations${q.toString() ? `?${q}` : ''}`)
+}
+
+export function generateInstructorClaimLink(instructorId: string) {
+  return adminFetch('/api/instructor/generate-claim-link', { method: 'POST', body: JSON.stringify({ instructorId }) })
+}

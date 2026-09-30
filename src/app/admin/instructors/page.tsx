@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import { generateInstructorClaimLink } from '@/lib/adminApi'
 
 interface Instructor {
   id: string; name: string; bio: string; avatar_url: string
@@ -99,13 +100,7 @@ export default function InstructorsPage() {
     }
     setClaimLoadingId(instructorId); setClaimError(null)
     try {
-      const res = await fetch('/api/instructor/generate-claim-link', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ instructorId }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'unknown')
+      const data = await generateInstructorClaimLink(instructorId)
       setClaimUrl(data.claimUrl)
     } catch (e) {
       setClaimError('產生連結失敗，請稍後再試')

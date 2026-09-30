@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import { getRegistrations } from '@/lib/adminApi'
 
 export default function RegistrationsPage() {
   const [courses, setCourses] = useState<any[]>([])
@@ -16,11 +17,10 @@ export default function RegistrationsPage() {
 
   useEffect(() => {
     if (!selectedCourse) return
-    supabase.from('registrations')
-      .select('*, users(name, room_number, phone, email, age_group, line_id)')
-      .eq('course_id', selectedCourse).in('status', ['confirmed', 'attended', 'absent'])
-      .order('registered_at', { ascending: true })
-      .then(({ data }) => setRegistrations(data || []))
+    // 報名名單含居民個資，走驗證過的後台 API，不再用 anon key 直接查
+    getRegistrations({ courseId: selectedCourse, statuses: ['confirmed', 'attended', 'absent'], order: 'asc' })
+      .then(data => setRegistrations(data || []))
+      .catch(e => { setRegistrations([]); alert('讀取報名名單失敗：' + (e?.message || '請稍後再試')) })
   }, [selectedCourse])
 
   const csvField = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`

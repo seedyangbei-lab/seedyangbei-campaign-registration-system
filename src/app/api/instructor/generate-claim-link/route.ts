@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
 import crypto from 'crypto'
+import { verifyAdminToken } from '@/lib/admin-auth-server'
 
+// 產生講師綁定邀請連結（只有後台講師管理頁會用）。這支原本沒有驗證身份，
+// 任何人都能幫任一講師產生新連結、再用自己的 LINE 綁定冒充講師，所以必須帶後台 token。
 export async function POST(request: NextRequest) {
+  if (!verifyAdminToken(request.headers.get('x-admin-token'))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   const { instructorId } = await request.json()
   if (!instructorId) {
     return NextResponse.json({ error: 'missing_instructor_id' }, { status: 400 })
