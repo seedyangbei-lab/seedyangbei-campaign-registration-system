@@ -19,6 +19,7 @@ import { staffAuthHeaders, fetchFeedbackCounts } from '@/lib/staffAuthHeaders'
 import { hasValidInstructorToken, clearInstructorSession } from '@/lib/instructor-auth'
 import { courseStartAt } from '@/lib/courseFeedback'
 import { createInstructorCourse, updateInstructorCourseWithLog, cancelInstructorRegistration, deleteInstructorRegistration } from '@/lib/instructorCoursesApi'
+import { getMyInstructorProfile, updateMyInstructorProfile } from '@/lib/instructorCoursesApi'
 
 const ROSTER_PAGE_SIZE = 10
 
@@ -119,7 +120,7 @@ function InstructorPortal() {
       try {
         const parsed = JSON.parse(decodeURIComponent(lineUserParam))
         localStorage.setItem('instructor_line_user', JSON.stringify(parsed))
-        lookupInstructor(parsed.lineUserId)
+        lookupInstructor()
         if (justClaimed) setToast('已成功綁定講師身份，之後可以直接用這個 LINE 帳號登入')
       } catch { setStatus('not_bound') }
       return
@@ -134,8 +135,7 @@ function InstructorPortal() {
       return
     }
     if (stored) {
-      try { lookupInstructor(JSON.parse(stored).lineUserId) }
-      catch { setStatus('not_bound') }
+      lookupInstructor()
     } else {
       setStatus('not_bound')
     }
@@ -147,8 +147,11 @@ function InstructorPortal() {
     return () => clearTimeout(t)
   }, [toast])
 
-  const lookupInstructor = async (lineUserId: string) => {
-    const { data } = await supabase.from('instructors').select('*').eq('line_user_id', lineUserId).maybeSingle()
+  // 目前登入的講師由伺服器從講師 token 解出（不再用 localStorage 自稱的 lineUserId 查 instructors.line_user_id）。
+  // token 過期或已被後台解除綁定時 API 會回 401，instructorFetch 會清掉本機登入狀態
+  const lookupInstructor = async () => {
+    let data: any = null
+    try { data = await getMyInstructorProfile() } catch { data = null }
     if (data) {
       setInstructor(data)
       setProfileForm({ name: data.name || '', bio: data.bio || '', avatar_url: data.avatar_url || '', phone: data.phone || '', line_id: data.line_id || '' })
@@ -274,13 +277,19 @@ function InstructorPortal() {
     const trimmedName = profileForm.name.trim()
     if (!trimmedName) { setToast('姓名不能是空白'); return }
     setProfileSaving(true)
-    await supabase.from('instructors').update({
-      name: trimmedName,
-      bio: profileForm.bio,
-      avatar_url: profileForm.avatar_url || null,
-      phone: profileForm.phone || null,
-      line_id: profileForm.line_id || null,
-    }).eq('id', instructor.id)
+    try {
+      await updateMyInstructorProfile({
+        name: trimmedName,
+        bio: profileForm.bio,
+        avatar_url: profileForm.avatar_url || null,
+        phone: profileForm.phone || null,
+        line_id: profileForm.line_id || null,
+      })
+    } catch (e: any) {
+      setProfileSaving(false)
+      setToast('儲存失敗：' + (e?.message || '請稍後再試'))
+      return
+    }
     setInstructor({ ...instructor, ...profileForm, name: trimmedName })
     setProfileSaving(false)
     setShowProfileModal(false)

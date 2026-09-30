@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { hasValidInstructorToken } from '@/lib/instructor-auth'
+import { getMyInstructorProfile } from '@/lib/instructorCoursesApi'
 
 interface CheckinEvent {
   id: string
@@ -82,10 +83,9 @@ function CheckinPageInner() {
       const stored = typeof window !== 'undefined' ? localStorage.getItem('instructor_line_user') : null
       if (!stored) { router.replace('/instructor'); return }
       if (!hasValidInstructorToken()) { router.replace('/instructor'); return }
-      let lineUserId = ''
-      try { lineUserId = JSON.parse(stored).lineUserId } catch { router.replace('/instructor'); return }
-
-      const { data: instr } = await supabase.from('instructors').select('id, name').eq('line_user_id', lineUserId).maybeSingle()
+      // 目前登入的講師由伺服器從講師 token 解出，不再用 localStorage 自稱的 lineUserId 查表
+      let instr: any = null
+      try { instr = await getMyInstructorProfile() } catch { instr = null }
       if (!instr) { router.replace('/instructor'); return }
       setInstructor(instr)
       await loadData(instr.id)

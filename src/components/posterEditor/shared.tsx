@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import { updateMyInstructorProfile } from '@/lib/instructorCoursesApi'
 
 // ── 課程海報編輯器：桌機版／手機版共用的常數與繪製邏輯 ──────────────────────────────
 // （色彩研究、字體清單、Canvas 繪製演算法只維護這一份，避免兩版分岔）
@@ -100,9 +101,13 @@ export async function fetchInstructorPosterSettings(instructorId: string): Promi
 
 export async function saveInstructorPosterSettings(instructorId: string, payload: Record<string, any>): Promise<void> {
   if (!instructorId) throw new Error('missing instructorId')
-  const supabase = createClient()
-  const { error } = await supabase.from('instructors').update({ poster_settings: payload }).eq('id', instructorId)
-  if (error) { console.error('[poster] saveInstructorPosterSettings failed', error); throw error }
+  // 寫入走驗證過的 API，伺服器從講師 token 解出身份，只能改自己的設定（instructorId 只用來確認已登入）
+  try {
+    await updateMyInstructorProfile({ poster_settings: payload })
+  } catch (error) {
+    console.error('[poster] saveInstructorPosterSettings failed', error)
+    throw error
+  }
 }
 
 // 批次匯出用：一次查多位講師的已儲存設定，避免每堂課各查一次

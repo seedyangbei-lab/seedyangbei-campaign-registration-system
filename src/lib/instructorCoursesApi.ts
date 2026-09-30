@@ -45,3 +45,13 @@ export function getInstructorCourseFeedback(courseId: string) {
 export function proxyFillCourseFeedback(courseId: string, registrationId: string, answers: Record<string, any>) {
   return instructorFetch(`/api/instructor/courses/${courseId}/feedback`, { method: 'POST', body: JSON.stringify({ registrationId, answers }) })
 }
+
+// 目前登入的講師本人資料（身份由伺服器從講師 token 解出）。token 過期／已被後台解除綁定時會丟錯並清掉本機登入狀態
+export function getMyInstructorProfile() {
+  return instructorFetch('/api/instructor/me')
+}
+
+// 講師修改自己的個人資料或海報樣式設定
+export function updateMyInstructorProfile(payload: Record<string, any>) {
+  return instructorFetch('/api/instructor/me', { method: 'PATCH', body: JSON.stringify(payload) })
+}

@@ -12,6 +12,8 @@ import {
   posterSettingsStorageKey, fetchInstructorPosterSettings, saveInstructorPosterSettings,
 } from '@/components/posterEditor/shared'
 import { updateInstructorCourse } from '@/lib/instructorCoursesApi'
+import { getMyInstructorProfile } from '@/lib/instructorCoursesApi'
+import { getInstructorToken } from '@/lib/instructor-auth'
 
 // ── 小型共用 UI（手機版專用） ──────────────────────────────────────────────────
 function BackArrowIcon() {
@@ -696,12 +698,11 @@ function PosterEditorLoader() {
       setPhotos(photoList)
 
       // 目前登入的講師（跟「我的課程」頁面同一套 LINE 登入狀態），用來讀寫他自己的「儲存設定」
+      // 身份由伺服器從講師 token 解出；沒登入／過期就只是讀不到個人設定，不影響編輯海報
       try {
-        const stored = localStorage.getItem('instructor_line_user')
-        const lineUserId = stored ? JSON.parse(stored).lineUserId : null
-        if (lineUserId) {
-          const { data: self } = await supabase.from('instructors').select('id').eq('line_user_id', lineUserId).maybeSingle()
-          if (self) setInstructorId(self.id)
+        if (getInstructorToken()) {
+          const self = await getMyInstructorProfile()
+          if (self?.id) setInstructorId(self.id)
         }
       } catch (_e) { /* ignore */ }
 

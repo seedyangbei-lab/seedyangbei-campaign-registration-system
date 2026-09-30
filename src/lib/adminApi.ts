@@ -61,3 +61,23 @@ export function getRegistrations(params: {
 export function generateInstructorClaimLink(instructorId: string) {
   return adminFetch('/api/instructor/generate-claim-link', { method: 'POST', body: JSON.stringify({ instructorId }) })
 }
+
+export function getInstructors() {
+  return adminFetch('/api/admin/instructors')
+}
+
+export function createInstructor(payload: Record<string, any>) {
+  return adminFetch('/api/admin/instructors', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function updateInstructor(id: string, payload: Record<string, any>) {
+  return adminFetch(`/api/admin/instructors/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
+}
+
+export function unbindInstructor(id: string) {
+  return adminFetch(`/api/admin/instructors/${id}`, { method: 'PATCH', body: JSON.stringify({ unbind: true }) })
+}
+
+export function deleteInstructor(id: string) {
+  return adminFetch(`/api/admin/instructors/${id}`, { method: 'DELETE' })
+}
