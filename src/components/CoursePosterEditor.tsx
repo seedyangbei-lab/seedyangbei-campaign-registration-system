@@ -8,6 +8,7 @@ import {
   POSTER_W, POSTER_H, PHOTO_H, INFO_PAD, TITLE_WEIGHT, EN_WEIGHT,
   exportPosterPNG, MinusIcon, PlusIcon, SliderRow, sliderTrackStyle, ColorPickerDropdown, ZH_SIZE_OPTIONS, EN_SIZE_OPTIONS, FontSelectDropdown,
   posterSettingsStorageKey, fetchInstructorPosterSettings, saveInstructorPosterSettings,
+  PhotoAdjust, getPhotoAdjust, buildPhotoAdjustMap, borderRepeatUnit,
 } from './posterEditor/shared'
 import { updateInstructorCourse } from '@/lib/instructorCoursesApi'
 
@@ -27,6 +28,10 @@ export default function CoursePosterEditor({ course, instructorId, initialImage,
   const [imgScale, setImgScale] = useState(1)
   const [isDragging, setIsDragging] = useState(false)
   const dragStart = useRef({ mx:0, my:0, px:0, py:0 })
+  // 各課程已儲存的照片縮放／位置（存檔時合併回去，避免蓋掉其他課程的設定）
+  const photoAdjustRef = useRef<Record<string, PhotoAdjust>>({})
+  const imgSrcRef = useRef(imgSrc)
+  imgSrcRef.current = imgSrc
 
   const [scheme, setScheme]   = useState(SCHEMES[0])
   const [customBg, setCustomBg] = useState('')
@@ -92,6 +97,9 @@ export default function CoursePosterEditor({ course, instructorId, initialImage,
     if (typeof s.enFontSize === 'number') setEnFontSize(s.enFontSize)
     if (typeof s.letterSpacingPct === 'number') setLetterSpacingPct(s.letterSpacingPct)
     if (typeof s.lineSpacingMult === 'number') setLineSpacingMult(s.lineSpacingMult)
+    if (s.photoAdjust && typeof s.photoAdjust === 'object') photoAdjustRef.current = s.photoAdjust
+    const adj = getPhotoAdjust(s, course.id, imgSrcRef.current)
+    if (adj) { setImgPos({ x:adj.x, y:adj.y }); setImgScale(adj.scale) }
   }
 
   useEffect(() => {
@@ -110,8 +118,10 @@ export default function CoursePosterEditor({ course, instructorId, initialImage,
 
   // 把目前選定的照片（可能是從課程既有照片挑的，也可能是剛上傳的新照片）存回課程的
   // photo_urls[0]，讓中台批次匯出讀到的照片跟講師編輯器裡看到的一致，而不是永遠停留在課程原本的第一張照片。
-  const persistSelectedPhoto = async () => {
-    if (!course.id || !imgSrc || imgSrc === (photos && photos[0])) return
+  // 回傳最後存進課程的照片網址（上傳失敗回傳 null），用來記錄這張照片的縮放／位置
+  const persistSelectedPhoto = async (): Promise<string|null> => {
+    if (!imgSrc) return null
+    if (!course.id || imgSrc === (photos && photos[0])) return imgSrc.startsWith('data:') ? null : imgSrc
     try {
       const supabase = createClient()
       let finalUrl = imgSrc
@@ -119,30 +129,39 @@ export default function CoursePosterEditor({ course, instructorId, initialImage,
         const blob = await (await fetch(imgSrc)).blob()
         const filename = `course-photos/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`
         const { error: upErr } = await supabase.storage.from('images').upload(filename, blob, { upsert: true, contentType: blob.type || 'image/jpeg' })
-        if (upErr) { console.error('[poster] photo upload failed', upErr); return }
+        if (upErr) { console.error('[poster] photo upload failed', upErr); return null }
         const { data: urlData } = supabase.storage.from('images').getPublicUrl(filename)
         finalUrl = urlData.publicUrl
       }
       const others = (photos || []).filter(p => p !== finalUrl && p !== imgSrc)
       try {
         await updateInstructorCourse(course.id, { photo_urls: [finalUrl, ...others] })
-      } catch (updateErr) { console.error('[poster] photo_urls update failed', updateErr) }
+      } catch (updateErr) { console.error('[poster] photo_urls update failed', updateErr); return null }
+      return finalUrl
     } catch (e) {
       console.error('[poster] persistSelectedPhoto threw', e) // 照片同步失敗不阻擋樣式儲存，只記錄不中斷
+      return null
     }
   }
 
   const handleSaveSettings = async () => {
-    const payload = {
-      schemeId: scheme.id, customBg,
-      dotShape, dotCustomChar, dotColor, dotOpacity, dotSize, dotDensity, dotCoverage, dotArrangement,
-      textColorOverride, enTextColorOverride, borderOn, borderText,
-      zhFontIdx, enFontIdx, zhFontSize, enFontSize, letterSpacingPct, lineSpacingMult,
-    }
-    try { localStorage.setItem(posterSettingsStorageKey(instructorId), JSON.stringify(payload)) } catch (_e) { /* localStorage 不可用時靜默略過 */ }
     setSavingSettings(true)
     try {
-      await Promise.all([saveInstructorPosterSettings(instructorId, payload), persistSelectedPhoto()])
+      // 先把照片存回課程拿到正式網址，再記錄這張照片的縮放／位置，下次打開編輯器才會還原
+      const savedSrc = await persistSelectedPhoto()
+      if (savedSrc && savedSrc !== imgSrc) setImgSrc(savedSrc)  // 剛上傳的照片改指向正式網址，再存一次不會重複上傳
+      const adjust = savedSrc ? { src:savedSrc, x:imgPos.x, y:imgPos.y, scale:imgScale } : null
+      const photoAdjust = await buildPhotoAdjustMap(instructorId, photoAdjustRef.current, course.id, adjust)
+      photoAdjustRef.current = photoAdjust
+      const payload = {
+        schemeId: scheme.id, customBg,
+        dotShape, dotCustomChar, dotColor, dotOpacity, dotSize, dotDensity, dotCoverage, dotArrangement,
+        textColorOverride, enTextColorOverride, borderOn, borderText,
+        zhFontIdx, enFontIdx, zhFontSize, enFontSize, letterSpacingPct, lineSpacingMult,
+        photoAdjust,
+      }
+      try { localStorage.setItem(posterSettingsStorageKey(instructorId), JSON.stringify(payload)) } catch (_e) { /* localStorage 不可用時靜默略過 */ }
+      await saveInstructorPosterSettings(instructorId, payload)
       setSavedFlash(true)
       setTimeout(() => setSavedFlash(false), 1500)
     } catch (e) {
@@ -515,7 +534,7 @@ export default function CoursePosterEditor({ course, instructorId, initialImage,
                             d={`M 8,${PHOTO_H} L 8,16 Q 8,8 16,8 L ${POSTER_W-16},8 Q ${POSTER_W-8},8 ${POSTER_W-8},16 L ${POSTER_W-8},${PHOTO_H}`} />
                         </defs>
                         <text fontSize={borderFontSize} letterSpacing={enLetterPx} fill={enTc} opacity={0.42} fontFamily={enFont.value} dominantBaseline="middle">
-                          <textPath href="#border-u-path" startOffset="0">{borderText.repeat(20)}</textPath>
+                          <textPath href="#border-u-path" startOffset="0">{borderRepeatUnit(borderText).repeat(30)}</textPath>
                         </text>
                       </svg>
                     )}

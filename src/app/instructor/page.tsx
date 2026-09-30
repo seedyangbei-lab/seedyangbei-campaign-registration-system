@@ -917,6 +917,8 @@ function InstructorPortal() {
             setPosterEditorCourse(null)
             setPosterInitialImage(null)
             setPosterPhotos([])
+            // 編輯器可能把新選的照片存回課程，重抓一次，下次打開才會是同一張照片（並還原縮放／位置）
+            if (instructor?.id) fetchCourses(instructor.id)
           }}
         />
       )}
