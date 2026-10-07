@@ -152,6 +152,16 @@ function AttendancePageInner() {
             <p className="text-xs text-stone-600 text-center w-full">已勾選 {checkedIds.size} / {list.length} 人</p>
             <p className="text-xs text-stone-400 whitespace-nowrap">勾選代表已出席，取消勾選代表撤銷出席</p>
             {course && courseEndAt(course) > new Date() && <p className="text-xs text-orange-600 text-center">課程進行中：沒勾選的人先維持「未確認」，課程結束後再確認一次即可</p>}
+            {/* 有填回饋通常代表人在現場，但不自動算出席（出席會給點數，問卷在家也能填），由講師按一下確認 */}
+            {(() => {
+              const pending = list.filter((r: any) => feedbackDoneIds.has(r.id) && !checkedIds.has(r.id))
+              return pending.length > 0 && (
+                <button type="button" onClick={() => setCheckedIds(new Set([...Array.from(checkedIds), ...pending.map((r: any) => r.id)]))}
+                  className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-xl py-2.5 hover:bg-green-100 transition-colors">
+                  <CheckIcon />勾選已填回饋的 {pending.length} 人
+                </button>
+              )
+            })()}
           </>
         )}
 
