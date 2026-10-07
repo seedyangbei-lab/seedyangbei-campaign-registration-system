@@ -17,11 +17,16 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
   const viewportHRef = useRef(0) // 只在 mount／resize 時更新，滾動時不重算，避免手機工具列跳動造成抖動
   const [progress, setProgress] = useState(0) // 0~1
   const [videoOk, setVideoOk] = useState(false)
+  const [videoError, setVideoError] = useState(false) // 真的載入失敗（跟「還在載入中」分開），只有這個才顯示除錯文字
   const [reducedMotion, setReducedMotion] = useState(false)
   const [entered, setEntered] = useState(false) // 進場動畫用：剛載入時是否已經「定位」
   // 現在有兩支原生比例都對的素材（桌機 16:9／手機 9:16），不用再靠「模糊背景墊底＋object-contain」
   // 硬湊版面，直接依斷點切換來源、用 object-cover 滿版顯示即可
-  const [isMobile, setIsMobile] = useState(false)
+  // 初值照 mobileOnly 直接定案（不是硬寫 false）：mobileOnly 這條路徑（首頁手機版）從一開始就
+  // 確定是手機版，不用等下面的 effect 跑完才翻成 true——否則下面載入影片的 effect 會先抓一次
+  // 桌機版影片（isMobile 還是初始的 false），抓到一半才被 effect 重跑打斷、換成手機版重新抓，
+  // 等於每次打開都多浪費一次下載，也是「要等好幾秒才出現」的一部分原因。
+  const [isMobile, setIsMobile] = useState(mobileOnly)
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -44,6 +49,13 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
   }, [mobileOnly])
 
   const videoSrc = isMobile ? MOBILE_VIDEO_SRC : DESKTOP_VIDEO_SRC
+  // mobileOnly 這條路徑從一開始就確定要用哪支影片，不用等斷點判斷，所以直接把 src 寫進
+  // 第一次 render 的 JSX（見下方 <video src={initialSrc}>）。這樣瀏覽器在 parse 到伺服器吐出的
+  // HTML 當下就會開始下載，不用等 JS 下載、hydrate、effect 跑完才發出請求——這一段等待
+  // （尤其手機網路）正是「要等好幾秒才出現」的主因之一。/world 全頁版本斷點不確定，
+  // 維持原本等 effect 判斷完斷點才載入，避免先抓錯尺寸浪費頻寬。
+  const initialSrc = mobileOnly ? MOBILE_VIDEO_SRC : undefined
+  const requestedSrcRef = useRef<string | null>(mobileOnly ? MOBILE_VIDEO_SRC : null)
 
   // 順序是「導覽列 > 報名步驟條 > 這支影片」，這三段要收在第一個 100vh 裡，影片區塊的
   // sticky top／高度要扣掉導覽列（固定常數 52／56px）+ 報名步驟條的實際渲染高度。
@@ -78,15 +90,24 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
   // 改回瀏覽器原生載入方式，時間到影片點（time to first frame）會明顯變快。
   useEffect(() => {
     if (reducedMotion) return
-    setVideoOk(false)
     const el = videoRef.current
     if (!el) return
     const onLoaded = () => setVideoOk(true)
-    const onError = () => setVideoOk(false) // 影片還沒生成好，維持佔位色塊
+    const onError = () => setVideoError(true)
     el.addEventListener('loadedmetadata', onLoaded)
     el.addEventListener('error', onError)
-    el.src = videoSrc
-    el.load()
+    // 只有目標影片真的換了（例如斷點切換、或還沒透過 initialSrc 先載過）才重新指定 src + load()。
+    // 重複指定同一個 src 會打斷瀏覽器正在進行中的下載，從頭重新起跑一次連線，白白浪費已經
+    // 下載到一半的進度——mobileOnly 情境下 src 已經在 initialSrc 先寫進 HTML 了，這裡要避開。
+    if (requestedSrcRef.current !== videoSrc) {
+      requestedSrcRef.current = videoSrc
+      setVideoOk(false)
+      setVideoError(false)
+      el.src = videoSrc
+      el.load()
+    } else if (el.readyState >= 1) {
+      setVideoOk(true)
+    }
     return () => {
       el.removeEventListener('loadedmetadata', onLoaded)
       el.removeEventListener('error', onError)
@@ -169,15 +190,18 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
               不用再靠模糊背景墊底湊版面，直接 object-cover 滿版顯示即可 */}
           <video
             ref={videoRef}
+            src={initialSrc}
             muted
             playsInline
             preload="auto"
             className="absolute inset-0 w-full h-full object-cover"
             style={{ opacity: videoOk ? 1 : 0, transition: 'opacity 0.4s' }}
           />
-          {!videoOk && (
+          {/* 影片載入中：不顯示任何文字，後面暖色佔位色塊就夠了，淡入過程才不會先閃一段除錯字樣。
+              只有真的載入失敗（例如檔案不存在）才提示，方便之後除錯用 */}
+          {videoError && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <p className="text-stone-500 text-sm">〔影片尚未生成：{videoSrc}〕</p>
+              <p className="text-stone-500 text-sm">〔影片載入失敗：{videoSrc}〕</p>
             </div>
           )}
         </div>
