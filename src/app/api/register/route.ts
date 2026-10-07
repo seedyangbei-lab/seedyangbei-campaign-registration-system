@@ -66,7 +66,16 @@ export async function POST(req: NextRequest) {
       userId = newUser.id
     }
 
+    // 同一帳號同一堂課只能有一筆有效報名（已報名／已出席）。前台雖然會把已報名的課標成「已報名」，
+    // 但登入過期時前台判斷不出來，學員重新登入後會把整批課再送一次（2026-10-07 發生過）。
+    // 資料庫也有 partial unique index 擋（sql/2026-10-07_registrations_unique_active.sql），撞到 23505 一樣跳過
+    const { data: activeRegs } = await supabase
+      .from('registrations').select('course_id')
+      .eq('user_id', userId).in('course_id', courseIds).in('status', ['confirmed', 'attended'])
+    const alreadyRegistered = new Set((activeRegs || []).map((r: any) => r.course_id))
+
     for (const courseId of courseIds) {
+      if (alreadyRegistered.has(courseId)) continue
       const { error: regErr } = await supabase.from('registrations').insert({
         user_id: userId, course_id: courseId,
         questions: questions || null,

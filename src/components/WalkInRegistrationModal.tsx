@@ -168,6 +168,7 @@ export default function WalkInRegistrationModal({
 
     let created: CreatedReg[] = []
     let failedNames: string[] = []
+    let alreadyNames: string[] = []
 
     try {
       const res = await fetch('/api/walk-in-registration', {
@@ -185,6 +186,7 @@ export default function WalkInRegistrationModal({
       if (!res.ok) throw new Error(body.error || '新增失敗')
       created = body.created || []
       failedNames = body.failedNames || []
+      alreadyNames = body.alreadyRegisteredNames || []
     } catch (e: any) {
       setError('新增失敗：' + (e?.message || '請稍後再試'))
       setSaving(false)
@@ -193,15 +195,19 @@ export default function WalkInRegistrationModal({
 
     setSaving(false)
 
-    if (failedNames.length > 0) {
-      setError(`部分新增失敗（可能已報名過）：${failedNames.join('、')}`)
-      setPendingList(list => list.filter(p => failedNames.includes(p.name)))
+    const notAdded = [...failedNames, ...alreadyNames]
+    if (notAdded.length > 0) {
+      const msgs = []
+      if (alreadyNames.length > 0) msgs.push(`已在報名名單上，請直接在名單勾選出席：${alreadyNames.join('、')}`)
+      if (failedNames.length > 0) msgs.push(`新增失敗：${failedNames.join('、')}`)
+      setError(msgs.join('\n'))
+      setPendingList(list => list.filter(p => notAdded.includes(p.name)))
     } else {
       setPendingList([])
     }
 
     if (created.length > 0) onConfirmed(created)
-    if (failedNames.length === 0) onClose()
+    if (notAdded.length === 0) onClose()
   }
 
   const footerLabel = saving
@@ -363,7 +369,7 @@ export default function WalkInRegistrationModal({
             </>
           )}
 
-          {error && <p className="text-sm text-red-500 pb-1">{error}</p>}
+          {error && <p className="text-sm text-red-500 pb-1 whitespace-pre-line">{error}</p>}
         </div>
 
         <div className="mt-4 border-t border-stone-100 p-5">

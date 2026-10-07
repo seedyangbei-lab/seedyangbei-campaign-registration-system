@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     : (manualReason || '手動調整')
 
   // 更新報名狀態、查詢 LINE 會員這兩件事互不相依，平行處理縮短單次請求耗時
-  const [, memberResult] = await Promise.all([
+  const [updateResult, memberResult] = await Promise.all([
     registrationId
       ? supabase.from('registrations').update({ status: nextStatus }).eq('id', registrationId)
       : Promise.resolve(null),
@@ -57,6 +57,14 @@ export async function POST(req: NextRequest) {
       ? supabase.from('line_members').select('id').eq('line_user_id', lineUserId).maybeSingle()
       : Promise.resolve(null),
   ])
+  // 狀態沒寫進去就不能動點數（例如同一人在這堂課已經有另一筆有效報名，撞到 registrations_unique_active）
+  if (updateResult && (updateResult as any).error) {
+    const err = (updateResult as any).error
+    const message = err.code === '23505'
+      ? '這位學員在這堂課已經有另一筆報名紀錄（已報名或已出席），請勾選那一筆'
+      : '更新出席狀態失敗：' + err.message
+    return NextResponse.json({ error: message }, { status: err.code === '23505' ? 409 : 500 })
+  }
 
   // mark_absent 不牽涉點數異動（人本來就沒被記點過），到此結束即可
   if (lineUserId && action !== 'mark_absent') {

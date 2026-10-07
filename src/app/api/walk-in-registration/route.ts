@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
 
   const created: any[] = []
   const failedNames: string[] = []
+  const alreadyRegisteredNames: string[] = []
 
   for (const p of items) {
     let userRow: { id: string; name: string; room_number: string; line_id: string | null } | null = null
@@ -66,6 +67,11 @@ export async function POST(req: NextRequest) {
       userRow = newUser
     }
 
+    // 已經在報名名單上的人（已報名／已出席）不另外新增一筆，請講師直接在名單勾選出席，避免重複報名、重複發點數
+    const { data: activeReg } = await supabase.from('registrations').select('id')
+      .eq('user_id', userRow.id).eq('course_id', courseId).in('status', ['confirmed', 'attended']).limit(1)
+    if (activeReg && activeReg.length > 0) { alreadyRegisteredNames.push(p.name); continue }
+
     const { data: newReg, error: regErr } = await supabase.from('registrations')
       .insert({
         user_id: userRow.id, course_id: courseId, status: 'attended',
@@ -93,5 +99,5 @@ export async function POST(req: NextRequest) {
     created.push({ ...newReg, users: userRow })
   }
 
-  return NextResponse.json({ created, failedNames })
+  return NextResponse.json({ created, failedNames, alreadyRegisteredNames })
 }
