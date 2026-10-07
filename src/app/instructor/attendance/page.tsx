@@ -8,6 +8,7 @@ import WalkInRegistrationModal from '@/components/WalkInRegistrationModal'
 import { staffAuthHeaders, fetchFeedbackCounts } from '@/lib/staffAuthHeaders'
 import { hasValidInstructorToken } from '@/lib/instructor-auth'
 import { courseEndAt } from '@/lib/courseFeedback'
+import { getInstructorCourseRegistrations } from '@/lib/instructorCoursesApi'
 
 function BackArrowIcon() {
   return (
@@ -72,17 +73,14 @@ function AttendancePageInner() {
 
     const { data: courseRow } = await supabase.from('courses').select('id, title, date, time_start, time_end').eq('id', courseId).maybeSingle()
     setCourse(courseRow)
-    const { data: regs, error } = await supabase
-      .from('registrations')
-      .select('id, status, is_walk_in, users(id, name, room_number, line_id)')
-      .eq('course_id', courseId)
-      .in('status', ['confirmed', 'attended', 'absent'])
-      .order('registered_at')
-    if (error) {
-      console.error('attendance fetch error:', error)
-      setErrorMsg('讀取報名名單失敗：' + error.message + (error.message.includes('is_walk_in') ? '（sql/2026-07-16_registrations_walk_in.sql 這份遷移可能還沒在 Supabase SQL Editor 執行過）' : ''))
-    } else {
+    // 出席名單含居民個資，走驗證過的講師 API（伺服器會確認這堂課是本人的），不再用 anon key 直接查
+    let regs: any[] = []
+    try {
+      regs = await getInstructorCourseRegistrations(courseId!, ['confirmed', 'attended', 'absent'], 'asc')
       setErrorMsg('')
+    } catch (e: any) {
+      console.error('attendance fetch error:', e)
+      setErrorMsg('讀取報名名單失敗：' + (e?.message || '請稍後再試'))
     }
     setList(regs || [])
     setCheckedIds(new Set((regs || []).filter((r: any) => r.status === 'attended').map((r: any) => r.id)))

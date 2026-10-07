@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { updateUserRoomNumber, updateLineMember } from '@/lib/adminApi'
+import { updateUserRoomNumber, updateLineMember, getMembers, getRegistrations } from '@/lib/adminApi'
 import { staffAuthHeaders } from '@/lib/staffAuthHeaders'
 
 type Member = {
@@ -19,7 +19,20 @@ type Member = {
   points?: number | null
   created_at: string
   room_number?: string | null
+  user_room_number?: string | null  // LINE 會員對應 users 紀錄的房號（編輯表單預填用）
 }
+
+// 會員管理頁統計用的報名紀錄（精簡欄位，由 /api/admin/registrations?view=participation 提供）
+type ParticipationRow = {
+  user_id: string
+  course_id: string
+  registered_at: string | null
+  users: { id: string; line_id: string | null } | null
+  courses: { date: string | null } | null
+}
+
+const matchesGroup = (r: ParticipationRow, scope: 'all' | 'line' | 'unbound') =>
+  scope === 'all' ? true : scope === 'line' ? !!r.users?.line_id : !r.users?.line_id
 
 function getTag(count: number) {
   if (count === 0) return { label: '尚未參與', color: '#9ca3af', bg: '#f3f4f6' }
@@ -63,6 +76,8 @@ export default function MembersPage() {
   const [historyRegs, setHistoryRegs] = useState<any[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
   const [regCounts, setRegCounts] = useState<Record<string, number>>({})
+  // 所有有效參與的報名紀錄，一次撈回來，參與次數、走勢圖、月份細項、個人走勢都在前端從這份資料算
+  const [participation, setParticipation] = useState<ParticipationRow[]>([])
 
   // 篩選 chip：全部會員 / LINE 會員 / 未綁定會員——同時控制下面的名單跟走勢圖的統計範圍
   const [groupFilter, setGroupFilter] = useState<'all' | 'line' | 'unbound'>('all')
@@ -91,50 +106,39 @@ export default function MembersPage() {
     return () => window.removeEventListener('resize', check)
   }, [])
 
+  // 會員名單與報名紀錄都含居民個資，一律走驗證過的後台 API，不再用 anon key 直接查 users／registrations
   const fetchMembers = async () => {
-    const res = await fetch('/api/admin/members')
-    const data = await res.json()
+    const [data, regs] = await Promise.all([
+      getMembers().catch(() => []),
+      getRegistrations({ statuses: PARTICIPATED_STATUSES, view: 'participation' }).catch(() => []) as Promise<ParticipationRow[]>,
+    ])
     if (!Array.isArray(data)) { setMembers([]); return }
     setMembers(data)
+    setParticipation(regs)
 
-    // 批次撈所有有效報名，一次 query 取代 N 次；同時支援 LINE 會員（用 line_id 對應）跟未綁定會員（用 user_id 本身對應）
-    const { data: allRegs } = await supabase
-      .from('registrations')
-      .select('user_id, users!inner(id, line_id)')
-      .in('status', PARTICIPATED_STATUSES)
-
+    // 同時支援 LINE 會員（用 line_id 對應）跟未綁定會員（用 user_id 本身對應）
     const counts: Record<string, number> = {}
-    if (allRegs) {
-      const lineIdCount: Record<string, number> = {}
-      const userIdCount: Record<string, number> = {}
-      allRegs.forEach((r: any) => {
-        const lid = r.users?.line_id
-        const uid = r.users?.id
-        if (lid) lineIdCount[lid] = (lineIdCount[lid] || 0) + 1
-        else if (uid) userIdCount[uid] = (userIdCount[uid] || 0) + 1
-      })
-      data.forEach((m: any) => {
-        counts[m.id] = m.source === 'line' ? (lineIdCount[m.line_user_id] || 0) : (userIdCount[m.id] || 0)
-      })
-    }
+    const lineIdCount: Record<string, number> = {}
+    const userIdCount: Record<string, number> = {}
+    regs.forEach(r => {
+      const lid = r.users?.line_id
+      const uid = r.users?.id
+      if (lid) lineIdCount[lid] = (lineIdCount[lid] || 0) + 1
+      else if (uid) userIdCount[uid] = (userIdCount[uid] || 0) + 1
+    })
+    data.forEach((m: any) => {
+      counts[m.id] = m.source === 'line' ? (lineIdCount[m.line_user_id] || 0) : (userIdCount[m.id] || 0)
+    })
     setRegCounts(counts)
+    buildOverallChart(regs, 'all')
   }
 
-  useEffect(() => { fetchMembers(); fetchOverallChart('all') }, [])
+  useEffect(() => { fetchMembers() }, [])
 
-  const fetchOverallChart = async (scope: 'all' | 'line' | 'unbound') => {
-    let query = supabase
-      .from('registrations')
-      .select('course_id, courses!inner(date), users!inner(line_id)')
-      .in('status', PARTICIPATED_STATUSES)
-    if (scope === 'line') query = query.not('users.line_id', 'is', null)
-    if (scope === 'unbound') query = query.is('users.line_id', null)
-    const { data: regs } = await query
-    if (!regs) { setChartData([]); return }
+  const buildOverallChart = (regs: ParticipationRow[], scope: 'all' | 'line' | 'unbound') => {
     const monthMap: Record<string, number> = {}
-    regs.forEach((r: any) => {
-      const date = (r.courses as any)?.date
-      const m = date?.slice(0, 7)
+    regs.filter(r => matchesGroup(r, scope)).forEach(r => {
+      const m = r.courses?.date?.slice(0, 7)
       if (m) monthMap[m] = (monthMap[m] || 0) + 1
     })
     const sorted = Object.keys(monthMap).sort()
@@ -150,7 +154,7 @@ export default function MembersPage() {
     setPersonalChartData([])
     setSelectedMonth('')
     setMonthBarData([])
-    fetchOverallChart(scope)
+    buildOverallChart(participation, scope)
   }
 
   const fetchMonthBar = async (monthKey: string) => {
@@ -172,22 +176,13 @@ export default function MembersPage() {
 
     const courseIds = monthlyCourses.map((c: any) => c.id)
 
-    let query = supabase
-      .from('registrations')
-      .select('course_id, users!inner(line_id)')
-      .in('status', PARTICIPATED_STATUSES)
-      .in('course_id', courseIds)
-    if (groupFilter === 'line') query = query.not('users.line_id', 'is', null)
-    if (groupFilter === 'unbound') query = query.is('users.line_id', null)
-    const { data: regs } = await query
-
-    if (!regs) { setMonthBarData([]); return }
+    const regs = participation.filter(r => courseIds.includes(r.course_id) && matchesGroup(r, groupFilter))
 
     const countMap: Record<string, { title: string; count: number }> = {}
     monthlyCourses.forEach((c: any) => {
       countMap[c.id] = { title: c.title, count: 0 }
     })
-    regs.forEach((r: any) => {
+    regs.forEach(r => {
       if (countMap[r.course_id]) countMap[r.course_id].count++
     })
     setMonthBarData(
@@ -216,22 +211,11 @@ export default function MembersPage() {
     setMonthBarData([])
     setSelectedMemberForChart(member)
 
-    let userId: string | null = null
-    if (member.source === 'unbound') {
-      userId = member.id
-    } else {
-      const { data: user } = await supabase.from('users').select('id').eq('line_id', member.line_user_id).maybeSingle()
-      userId = user?.id ?? null
-    }
-    if (!userId) { setPersonalChartData([]); return }
-    const { data: regs } = await supabase
-      .from('registrations')
-      .select('registered_at')
-      .eq('user_id', userId)
-      .in('status', PARTICIPATED_STATUSES)
-    if (!regs) { setPersonalChartData([]); return }
+    const regs = participation.filter(r => member.source === 'unbound'
+      ? (!r.users?.line_id && r.users?.id === member.id)
+      : (!!member.line_user_id && r.users?.line_id === member.line_user_id))
     const monthMap: Record<string, number> = {}
-    regs.forEach((r: any) => {
+    regs.forEach(r => {
       const m = r.registered_at?.slice(0, 7)
       if (m) monthMap[m] = (monthMap[m] || 0) + 1
     })
@@ -252,19 +236,15 @@ export default function MembersPage() {
     setHistoryLoading(true)
     setHistoryRegs([])
 
-    let userId: string | null = null
-    if (member.source === 'unbound') {
-      userId = member.id
-    } else {
-      const { data: user } = await supabase.from('users').select('id').eq('line_id', member.line_user_id).maybeSingle()
-      userId = user?.id ?? null
-    }
-    if (userId) {
-      const { data: regs } = await supabase.from('registrations')
-        .select('*, courses(title, date, time_start, time_end, location)')
-        .eq('user_id', userId).in('status', PARTICIPATED_STATUSES)
-        .order('registered_at', { ascending: false })
+    try {
+      const regs = member.source === 'unbound'
+        ? await getRegistrations({ userId: member.id, statuses: PARTICIPATED_STATUSES })
+        : member.line_user_id
+          ? await getRegistrations({ lineUserId: member.line_user_id, statuses: PARTICIPATED_STATUSES })
+          : []
       setHistoryRegs(regs || [])
+    } catch {
+      setHistoryRegs([])
     }
     setHistoryLoading(false)
   }
@@ -278,15 +258,12 @@ export default function MembersPage() {
     let building = member.building || ''
     let unit_number = member.unit_number || ''
     let floor_number = member.floor_number || ''
-    if (!building && member.line_user_id) {
-      const { data: user } = await supabase.from('users').select('room_number').eq('line_id', member.line_user_id).maybeSingle()
-      if (user?.room_number) {
-        const match = user.room_number.match(/^([A-Z]棟)\s+(\d+)-(\d+)F-(\d+)$/)
-        if (match) {
-          building = match[1]
-          unit_number = match[2]
-          floor_number = match[3]
-        }
+    if (!building && member.user_room_number) {
+      const match = member.user_room_number.match(/^([A-Z]棟)\s+(\d+)-(\d+)F-(\d+)$/)
+      if (match) {
+        building = match[1]
+        unit_number = match[2]
+        floor_number = match[3]
       }
     }
     setEditForm({ building, unit_number, floor_number, notes: member.notes || '', room_number: '' })

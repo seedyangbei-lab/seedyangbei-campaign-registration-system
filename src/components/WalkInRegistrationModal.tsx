@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase'
 import { BUILDINGS, UNIT_NUMBERS, SUB_UNITS, getFloors, formatRoomNumber } from '@/lib/address'
 import { staffAuthHeaders } from '@/lib/staffAuthHeaders'
 
@@ -54,7 +53,6 @@ export default function WalkInRegistrationModal({
   onClose: () => void
   onConfirmed: (regs: CreatedReg[]) => void
 }) {
-  const supabase = createClient()
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<Candidate[]>([])
   const [selected, setSelected] = useState<Candidate | null>(null)
@@ -77,12 +75,15 @@ export default function WalkInRegistrationModal({
 
   const runSearch = async (q: string) => {
     if (!q) { setSuggestions([]); return }
-    // users 表 RLS 對匿名讀取是開放的，可以直接查；line_members 沒有開放匿名讀取（跟後台會員頁一樣走 service role），
-    // 所以另外打一支用 service role 查的 API，才能搜到「是 LINE 會員但沒報名過活動」的人
-    const [{ data: userRows }, memberRows] = await Promise.all([
-      supabase.from('users').select('id, name, room_number, line_id').ilike('name', `%${q}%`).limit(6),
-      fetch(`/api/search-members?q=${encodeURIComponent(q)}`, { headers: staffAuthHeaders() }).then(r => r.ok ? r.json() : []).catch(() => []) as Promise<{ line_user_id: string; display_name: string | null; building: string | null; unit_number: string | null; floor_number: string | null }[]>,
-    ])
+    // 曾報名過的居民（users）跟 LINE 會員（line_members）都含個資，一律走驗證過的 API（後台或講師 token），
+    // 才能同時搜到「是 LINE 會員但沒報名過活動」的人
+    type SearchResult = {
+      users: { id: string; name: string; room_number: string; line_id: string | null }[]
+      lineMembers: { line_user_id: string; display_name: string | null; building: string | null; unit_number: string | null; floor_number: string | null }[]
+    }
+    const { users: userRows, lineMembers: memberRows } = await fetch(`/api/search-members?q=${encodeURIComponent(q)}`, { headers: staffAuthHeaders() })
+      .then(r => r.ok ? r.json() : { users: [], lineMembers: [] })
+      .catch(() => ({ users: [], lineMembers: [] })) as SearchResult
     const userLineIds = new Set((userRows || []).map(u => u.line_id).filter(Boolean))
     const userCandidates: Candidate[] = (userRows || []).map(u => ({
       key: u.id, name: u.name, roomNumber: u.room_number, lineId: u.line_id, source: 'user',

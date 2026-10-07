@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { hasValidInstructorToken } from '@/lib/instructor-auth'
+import { getMyInstructorProfile } from '@/lib/instructorCoursesApi'
 
 const MAX_SIGNIN_PHOTOS = 5
 const MIN_SIGNIN_PHOTOS = 1
@@ -131,10 +132,9 @@ function ReportPageInner() {
       const stored = typeof window !== 'undefined' ? localStorage.getItem('instructor_line_user') : null
       if (!stored || !courseId) { router.replace('/instructor'); return }
       if (!hasValidInstructorToken()) { router.replace('/instructor'); return }
-      let lineUserId = ''
-      try { lineUserId = JSON.parse(stored).lineUserId } catch { router.replace('/instructor'); return }
-
-      const { data: instr } = await supabase.from('instructors').select('*').eq('line_user_id', lineUserId).maybeSingle()
+      // 目前登入的講師由伺服器從講師 token 解出，不再用 localStorage 自稱的 lineUserId 查表
+      let instr: any = null
+      try { instr = await getMyInstructorProfile() } catch { instr = null }
       if (!instr) { router.replace('/instructor'); return }
 
       const { data: courseRow } = await supabase.from('courses').select('*').eq('id', courseId).maybeSingle()
@@ -162,7 +162,8 @@ function ReportPageInner() {
         setRecordPhotos(existing.photo_urls || [])
       } else {
         setSummary(courseRow.description || '')
-        const { count } = await supabase.from('registrations').select('id', { count: 'exact', head: true })
+        // 只需要人數：查 course_id 欄位計數（registrations 對外只開放 course_id／status 兩個欄位）
+        const { count } = await supabase.from('registrations').select('course_id', { count: 'exact', head: true })
           .eq('course_id', courseId).eq('status', 'attended')
         setParticipantCount(count ?? 0)
       }

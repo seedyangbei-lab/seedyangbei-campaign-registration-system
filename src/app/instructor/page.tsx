@@ -18,7 +18,10 @@ import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import { staffAuthHeaders, fetchFeedbackCounts } from '@/lib/staffAuthHeaders'
 import { hasValidInstructorToken, clearInstructorSession } from '@/lib/instructor-auth'
 import { courseStartAt, courseEndAt } from '@/lib/courseFeedback'
-import { createInstructorCourse, updateInstructorCourseWithLog, cancelInstructorRegistration, deleteInstructorRegistration } from '@/lib/instructorCoursesApi'
+import {
+  createInstructorCourse, updateInstructorCourseWithLog, cancelInstructorRegistration, deleteInstructorRegistration,
+  getMyInstructorProfile, updateMyInstructorProfile, getInstructorCourseRegistrations,
+} from '@/lib/instructorCoursesApi'
 
 const ROSTER_PAGE_SIZE = 10
 
@@ -119,7 +122,7 @@ function InstructorPortal() {
       try {
         const parsed = JSON.parse(decodeURIComponent(lineUserParam))
         localStorage.setItem('instructor_line_user', JSON.stringify(parsed))
-        lookupInstructor(parsed.lineUserId)
+        lookupInstructor()
         if (justClaimed) setToast('已成功綁定講師身份，之後可以直接用這個 LINE 帳號登入')
       } catch { setStatus('not_bound') }
       return
@@ -134,8 +137,7 @@ function InstructorPortal() {
       return
     }
     if (stored) {
-      try { lookupInstructor(JSON.parse(stored).lineUserId) }
-      catch { setStatus('not_bound') }
+      lookupInstructor()
     } else {
       setStatus('not_bound')
     }
@@ -147,8 +149,11 @@ function InstructorPortal() {
     return () => clearTimeout(t)
   }, [toast])
 
-  const lookupInstructor = async (lineUserId: string) => {
-    const { data } = await supabase.from('instructors').select('*').eq('line_user_id', lineUserId).maybeSingle()
+  // 目前登入的講師由伺服器從講師 token 解出（不再用 localStorage 自稱的 lineUserId 查 instructors.line_user_id）。
+  // token 過期或已被後台解除綁定時 API 會回 401，instructorFetch 會清掉本機登入狀態
+  const lookupInstructor = async () => {
+    let data: any = null
+    try { data = await getMyInstructorProfile() } catch { data = null }
     if (data) {
       setInstructor(data)
       setProfileForm({ name: data.name || '', bio: data.bio || '', avatar_url: data.avatar_url || '', phone: data.phone || '', line_id: data.line_id || '' })
@@ -274,13 +279,19 @@ function InstructorPortal() {
     const trimmedName = profileForm.name.trim()
     if (!trimmedName) { setToast('姓名不能是空白'); return }
     setProfileSaving(true)
-    await supabase.from('instructors').update({
-      name: trimmedName,
-      bio: profileForm.bio,
-      avatar_url: profileForm.avatar_url || null,
-      phone: profileForm.phone || null,
-      line_id: profileForm.line_id || null,
-    }).eq('id', instructor.id)
+    try {
+      await updateMyInstructorProfile({
+        name: trimmedName,
+        bio: profileForm.bio,
+        avatar_url: profileForm.avatar_url || null,
+        phone: profileForm.phone || null,
+        line_id: profileForm.line_id || null,
+      })
+    } catch (e: any) {
+      setProfileSaving(false)
+      setToast('儲存失敗：' + (e?.message || '請稍後再試'))
+      return
+    }
     setInstructor({ ...instructor, ...profileForm, name: trimmedName })
     setProfileSaving(false)
     setShowProfileModal(false)
@@ -420,15 +431,13 @@ function InstructorPortal() {
     setAttendanceLoading(true)
     setCheckedIds(new Set())
     setWalkInModalOpen(false)
-    const { data: regs, error } = await supabase
-      .from('registrations')
-      .select('id, status, is_walk_in, users(id, name, room_number, line_id)')
-      .eq('course_id', course.id)
-      .in('status', ['confirmed', 'attended', 'absent'])
-      .order('registered_at')
-    if (error) {
-      console.error('attendance fetch error:', error)
-      alert('讀取報名名單失敗：' + error.message + (error.message.includes('is_walk_in') ? '\n\nsql/2026-07-16_registrations_walk_in.sql 這份遷移可能還沒在 Supabase SQL Editor 執行過。' : ''))
+    // 出席名單含居民個資，走驗證過的講師 API（伺服器會確認這堂課是本人的），不再用 anon key 直接查
+    let regs: any[] = []
+    try {
+      regs = await getInstructorCourseRegistrations(course.id, ['confirmed', 'attended', 'absent'], 'asc')
+    } catch (e: any) {
+      console.error('attendance fetch error:', e)
+      alert('讀取報名名單失敗：' + (e?.message || '請稍後再試'))
     }
     setAttendanceList(regs || [])
     const attended = new Set((regs || []).filter((r: any) => r.status === 'attended').map((r: any) => r.id))
@@ -476,13 +485,13 @@ function InstructorPortal() {
     setRosterPage(1)
     setRosterExpandedId(null)
     setRosterLoading(true)
-    const { data } = await supabase
-      .from('registrations')
-      .select('*, users(name, room_number, phone, age_group, line_id), courses(id, title, date)')
-      .eq('course_id', course.id)
-      .in('status', ['confirmed', 'attended', 'cancelled'])
-      .order('registered_at', { ascending: false })
-    setRosterList(data || [])
+    let data: any[] = []
+    try {
+      data = await getInstructorCourseRegistrations(course.id, ['confirmed', 'attended', 'cancelled'])
+    } catch (e: any) {
+      alert('讀取報名紀錄失敗：' + (e?.message || '請稍後再試'))
+    }
+    setRosterList(data)
     setRosterLoading(false)
   }
 
@@ -913,6 +922,8 @@ function InstructorPortal() {
             setPosterEditorCourse(null)
             setPosterInitialImage(null)
             setPosterPhotos([])
+            // 編輯器可能把新選的照片存回課程，重抓一次，下次打開才會是同一張照片（並還原縮放／位置）
+            if (instructor?.id) fetchCourses(instructor.id)
           }}
         />
       )}

@@ -12,7 +12,7 @@ import TutorialSkipButton from '@/components/TutorialSkipButton'
 import SiteNavbar from '@/components/SiteNavbar'
 import Link from 'next/link'
 import { BUILDINGS, UNIT_NUMBERS, SUB_UNITS, getFloors } from '@/lib/address'
-import { getResidentToken } from '@/lib/resident-auth'
+import { getResidentToken, getStoredLineUser } from '@/lib/resident-auth'
 
 const DEMO_COURSE_DISPLAY = { id: DEMO_COURSE_ID, title: '範例課程（僅供教學示範）', date: new Date().toISOString().split('T')[0], time_start: '10:00', time_end: '12:00', location: '示範地點' }
 
@@ -103,10 +103,8 @@ function RegisterForm() {
       } catch {}
     }
     if (!user) {
-      try {
-        const stored = localStorage.getItem('line_user')
-        if (stored) user = JSON.parse(stored)
-      } catch {}
+      // 登入已過期就當作未登入（同時清掉本機登入狀態），畫面會直接顯示 LINE 登入按鈕
+      user = getStoredLineUser()
     }
 
    if (ids.length === 0) {
@@ -126,7 +124,7 @@ function RegisterForm() {
     if (user) {
       setLineUser(user)
       setForm(f => ({ ...f, name: user.displayName || '' }))
-      prefillUserData(user.lineUserId)
+      prefillUserData()
     }
 
     if (errParam === 'line_denied') setError('LINE 登入已取消')
@@ -153,13 +151,15 @@ function RegisterForm() {
     if (shouldRedirect) router.push(redirectTarget)
   }, [shouldRedirect, redirectTarget])
 
-  const prefillUserData = async (lineUserId: string) => {
+  // 身份由伺服器從 resident token 解出，不再用 anon key 依 localStorage 自稱的 lineUserId 查 users。
+  // 沒有 token（舊登入）就只是不預填，送出報名時 /api/register 會再請居民重新登入
+  const prefillUserData = async () => {
     setPrefilling(true)
-    const { data: user } = await supabase
-      .from('users')
-      .select('name, room_number, phone, age_group, other_community')
-      .eq('line_id', lineUserId)
-      .maybeSingle()
+    const token = getResidentToken()
+    const user = token
+      ? await fetch('/api/register', { headers: { 'x-resident-token': token } })
+          .then(r => r.ok ? r.json() : null).catch(() => null)
+      : null
 
     if (user) {
       const roomRaw = user.room_number || ''

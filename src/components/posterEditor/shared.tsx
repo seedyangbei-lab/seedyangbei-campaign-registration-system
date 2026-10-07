@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import { updateMyInstructorProfile } from '@/lib/instructorCoursesApi'
 
 // ── 課程海報編輯器：桌機版／手機版共用的常數與繪製邏輯 ──────────────────────────────
 // （色彩研究、字體清單、Canvas 繪製演算法只維護這一份，避免兩版分岔）
@@ -100,9 +101,45 @@ export async function fetchInstructorPosterSettings(instructorId: string): Promi
 
 export async function saveInstructorPosterSettings(instructorId: string, payload: Record<string, any>): Promise<void> {
   if (!instructorId) throw new Error('missing instructorId')
-  const supabase = createClient()
-  const { error } = await supabase.from('instructors').update({ poster_settings: payload }).eq('id', instructorId)
-  if (error) { console.error('[poster] saveInstructorPosterSettings failed', error); throw error }
+  // 寫入走驗證過的 API，伺服器從講師 token 解出身份，只能改自己的設定（instructorId 只用來確認已登入）
+  try {
+    await updateMyInstructorProfile({ poster_settings: payload })
+  } catch (error) {
+    console.error('[poster] saveInstructorPosterSettings failed', error)
+    throw error
+  }
+}
+
+// ── 照片縮放／位置（每堂課各自獨立）──────────────────────────────────────────────
+// 存在講師 poster_settings.photoAdjust[courseId]，一併記下當時是哪張照片（src）：
+// 換了照片就不套用舊的縮放，避免新照片被舊比例裁掉
+export interface PhotoAdjust { src: string; x: number; y: number; scale: number }
+
+export function getPhotoAdjust(settings: Record<string, any> | null | undefined, courseId: string | undefined, src: string | null): PhotoAdjust | null {
+  if (!settings || !courseId || !src) return null
+  const a = settings.photoAdjust?.[courseId]
+  if (!a || a.src !== src) return null
+  if (typeof a.x !== 'number' || typeof a.y !== 'number' || typeof a.scale !== 'number') return null
+  return a
+}
+
+// 儲存時合併：先抓雲端最新的 photoAdjust（其他課程、其他裝置存的），再覆寫這一堂課
+export async function buildPhotoAdjustMap(instructorId: string, localMap: Record<string, PhotoAdjust>, courseId: string | undefined, adjust: PhotoAdjust | null): Promise<Record<string, PhotoAdjust>> {
+  const cloud = await fetchInstructorPosterSettings(instructorId)
+  const map: Record<string, PhotoAdjust> = { ...localMap, ...(cloud?.photoAdjust || {}) }
+  if (courseId) {
+    if (adjust) map[courseId] = adjust
+    else delete map[courseId]
+  }
+  return map
+}
+
+// 邊框英文重複時的單位：使用者輸入的字尾沒有分隔符號時自動補上「 · 」，
+// 否則重複後會變成「HELLOHELLO」首尾黏在一起
+export function borderRepeatUnit(text: string): string {
+  const t = text.trim()
+  if (!t) return ''
+  return /[A-Za-z0-9\u00C0-\u024F\u3040-\u30FF\u3400-\u9FFF\uAC00-\uD7AF]$/.test(t) ? `${t} · ` : `${t} `
 }
 
 // 批次匯出用：一次查多位講師的已儲存設定，避免每堂課各查一次
@@ -309,9 +346,11 @@ export function drawBorderText(ctx: CanvasRenderingContext2D, text: string, colo
   ctx.globalAlpha=0.42; ctx.fillStyle=color
   ctx.font=`400 ${fs}px ${fontFamily}`
   ctx.textAlign='center'; ctx.textBaseline='middle'
-  const charW=fs*0.6+lsp
-  const rep=text.repeat(50)
-  const chars=rep.split('')
+  // 逐字量測實際字寬（原本固定用 0.6 倍字級估算，W、M 等寬字母會重疊、黏在一起）
+  const unit=borderRepeatUnit(text)
+  if (!unit) { ctx.restore(); return }
+  const widths=new Map<string, number>()
+  const charWidth=(ch: string) => { let w=widths.get(ch); if (w===undefined) { w=ctx.measureText(ch).width; widths.set(ch,w) } return w+lsp }
   const arcLen=r*Math.PI/2
   const segA=H-margin-(margin+r)
   const segB=arcLen
@@ -319,9 +358,11 @@ export function drawBorderText(ctx: CanvasRenderingContext2D, text: string, colo
   const segD=arcLen
   const segE=H-margin-(margin+r)
   const totalLen=segA+segB+segC+segD+segE
+  const unitChars=Array.from(unit)
   let dist=0
-  for (const ch of chars) {
-    if (dist>=totalLen) break
+  for (let i=0; dist<totalLen; i++) {
+    const ch=unitChars[i%unitChars.length]
+    const charW=charWidth(ch)
     const d=dist+charW/2
     let x: number, y: number, angle: number
     if (d<segA) {
@@ -340,7 +381,7 @@ export function drawBorderText(ctx: CanvasRenderingContext2D, text: string, colo
       x=W-margin; y=margin+r+(d-segA-segB-segC-segD); angle=Math.PI/2
     }
     ctx.save(); ctx.translate(x,y); ctx.rotate(angle); ctx.fillText(ch,0,0); ctx.restore()
-    dist+=charW
+    dist+=Math.max(charW,0.5)
   }
   ctx.restore()
 }

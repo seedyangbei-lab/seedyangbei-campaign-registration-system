@@ -4,7 +4,7 @@ import JSZip from 'jszip'
 import {
   PosterCourseData, ExportPosterParams, renderPosterBlob, loadAllGoogleFonts, SCHEMES,
   DotShape, DotCoverage, DotArrangement,
-  fetchInstructorsPosterSettings,
+  fetchInstructorsPosterSettings, getPhotoAdjust,
 } from '@/components/posterEditor/shared'
 import { COMMUNITY_HOST_LABEL } from '@/components/CourseEditFormFields'
 
@@ -148,7 +148,8 @@ export async function exportMonthlyPosters(courses: MonthlyPosterCourse[], month
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
 
   // 每堂課以「主要講師」（instructor_ids[0]）的已儲存設定為準；一次批次查詢，避免逐堂課各打一次 API
-  const instructorIds = target.map(c => c.instructor_ids?.[0]).filter((id): id is string => !!id)
+  // 照片縮放／位置可能是任一位共同講師存的，所以所有講師的設定都要查
+  const instructorIds = target.flatMap(c => c.instructor_ids || []).filter((id): id is string => !!id)
   const settingsByInstructor = await fetchInstructorsPosterSettings(instructorIds)
 
   const zip = new JSZip()
@@ -161,6 +162,10 @@ export async function exportMonthlyPosters(courses: MonthlyPosterCourse[], month
 
     const instructorId = course.instructor_ids?.[0]
     const style = resolvePosterStyle(instructorId ? settingsByInstructor[instructorId] : null)
+    // 講師在編輯器裡調整過這張照片的縮放／位置就沿用，照片換過則回到預設
+    const adjust = (course.instructor_ids || [])
+      .map(id => getPhotoAdjust(settingsByInstructor[id], course.id, imgSrc))
+      .find(a => a) || null
 
     const posterCourse: PosterCourseData = {
       id: course.id, title: course.title, date: course.date,
@@ -174,7 +179,7 @@ export async function exportMonthlyPosters(courses: MonthlyPosterCourse[], month
       dotOpacity: style.dotOpacity, dotSize: style.dotSize, dotDensity: style.dotDensity,
       dotCoverage: style.dotCoverage, dotArrangement: style.dotArrangement, dotSeed: 42,
       borderOn: style.borderOn, borderText: style.borderText,
-      imgSrc, imgPos: { x: 0, y: 0 }, imgScale: 1,
+      imgSrc, imgPos: adjust ? { x: adjust.x, y: adjust.y } : { x: 0, y: 0 }, imgScale: adjust ? adjust.scale : 1,
       enFontValue: style.enFontValue, zhFontValue: style.zhFontValue,
       zhFontSize: style.zhFontSize, enFontSize: style.enFontSize,
       zhLetterPx: style.zhLetterPx, enLetterPx: style.enLetterPx,

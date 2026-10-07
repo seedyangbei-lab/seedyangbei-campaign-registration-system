@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto'
+import { RESIDENT_TOKEN_TTL_MS } from './resident-auth'
 
 // 居民端原本完全沒有伺服器端能驗證的登入憑證：LINE callback 驗證完身份後，
 // 只是把 { lineUserId, displayName, pictureUrl } 這包資料原封不動塞進網址參數，
@@ -13,9 +14,8 @@ function sign(payload: string): string {
   return createHmac('sha256', SECRET).update(payload).digest('hex')
 }
 
-// 效期 30 天：居民常常是幾天前報名時登入，上課當天才打開回饋問卷，原本 12 小時一過就被擋在外面，
-// 長輩也不知道要「先登出再重新登入」。過期時前端會直接提供「用 LINE 重新登入」按鈕。
-export function signResidentToken(lineUserId: string, ttlMs = 30 * 24 * 60 * 60 * 1000): string {
+// 效期見 RESIDENT_TOKEN_TTL_MS 的說明（居民多為長輩，登入效期放寬到 180 天，且有在使用就自動續期）
+export function signResidentToken(lineUserId: string, ttlMs = RESIDENT_TOKEN_TTL_MS): string {
   const expires = Date.now() + ttlMs
   const payload = `${lineUserId}.${expires}`
   return `${payload}.${sign(payload)}`

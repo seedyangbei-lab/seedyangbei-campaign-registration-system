@@ -7,6 +7,7 @@ import { useTutorialRect } from '@/lib/useTutorialRect'
 import TutorialMask from '@/components/TutorialMask'
 import TutorialTooltip from '@/components/TutorialTooltip'
 import TutorialSkipButton from '@/components/TutorialSkipButton'
+import { getResidentToken, getStoredLineUser } from '@/lib/resident-auth'
 
 interface Category { id: string; name: string; color: string }
 interface Course {
@@ -285,19 +286,12 @@ export default function CourseCard({ courses, categories }: {
   useEffect(() => {
     const fetchRegistered = async () => {
       try {
-        const stored = localStorage.getItem('line_user')
-        if (!stored) return
-        const lineUser = JSON.parse(stored)
-        const lineUserId: string = lineUser.lineUserId || lineUser.userId || lineUser.sub || lineUser.id
-        console.log('[my-reg] lineUser object:', JSON.stringify(lineUser))
-        console.log('[my-reg] lineUserId:', lineUserId)
-        if (!lineUserId) return
+        const token = getResidentToken()
+        if (!token) return
 
-        const res = await fetch(`/api/my-registrations?line_user_id=${encodeURIComponent(lineUserId)}`)
-        console.log('[my-reg] API status:', res.status)
+        const res = await fetch('/api/my-registrations', { headers: { 'x-resident-token': token } })
         if (!res.ok) return
         const data: { course_id: string }[] = await res.json()
-        console.log('[my-reg] API result:', data)
         setRegisteredIds(new Set(data.map(r => r.course_id)))
       } catch {}
     }
@@ -347,9 +341,10 @@ export default function CourseCard({ courses, categories }: {
     // 重新整理後還在，可以當作最後一層救援，避免使用者被硬彈回首頁、選課記錄整個消失
     localStorage.setItem('pending_courses', ids)
     try {
-      const stored = localStorage.getItem('line_user')
-      if (stored) {
-        const user = JSON.parse(stored)
+      // 登入已過期的話 getStoredLineUser 會清掉本機登入狀態，改走下面重新 LINE 登入，
+      // 不會再帶著過期的登入進報名表、填完送出才被擋
+      const user = getStoredLineUser()
+      if (user) {
         window.location.href = `/register?courses=${ids}&line_user=${encodeURIComponent(JSON.stringify(user))}`
         return
       }

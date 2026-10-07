@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import { generateInstructorClaimLink, getInstructors, createInstructor, updateInstructor, unbindInstructor, deleteInstructor } from '@/lib/adminApi'
 
 interface Instructor {
   id: string; name: string; bio: string; avatar_url: string
   is_active: boolean; phone?: string; line_id?: string
-  line_user_id?: string | null
-  claim_token?: string | null; claim_token_expires_at?: string | null
+  // 綁定的 LINE 帳號與邀請碼不回傳給前端，只有伺服器算好的狀態
+  is_bound: boolean
+  has_active_claim: boolean
 }
 
 const emptyForm = { name: '', bio: '', avatar_url: '', phone: '', line_id: '', is_active: true }
@@ -92,20 +94,13 @@ export default function InstructorsPage() {
     // 這是先前幾次講師綁定一直失敗的根因之一：後台端在講師還沒完成綁定前又點了一次「產生」，
     // 舊連結瞬間變成無效，講師端會看到「邀請連結無效」。這裡先確認過再送出
     const inst = instructors.find(i => i.id === instructorId)
-    const hasActiveToken = !!inst?.claim_token && !!inst?.claim_token_expires_at && new Date(inst.claim_token_expires_at) > new Date()
-    if (hasActiveToken) {
+    if (inst?.has_active_claim) {
       const ok = window.confirm('這位講師已經有一組尚未使用、還沒過期的邀請連結。重新產生後，舊連結會立即失效（就算他正在使用中也一樣）。確定要產生新的嗎？')
       if (!ok) return
     }
     setClaimLoadingId(instructorId); setClaimError(null)
     try {
-      const res = await fetch('/api/instructor/generate-claim-link', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ instructorId }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'unknown')
+      const data = await generateInstructorClaimLink(instructorId)
       setClaimUrl(data.claimUrl)
     } catch (e) {
       setClaimError('產生連結失敗，請稍後再試')
@@ -116,13 +111,13 @@ export default function InstructorsPage() {
 
   const handleUnbind = async (instructorId: string) => {
     if (!confirm('確定要解除這位講師的中台綁定嗎？解除後他需要用新的邀請連結重新綁定。')) return
-    await supabase.from('instructors').update({ line_user_id: null }).eq('id', instructorId)
+    try { await unbindInstructor(instructorId) } catch (e: any) { alert('解除綁定失敗：' + (e?.message || '請稍後再試')) }
     fetchInstructors()
   }
 
   const fetchInstructors = async () => {
-    const { data } = await supabase.from('instructors').select('*').order('created_at', { ascending: true })
-    setInstructors(data || [])
+    // 講師資料的讀寫一律走驗證過的後台 API，instructors 表不再開放 anon key 寫入
+    try { setInstructors(await getInstructors()) } catch { setInstructors([]) }
     setPageLoading(false)
   }
   useEffect(() => { fetchInstructors() }, [])
@@ -156,10 +151,13 @@ export default function InstructorsPage() {
       line_id: form.line_id || null,
       is_active: form.is_active,
     }
-    if (editTarget) {
-      await supabase.from('instructors').update(payload).eq('id', editTarget.id)
-    } else {
-      await supabase.from('instructors').insert(payload)
+    try {
+      if (editTarget) await updateInstructor(editTarget.id, payload)
+      else await createInstructor(payload)
+    } catch (e: any) {
+      alert('儲存失敗：' + (e?.message || '請稍後再試'))
+      setLoading(false)
+      return
     }
     setShowModal(false); await fetchInstructors(); setLoading(false)
   }
@@ -169,7 +167,11 @@ export default function InstructorsPage() {
     if (!editTarget) return
     if (!confirm('確定要刪除這位講師嗎？此操作無法復原。')) return
     setLoading(true)
-    await supabase.from('instructors').delete().eq('id', editTarget.id)
+    try { await deleteInstructor(editTarget.id) } catch (e: any) {
+      alert('刪除失敗：' + (e?.message || '請稍後再試'))
+      setLoading(false)
+      return
+    }
     setShowModal(false)
     await fetchInstructors()
     setLoading(false)
@@ -217,7 +219,7 @@ export default function InstructorsPage() {
           <div className="bg-white border border-stone-100 rounded-2xl p-12 text-center text-stone-400"><p>尚無講師資料</p></div>
         )}
         {instructors.map(inst => {
-          const bound = !!inst.line_user_id
+          const bound = inst.is_bound
           const expanded = expandedId === inst.id
           return (
             <div key={inst.id} className="bg-white border border-stone-100 rounded-2xl shadow-sm overflow-hidden">
