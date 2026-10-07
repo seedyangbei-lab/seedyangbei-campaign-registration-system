@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
 import { verifyInstructorToken } from '@/lib/instructor-auth-server'
-import { FEEDBACK_ELIGIBLE_STATUSES, FEEDBACK_FORM_VERSION, feedbackWindow, sanitizeAnswers } from '@/lib/courseFeedback'
+import { FEEDBACK_ELIGIBLE_STATUSES, FEEDBACK_FORM_VERSION, canProxyFillAnyone, feedbackWindow, sanitizeAnswers } from '@/lib/courseFeedback'
 import { loadCourseFeedbackDetail } from '@/lib/courseFeedbackServer'
 
 // 講師中台：查看自己課程的回饋（含填寫者姓名），以及幫沒有 LINE 帳號的學員代填。
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!FEEDBACK_ELIGIBLE_STATUSES.includes(reg.status)) {
     return NextResponse.json({ error: '這位學員目前無法填寫回饋' }, { status: 403 })
   }
-  if ((reg.users as any)?.line_id) {
+  if ((reg.users as any)?.line_id && !canProxyFillAnyone(id)) {
     return NextResponse.json({ error: '這位學員有 LINE 帳號，請本人登入填寫' }, { status: 403 })
   }
 

@@ -580,6 +580,11 @@ export default function CoursesPage() {
                           </>
                         ) : (
                           <>
+                            {/* 已結束的課也要能改（例如講師為了點名提早把結束時間改掉，需要由後台改回來） */}
+                            <button onClick={() => openEdit(course)} aria-label="編輯課程" title="編輯課程"
+                              className="shrink-0 flex items-center justify-center w-9 h-9 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 transition-colors">
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
                             <button onClick={() => openAttendance(course)}
                               className="flex-1 flex items-center justify-center gap-1.5 text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-3 py-2 rounded-lg transition-colors font-medium">
                               出席紀錄
@@ -651,6 +656,11 @@ export default function CoursesPage() {
                         </>
                       ) : (
                         <>
+                          <button onClick={() => openEdit(course)}
+                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 transition-colors font-medium whitespace-nowrap">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            編輯
+                          </button>
                           <button onClick={() => openAttendance(course)}
                             className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
                             出席紀錄

@@ -17,7 +17,7 @@ import CourseEditFormFields, { LOCATIONS, DESCRIPTION_MAX, COMMUNITY_HOST_LABEL,
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import { staffAuthHeaders, fetchFeedbackCounts } from '@/lib/staffAuthHeaders'
 import { hasValidInstructorToken, clearInstructorSession } from '@/lib/instructor-auth'
-import { courseStartAt } from '@/lib/courseFeedback'
+import { courseStartAt, courseEndAt } from '@/lib/courseFeedback'
 import { createInstructorCourse, updateInstructorCourseWithLog, cancelInstructorRegistration, deleteInstructorRegistration } from '@/lib/instructorCoursesApi'
 
 const ROSTER_PAGE_SIZE = 10
@@ -439,6 +439,9 @@ function InstructorPortal() {
 
   const saveAttendance = async () => {
     setAttendanceSaving(true)
+    // 上課中（還沒到結束時間）點名只記錄「已出席」，不把沒勾到的人標成未出席——
+    // 遲到的學員還沒到，標成未出席會讓他的報名紀錄從會員中心消失、也無法填回饋問卷
+    const classOver = courseEndAt(attendanceModal) <= new Date()
     // 平行送出所有變更，而非一筆一筆等待，避免多人異動時儲存時間疊加
     // 三種情況：勾選出席／原本已出席被取消（撤銷＋收回點數）／原本未確認且這次審核後仍未勾選（標記未出席，不動點數）
     await Promise.all(attendanceList.map((reg: any) => {
@@ -449,7 +452,7 @@ function InstructorPortal() {
         return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json', ...staffAuthHeaders() }, body: JSON.stringify({ registrationId: reg.id, courseTitle: attendanceModal.title, lineUserId: reg.users?.line_id || '', action: 'attend' }) })
       } else if (!shouldAttend && isAttended) {
         return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json', ...staffAuthHeaders() }, body: JSON.stringify({ registrationId: reg.id, courseTitle: attendanceModal.title, lineUserId: reg.users?.line_id || '', action: 'unattend' }) })
-      } else if (!shouldAttend && !isAttended && !isAbsent) {
+      } else if (classOver && !shouldAttend && !isAttended && !isAbsent) {
         return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json', ...staffAuthHeaders() }, body: JSON.stringify({ registrationId: reg.id, courseTitle: attendanceModal.title, lineUserId: reg.users?.line_id || '', action: 'mark_absent' }) })
       }
       return Promise.resolve()
@@ -654,6 +657,7 @@ function InstructorPortal() {
                 timeEnd={c.time_end?.slice(0, 5)}
                 location={c.location}
                 ended={isExpired(c)}
+                started={courseStartAt(c) <= new Date()}
                 registered={regCounts[c.id] || 0}
                 maxSeats={c.max_seats}
                 onEdit={() => openEdit(c)}
@@ -763,7 +767,8 @@ function InstructorPortal() {
                     <div className="text-center py-8 text-stone-400 text-sm">此課程尚無報名者</div>
                   ) : (
                     <div className="space-y-2">
-                      <p className="text-xs text-stone-400 mb-4">勾選代表已出席，取消勾選代表撤銷出席（點數同步調整）</p>
+                      <p className={`text-xs text-stone-400 ${courseEndAt(attendanceModal) > new Date() ? 'mb-1' : 'mb-4'}`}>勾選代表已出席，取消勾選代表撤銷出席（點數同步調整）</p>
+                      {courseEndAt(attendanceModal) > new Date() && <p className="text-xs text-orange-600 mb-4">課程進行中：沒勾選的人先維持「未確認」，課程結束後再確認一次即可</p>}
                       {attendanceList.map((reg: any) => (
                         <AttendeeCheckItem
                           key={reg.id}

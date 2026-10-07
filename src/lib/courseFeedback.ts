@@ -85,6 +85,11 @@ export function courseStartAt(course: { date: string; time_start?: string | null
   return new Date(`${course.date}T${time}:00${TW_OFFSET}`)
 }
 
+export function courseEndAt(course: { date: string; time_end?: string | null }): Date {
+  const time = (course.time_end || '23:59').slice(0, 5)
+  return new Date(`${course.date}T${time}:00${TW_OFFSET}`)
+}
+
 // 期限：課程日期所在月份的最後一天 23:59:59（台灣時間）。例如 8/12 的課 → 8/31 23:59:59
 function lastDayOfMonth(date: string): { y: number; m: number; lastDay: number } {
   const [y, m] = date.split('-').map(Number)
@@ -106,6 +111,15 @@ export function feedbackWindow(course: { date: string; time_start?: string | nul
 
 // 只有這兩種報名狀態可以填（absent 代表講師確認沒來、cancelled 已取消）
 export const FEEDBACK_ELIGIBLE_STATUSES = ['confirmed', 'attended']
+
+// 代填原則上只開放給沒有 LINE 帳號的學員。以下課程單次例外：講師可以幫所有學員代填。
+// 2026-10-07〔逐家做伙動起來_台語諺語律動〕（Cindy）：首次上線當天學員登入過期、講師上課中無法點名，
+// 課堂上沒能讓已報名學員填寫，特別開放這堂課代填。其他課程維持原規則。
+const PROXY_FILL_ANY_COURSE_IDS = ['026ecb15-6eba-487c-9667-1cc18678b5f8']
+
+export function canProxyFillAnyone(courseId: string): boolean {
+  return PROXY_FILL_ANY_COURSE_IDS.includes(courseId)
+}
 
 export function formatDeadline(course: { date: string }): string {
   const { m, lastDay } = lastDayOfMonth(course.date)

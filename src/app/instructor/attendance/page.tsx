@@ -7,6 +7,7 @@ import AttendeeCheckItem from '@/components/AttendeeCheckItem'
 import WalkInRegistrationModal from '@/components/WalkInRegistrationModal'
 import { staffAuthHeaders, fetchFeedbackCounts } from '@/lib/staffAuthHeaders'
 import { hasValidInstructorToken } from '@/lib/instructor-auth'
+import { courseEndAt } from '@/lib/courseFeedback'
 
 function BackArrowIcon() {
   return (
@@ -69,7 +70,7 @@ function AttendancePageInner() {
     if (!hasValidInstructorToken()) { router.replace('/instructor'); return }
     try { JSON.parse(stored) } catch { router.replace('/instructor'); return }
 
-    const { data: courseRow } = await supabase.from('courses').select('id, title, date').eq('id', courseId).maybeSingle()
+    const { data: courseRow } = await supabase.from('courses').select('id, title, date, time_start, time_end').eq('id', courseId).maybeSingle()
     setCourse(courseRow)
     const { data: regs, error } = await supabase
       .from('registrations')
@@ -102,6 +103,9 @@ function AttendancePageInner() {
 
   const handleConfirm = async () => {
     setSaving(true)
+    // 上課中（還沒到結束時間）點名只記錄「已出席」，不把沒勾到的人標成未出席——
+    // 遲到的學員還沒到，標成未出席會讓他的報名紀錄從會員中心消失、也無法填回饋問卷
+    const classOver = !!course && courseEndAt(course) <= new Date()
     // 平行送出所有變更，而非一筆一筆等待，避免多人異動時儲存時間疊加
     // 三種情況：勾選出席／原本已出席被取消（撤銷＋收回點數）／原本未確認且這次審核後仍未勾選（標記未出席，不動點數）
     await Promise.all(list.map((reg: any) => {
@@ -112,7 +116,7 @@ function AttendancePageInner() {
         return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json', ...staffAuthHeaders() }, body: JSON.stringify({ registrationId: reg.id, courseTitle: course?.title, lineUserId: reg.users?.line_id || '', action: 'attend' }) })
       } else if (!shouldAttend && isAttended) {
         return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json', ...staffAuthHeaders() }, body: JSON.stringify({ registrationId: reg.id, courseTitle: course?.title, lineUserId: reg.users?.line_id || '', action: 'unattend' }) })
-      } else if (!shouldAttend && !isAttended && !isAbsent) {
+      } else if (classOver && !shouldAttend && !isAttended && !isAbsent) {
         return fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json', ...staffAuthHeaders() }, body: JSON.stringify({ registrationId: reg.id, courseTitle: course?.title, lineUserId: reg.users?.line_id || '', action: 'mark_absent' }) })
       }
       return Promise.resolve()
@@ -149,6 +153,7 @@ function AttendancePageInner() {
           <>
             <p className="text-xs text-stone-600 text-center w-full">已勾選 {checkedIds.size} / {list.length} 人</p>
             <p className="text-xs text-stone-400 whitespace-nowrap">勾選代表已出席，取消勾選代表撤銷出席</p>
+            {course && courseEndAt(course) > new Date() && <p className="text-xs text-orange-600 text-center">課程進行中：沒勾選的人先維持「未確認」，課程結束後再確認一次即可</p>}
           </>
         )}
 

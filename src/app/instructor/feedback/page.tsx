@@ -6,7 +6,7 @@ import { hasValidInstructorToken } from '@/lib/instructor-auth'
 import { getInstructorCourseFeedback, proxyFillCourseFeedback } from '@/lib/instructorCoursesApi'
 import { FeedbackSummaryPanel, FeedbackResponseList, type FeedbackDetail } from '@/components/CourseFeedbackReport'
 import { FeedbackQuestions, useFeedbackDraft, MISSING_ANSWERS_MESSAGE } from '@/components/CourseFeedbackForm'
-import { formatDeadline } from '@/lib/courseFeedback'
+import { canProxyFillAnyone, formatDeadline } from '@/lib/courseFeedback'
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock'
 
 function BackArrowIcon() {
@@ -149,7 +149,7 @@ function FeedbackPageInner() {
         {!canProxy && detail.window === 'closed' && (
           <p className="text-xs text-stone-500">已超過填寫期限，無法再代填。</p>
         )}
-        <FeedbackResponseList participants={detail.participants} onProxyFill={canProxy ? setProxyTarget : undefined} />
+        <FeedbackResponseList participants={detail.participants} onProxyFill={canProxy ? setProxyTarget : undefined} proxyAnyone={canProxyFillAnyone(detail.course.id)} />
 
         <FeedbackSummaryPanel summary={detail.summary} />
       </div>

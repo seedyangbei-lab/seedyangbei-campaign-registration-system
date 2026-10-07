@@ -269,6 +269,8 @@ type InstructorCourseCardProps = {
   timeEnd?: string
   location: string
   ended: boolean
+  // 已開始但還沒結束（上課中）：講師要能當場點名，卡片改成「出席紀錄／報名紀錄／學員回饋」，編輯課程移到課名右邊
+  started?: boolean
   registered?: number
   maxSeats?: number
   onEdit: () => void
@@ -285,7 +287,7 @@ type InstructorCourseCardProps = {
 }
 
 export function InstructorCourseCard({
-  title, date, timeStart, timeEnd, location, ended,
+  title, date, timeStart, timeEnd, location, ended, started = false,
   registered = 0, maxSeats = 0, onEdit, onRoster, onPoster, onAttendance, onCopy, onReport, reportStatus,
   onFeedback, feedbackCount,
 }: InstructorCourseCardProps) {
@@ -304,6 +306,11 @@ export function InstructorCourseCard({
         {ended && onCopy && (
           <button onClick={onCopy} className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-md border border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-600 text-xs font-medium transition-colors">
             <CopyIcon />複製
+          </button>
+        )}
+        {!ended && started && onEdit && (
+          <button onClick={onEdit} className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-md border border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-600 text-xs font-medium transition-colors">
+            <EditIcon />編輯
           </button>
         )}
       </div>
@@ -336,7 +343,17 @@ export function InstructorCourseCard({
 
       <div className="h-px bg-stone-200 w-full" />
 
-      {!ended ? (
+      {!ended && started ? (
+        <div className="flex gap-1 w-full">
+          <button onClick={onAttendance} className="flex-1 flex items-center justify-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium py-2 rounded-md transition-colors whitespace-nowrap">
+            <CheckSquareIcon className="text-white" />出席紀錄
+          </button>
+          <button onClick={onRoster} className="flex-1 flex items-center justify-center gap-1.5 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 text-xs font-medium py-2 rounded-md transition-colors whitespace-nowrap">
+            <ListIcon />報名紀錄
+          </button>
+          {onFeedback && feedbackButton('bg-white hover:bg-stone-50 border border-stone-300 text-stone-600')}
+        </div>
+      ) : !ended ? (
         <div className="flex gap-1 w-full">
           <button onClick={onEdit} className="flex-1 flex items-center justify-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium py-2 rounded-md transition-colors">
             <EditIcon className="text-white" />編輯課程

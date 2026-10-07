@@ -13,7 +13,9 @@ function sign(payload: string): string {
   return createHmac('sha256', SECRET).update(payload).digest('hex')
 }
 
-export function signResidentToken(lineUserId: string, ttlMs = 12 * 60 * 60 * 1000): string {
+// 效期 30 天：居民常常是幾天前報名時登入，上課當天才打開回饋問卷，原本 12 小時一過就被擋在外面，
+// 長輩也不知道要「先登出再重新登入」。過期時前端會直接提供「用 LINE 重新登入」按鈕。
+export function signResidentToken(lineUserId: string, ttlMs = 30 * 24 * 60 * 60 * 1000): string {
   const expires = Date.now() + ttlMs
   const payload = `${lineUserId}.${expires}`
   return `${payload}.${sign(payload)}`

@@ -160,9 +160,11 @@ function ResponseAnswers({ f }: { f: any }) {
 }
 
 export function FeedbackResponseList({
-  participants, onProxyFill,
+  participants, onProxyFill, proxyAnyone = false,
 }: {
   participants: FeedbackDetail['participants']
+  // 單次例外開放的課程：有 LINE 的學員也顯示「代填」
+  proxyAnyone?: boolean
   // 有傳才顯示「代填」按鈕（講師中台用；後台不代填）
   onProxyFill?: (p: FeedbackDetail['participants'][number]) => void
 }) {
@@ -224,7 +226,7 @@ export function FeedbackResponseList({
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-md whitespace-nowrap ${st.cls}`}>{st.text}</span>
                   {p.is_walk_in && <span className="text-xs font-medium px-2 py-0.5 rounded-md whitespace-nowrap bg-stone-200 text-stone-600">現場報名</span>}
                   <span className="ml-auto flex-shrink-0">
-                    {!p.has_line && onProxyFill ? (
+                    {(!p.has_line || proxyAnyone) && onProxyFill ? (
                       <button onClick={() => onProxyFill(p)}
                         className="text-xs font-medium px-3 py-1.5 rounded-md bg-orange-100 border border-orange-200 text-orange-600 hover:bg-orange-200 transition-colors">
                         代填
