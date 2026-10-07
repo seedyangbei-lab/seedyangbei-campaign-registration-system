@@ -16,6 +16,7 @@ import { createCourse, updateCourse, deleteCourse } from '@/lib/adminCoursesApi'
 import { getRegistrations } from '@/lib/adminApi'
 import { staffAuthHeaders, fetchFeedbackCounts } from '@/lib/staffAuthHeaders'
 import AdminCourseFeedbackModal from '@/components/AdminCourseFeedbackModal'
+import { onePerPerson } from '@/lib/attendanceList'
 
 interface Instructor { id: string; name: string }
 interface Category { id: string; name: string; color: string }
@@ -308,7 +309,7 @@ export default function CoursesPage() {
     // 出席名單含居民個資，走驗證過的後台 API，不再用 anon key 直接查
     let regs: any[] = []
     try {
-      regs = await getRegistrations({ courseId: course.id, statuses: ['confirmed', 'attended', 'absent'], order: 'asc' })
+      regs = onePerPerson(await getRegistrations({ courseId: course.id, statuses: ['confirmed', 'attended', 'absent'], order: 'asc' }))
     } catch (e: any) {
       console.error('attendance fetch error:', e)
       alert('讀取報名名單失敗：' + (e?.message || '請稍後再試'))

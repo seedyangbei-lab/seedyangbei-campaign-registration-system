@@ -8,6 +8,7 @@ import WalkInRegistrationModal from '@/components/WalkInRegistrationModal'
 import { staffAuthHeaders, fetchFeedbackCounts } from '@/lib/staffAuthHeaders'
 import { hasValidInstructorToken } from '@/lib/instructor-auth'
 import { courseEndAt } from '@/lib/courseFeedback'
+import { onePerPerson } from '@/lib/attendanceList'
 import { getInstructorCourseRegistrations } from '@/lib/instructorCoursesApi'
 
 function BackArrowIcon() {
@@ -76,7 +77,7 @@ function AttendancePageInner() {
     // 出席名單含居民個資，走驗證過的講師 API（伺服器會確認這堂課是本人的），不再用 anon key 直接查
     let regs: any[] = []
     try {
-      regs = await getInstructorCourseRegistrations(courseId!, ['confirmed', 'attended', 'absent'], 'asc')
+      regs = onePerPerson(await getInstructorCourseRegistrations(courseId!, ['confirmed', 'attended', 'absent'], 'asc'))
       setErrorMsg('')
     } catch (e: any) {
       console.error('attendance fetch error:', e)

@@ -18,6 +18,7 @@ import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import { staffAuthHeaders, fetchFeedbackCounts } from '@/lib/staffAuthHeaders'
 import { hasValidInstructorToken, clearInstructorSession } from '@/lib/instructor-auth'
 import { courseStartAt, courseEndAt } from '@/lib/courseFeedback'
+import { onePerPerson } from '@/lib/attendanceList'
 import {
   createInstructorCourse, updateInstructorCourseWithLog, cancelInstructorRegistration, deleteInstructorRegistration,
   getMyInstructorProfile, updateMyInstructorProfile, getInstructorCourseRegistrations,
@@ -434,7 +435,7 @@ function InstructorPortal() {
     // 出席名單含居民個資，走驗證過的講師 API（伺服器會確認這堂課是本人的），不再用 anon key 直接查
     let regs: any[] = []
     try {
-      regs = await getInstructorCourseRegistrations(course.id, ['confirmed', 'attended', 'absent'], 'asc')
+      regs = onePerPerson(await getInstructorCourseRegistrations(course.id, ['confirmed', 'attended', 'absent'], 'asc'))
     } catch (e: any) {
       console.error('attendance fetch error:', e)
       alert('讀取報名名單失敗：' + (e?.message || '請稍後再試'))
