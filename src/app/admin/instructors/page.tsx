@@ -165,7 +165,9 @@ export default function InstructorsPage() {
   // 停止開課／刪除講師已整合進編輯講師彈窗（開課狀態切換 + 刪除講師按鈕）
   const handleDeleteFromModal = async () => {
     if (!editTarget) return
-    if (!confirm('確定要刪除這位講師嗎？此操作無法復原。')) return
+    const { count } = await supabase.from('courses').select('id', { count: 'exact', head: true })
+      .eq('instructor_id', editTarget.id).neq('instructor_mode', 'community')
+    if (!confirm(`確定要刪除「${editTarget.name}」嗎？\n\n他自己主辦的 ${count ?? 0} 堂課程（含報名資料）會一併刪除；擔任合作講師的課程會保留，只把他從講師名單移除。\n\n此操作無法復原。`)) return
     setLoading(true)
     try { await deleteInstructor(editTarget.id) } catch (e: any) {
       alert('刪除失敗：' + (e?.message || '請稍後再試'))
