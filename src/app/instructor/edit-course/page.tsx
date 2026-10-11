@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase'
 import CourseEditFormFields, { LOCATIONS, type CourseForm } from '@/components/CourseEditFormFields'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import { createInstructorCourse, updateInstructorCourseWithLog } from '@/lib/instructorCoursesApi'
+import { courseScheduleError } from '@/lib/courseFeedback'
 import { hasValidInstructorToken } from '@/lib/instructor-auth'
 import { getMyInstructorProfile } from '@/lib/instructorCoursesApi'
 
@@ -97,6 +98,8 @@ function EditCoursePageInner() {
     if (!instructor) return
     if (form.photos.length === 0) { setError('請至少上傳 1 張課程照片'); return }
     if (form.suitable_age === '其他' && !form.custom_age.trim()) { setError('請填寫適合年齡的說明'); return }
+    const scheduleError = courseScheduleError(form)
+    if (scheduleError) { setError(scheduleError); return }
     setError('')
     setSaving(true)
 

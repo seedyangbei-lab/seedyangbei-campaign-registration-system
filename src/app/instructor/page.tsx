@@ -17,7 +17,7 @@ import CourseEditFormFields, { LOCATIONS, DESCRIPTION_MAX, COMMUNITY_HOST_LABEL,
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import { staffAuthHeaders, fetchFeedbackCounts } from '@/lib/staffAuthHeaders'
 import { hasValidInstructorToken, clearInstructorSession } from '@/lib/instructor-auth'
-import { courseStartAt, courseEndAt } from '@/lib/courseFeedback'
+import { courseStartAt, courseEndAt, courseScheduleError } from '@/lib/courseFeedback'
 import { onePerPerson } from '@/lib/attendanceList'
 import {
   createInstructorCourse, updateInstructorCourseWithLog, cancelInstructorRegistration, deleteInstructorRegistration,
@@ -368,6 +368,8 @@ function InstructorPortal() {
     if (!instructor) return
     if (form.photos.length === 0) { alert('請至少上傳 1 張課程照片'); return }
     if (form.suitable_age === '其他' && !form.custom_age.trim()) { alert('請填寫適合年齡的說明'); return }
+    const scheduleError = courseScheduleError(form)
+    if (scheduleError) { alert(scheduleError); return }
     setSaving(true)
 
     const location = form.location === '其他' ? form.custom_location : form.location

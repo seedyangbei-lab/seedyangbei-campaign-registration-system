@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
 import { verifyInstructorToken } from '@/lib/instructor-auth-server'
+import { courseScheduleError } from '@/lib/courseFeedback'
 
 // 講師新增課程：原本前端直接用 anon key 寫 courses 表，instructor_id／instructor_ids
 // 完全由前端自己宣告，改走這支之後一律以 token 解出來的 instructorId 為準，
@@ -12,6 +13,8 @@ export async function POST(req: NextRequest) {
   }
 
   const payload = await req.json()
+  const scheduleError = courseScheduleError(payload)
+  if (scheduleError) return NextResponse.json({ error: scheduleError }, { status: 400 })
   const coInstructorIds = (payload.instructor_ids || []).filter((id: string) => id && id !== instructorId)
   const instructorIds = [instructorId, ...coInstructorIds]
 

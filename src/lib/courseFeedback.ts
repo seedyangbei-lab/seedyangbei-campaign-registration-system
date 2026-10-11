@@ -90,6 +90,18 @@ export function courseEndAt(course: { date: string; time_end?: string | null }):
   return new Date(`${course.date}T${time}:00${TW_OFFSET}`)
 }
 
+// 新增／編輯課程時檢查上課時間：結束時間要晚於開始時間，而且不能整堂課都已經過去。
+// 否則存檔後課程會直接掉進「已結束」，講師那邊就再也改不到、也刪不掉。回傳錯誤訊息，沒問題回傳空字串
+export function courseScheduleError(
+  course: { date?: string | null; time_start?: string | null; time_end?: string | null },
+  now = new Date(),
+): string {
+  if (!course.date || !course.time_start || !course.time_end) return ''
+  if (course.time_end.slice(0, 5) <= course.time_start.slice(0, 5)) return '結束時間不能早於或等於開始時間'
+  if (courseEndAt({ date: course.date, time_end: course.time_end }) <= now) return '上課時間已經過了，請確認日期與時間是否正確'
+  return ''
+}
+
 // 期限：課程日期所在月份的最後一天 23:59:59（台灣時間）。例如 8/12 的課 → 8/31 23:59:59
 function lastDayOfMonth(date: string): { y: number; m: number; lastDay: number } {
   const [y, m] = date.split('-').map(Number)
