@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createHash } from 'crypto'
 import { createServerClient } from '@/lib/supabase-server'
 import { signInstructorToken } from '@/lib/instructor-auth-server'
 import { signResidentToken } from '@/lib/resident-auth-server'
@@ -17,6 +18,73 @@ async function logLineLoginFail(detail: Record<string, any>) {
   } catch (e) {
     console.error('logLineLoginFail failed:', e)
   }
+}
+
+// 同一組授權碼重複打進來時沿用第一次結果的記錄：用來確認「code 被別的請求搶先用掉」的推測，
+// 也能看出搶先的那個請求是什麼（firstUserAgent）
+async function logLineLoginReused(detail: Record<string, any>) {
+  try {
+    const supabase = createServerClient()
+    await supabase.from('funnel_logs').insert({
+      session_id: 'system',
+      step: 'line_login_reused',
+      course_ids: null,
+      detail,
+    })
+  } catch (e) {
+    console.error('logLineLoginReused failed:', e)
+  }
+}
+
+// 授權碼快取的有效時間：只用來接住「同一組 code 幾秒內被打兩次」，不需要留久
+const CODE_CACHE_TTL_MS = 120 * 1000
+
+type CachedLogin = {
+  line_user_id: string
+  display_name: string | null
+  picture_url: string | null
+  email: string | null
+  user_agent: string | null
+  created_at: string
+}
+
+async function cacheLogin(codeHash: string, login: { lineUserId: string; displayName: string; pictureUrl: string | null; email: string; userAgent: string | null }) {
+  try {
+    const supabase = createServerClient()
+    await supabase.from('line_login_code_cache').upsert({
+      code_hash: codeHash,
+      line_user_id: login.lineUserId,
+      display_name: login.displayName,
+      picture_url: login.pictureUrl,
+      email: login.email,
+      user_agent: login.userAgent,
+    })
+    // 順手清掉過期的快取，表不會越長越大
+    await supabase.from('line_login_code_cache').delete().lt('created_at', new Date(Date.now() - CODE_CACHE_TTL_MS).toISOString())
+  } catch (e) {
+    console.error('cacheLogin failed:', e)
+  }
+}
+
+// 兩個請求幾乎同時抵達時，第一個可能還在跟 LINE 換 profile、還沒寫進快取，所以這裡等一下再放棄
+async function waitForCachedLogin(codeHash: string): Promise<CachedLogin | null> {
+  const supabase = createServerClient()
+  for (let i = 0; i < 8; i++) {
+    try {
+      const { data } = await supabase
+        .from('line_login_code_cache')
+        .select('line_user_id, display_name, picture_url, email, user_agent, created_at')
+        .eq('code_hash', codeHash)
+        .gte('created_at', new Date(Date.now() - CODE_CACHE_TTL_MS).toISOString())
+        .maybeSingle()
+      if (data) return data as CachedLogin
+    } catch (e) {
+      console.error('waitForCachedLogin failed:', e)
+      return null
+    }
+    await new Promise(r => setTimeout(r, 500))
+  }
+  return null
 }
 
 // 判斷這次 LINE 登入屬於哪個流程：講師綁定邀請連結 / 講師登入中台 /
@@ -102,36 +170,75 @@ export async function GET(request: NextRequest) {
     })
 
     const tokenData = await tokenRes.json()
+    const codeHash = createHash('sha256').update(code).digest('hex')
 
-    // Token 交換失敗時記錄詳細錯誤（順便記錄 error code + state 內容，方便之後判斷是哪個流程／裝置觸發的）
+    let lineUserId: string
+    let displayName: string
+    let pictureUrl: string | null
+    let email = ''
+
     if (!tokenData.access_token) {
-      console.error('LINE token error:', JSON.stringify(tokenData))
-      await logLineLoginFail({
-        stage: 'token_exchange',
-        reason: tokenData.error_description || 'no_token',
-        errorCode: tokenData.error || null,
-        hasState: !!state,
-        userAgent: request.headers.get('user-agent') || null,
+      // 同一組 code 被打第二次（第一次被連結掃描／預先載入／重複送出搶先用掉）時，LINE 會回 invalid_grant。
+      // 第一次如果有成功換到身份，沿用那次的結果，使用者自己這次的請求就不會被誤判成登入失敗
+      const cached = tokenData.error === 'invalid_grant' ? await waitForCachedLogin(codeHash) : null
+      if (!cached) {
+        // Token 交換失敗時記錄詳細錯誤（順便記錄 error code + state 內容，方便之後判斷是哪個流程／裝置觸發的）
+        console.error('LINE token error:', JSON.stringify(tokenData))
+        await logLineLoginFail({
+          stage: 'token_exchange',
+          reason: tokenData.error_description || 'no_token',
+          errorCode: tokenData.error || null,
+          hasState: !!state,
+          userAgent: request.headers.get('user-agent') || null,
+          flow,
+        })
+        return NextResponse.redirect(new URL(buildFailureRedirect(origin, state, 'line_failed', tokenData.error_description || 'no_token'), request.url))
+      }
+      await logLineLoginReused({
         flow,
+        firstUserAgent: cached.user_agent,
+        userAgent: request.headers.get('user-agent') || null,
+        secondsAfterFirst: Math.round((Date.now() - new Date(cached.created_at).getTime()) / 1000),
       })
-      return NextResponse.redirect(new URL(buildFailureRedirect(origin, state, 'line_failed', tokenData.error_description || 'no_token'), request.url))
-    }
+      lineUserId = cached.line_user_id
+      displayName = cached.display_name || 'LINE 使用者'
+      pictureUrl = cached.picture_url
+      email = cached.email || ''
+    } else {
+      // Step 2: Get user profile
+      const profileRes = await fetch('https://api.line.me/v2/profile', {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      })
+      const profile = await profileRes.json()
 
-    // Step 2: Get user profile
-    const profileRes = await fetch('https://api.line.me/v2/profile', {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
-    })
-    const profile = await profileRes.json()
+      // LINE profile 格式：{ userId, displayName, pictureUrl, statusMessage }
+      lineUserId = profile.userId
+      displayName = profile.displayName || 'LINE 使用者'
+      pictureUrl = profile.pictureUrl || null
 
-    // LINE profile 格式：{ userId, displayName, pictureUrl, statusMessage }
-    const lineUserId = profile.userId
-    const displayName = profile.displayName || 'LINE 使用者'
-    const pictureUrl = profile.pictureUrl || null
+      if (!lineUserId) {
+        console.error('LINE profile error:', JSON.stringify(profile))
+        await logLineLoginFail({ stage: 'profile_fetch', reason: 'no_user_id', flow })
+        return NextResponse.redirect(new URL(buildFailureRedirect(origin, state, 'line_failed'), request.url))
+      }
 
-    if (!lineUserId) {
-      console.error('LINE profile error:', JSON.stringify(profile))
-      await logLineLoginFail({ stage: 'profile_fetch', reason: 'no_user_id', flow })
-      return NextResponse.redirect(new URL(buildFailureRedirect(origin, state, 'line_failed'), request.url))
+      // Step 3: Parse email from id_token if available
+      if (tokenData.id_token) {
+        try {
+          const parts = tokenData.id_token.split('.')
+          if (parts.length >= 2) {
+            // Base64url decode
+            const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+            const padded = base64 + '='.repeat((4 - base64.length % 4) % 4)
+            const decoded = JSON.parse(Buffer.from(padded, 'base64').toString('utf-8'))
+            email = decoded.email || ''
+          }
+        } catch (e) {
+          console.log('id_token parse skipped:', e)
+        }
+      }
+
+      await cacheLogin(codeHash, { lineUserId, displayName, pictureUrl, email, userAgent: request.headers.get('user-agent') || null })
     }
 
     // Step 2.5: 講師中台登入／邀請連結綁定分流（跟居民報名流程互不影響）
@@ -233,23 +340,6 @@ export async function GET(request: NextRequest) {
         }
       } catch {
         // state 不是講師相關 JSON，繼續走原本居民報名流程
-      }
-    }
-
-    // Step 3: Parse email from id_token if available
-    let email = ''
-    if (tokenData.id_token) {
-      try {
-        const parts = tokenData.id_token.split('.')
-        if (parts.length >= 2) {
-          // Base64url decode
-          const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
-          const padded = base64 + '='.repeat((4 - base64.length % 4) % 4)
-          const decoded = JSON.parse(Buffer.from(padded, 'base64').toString('utf-8'))
-          email = decoded.email || ''
-        }
-      } catch (e) {
-        console.log('id_token parse skipped:', e)
       }
     }
 
