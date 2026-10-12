@@ -257,7 +257,8 @@ function RegisterForm() {
       if (typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches) {
         setShowSuccessModal(true)
       } else {
-        router.push('/register-success')
+        // 用 replace 取代報名頁這筆瀏覽紀錄：成功頁按「返回」不會再回到已送出的報名表
+        router.replace('/register-success')
       }
     } catch (err: any) {
       logFunnelStep('register_error', courseIds.join(','), { message: err.message })

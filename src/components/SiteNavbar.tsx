@@ -50,7 +50,14 @@ export default function SiteNavbar({ siteTitle, variant = 'home', onLogout }: Si
       setLoginError(LOGIN_ERROR_MESSAGES[err])
       shouldCleanUrl = true
     }
-    if (shouldCleanUrl) window.history.replaceState({}, '', window.location.pathname)
+    // 只拿掉登入用的參數，其他參數（例如報名頁的 courses）要留著：以前這裡把整串 query string 清掉，
+    // /register?courses=xxx&line_user=xxx 被改寫成光禿禿的 /register，報名成功後按「返回」或重新整理，
+    // 報名頁就讀不到課程而觸發「課程資訊遺失」（register_guard_fail）、被彈回首頁
+    if (shouldCleanUrl) {
+      const url = new URL(window.location.href)
+      ;['line_user', 'error', 'detail'].forEach(k => url.searchParams.delete(k))
+      window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
+    }
   }, [])
 
   // 登入期間到期自動登出：到期時間一到就切回未登入並提示。手機切到背景時計時器會暫停，
