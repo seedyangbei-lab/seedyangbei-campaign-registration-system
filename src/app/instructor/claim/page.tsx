@@ -28,7 +28,11 @@ function ClaimContent() {
         <div className="max-w-sm text-center">
           <p className="text-stone-800 font-semibold mb-2">綁定失敗</p>
           <p className="text-stone-400 text-sm">
-            {error === 'expired' ? '這組邀請連結已過期，請聯繫負責人重新產生。' : '這組邀請連結已被新產生的連結取代，或已完成綁定，請聯繫負責人確認最新連結。'}
+            {error === 'expired'
+              ? '這組邀請連結已過期，請聯繫負責人重新產生。'
+              : error === 'already_bound'
+                ? '您目前登入的 LINE 帳號已經綁定在另一位講師身份上。請確認開啟的是發給您本人的邀請連結，或聯繫負責人協助處理。'
+                : '這組邀請連結已被新產生的連結取代，或已完成綁定，請聯繫負責人確認最新連結。'}
           </p>
         </div>
       </div>

@@ -164,10 +164,23 @@ export async function GET(request: NextRequest) {
           }
 
           if (!matched) {
-            // 常見原因：講師登入 LINE 授權期間，後台又重新產生了一次邀請連結，
+            // 綁定成功後 claim_token 會被清空，講師之後再點一次同一條邀請連結（很常見：
+            // 把邀請連結當成中台入口收藏起來）就會查不到。這個 LINE 帳號如果本來就已經是講師，
+            // 直接當成講師登入放行，不算綁定失敗
+            const { data: alreadyBound } = await supabase
+              .from('instructors')
+              .select('id')
+              .eq('line_user_id', lineUserId)
+              .maybeSingle()
+            if (alreadyBound) {
+              const instructorToken = signInstructorToken(alreadyBound.id)
+              const userInfo = encodeURIComponent(JSON.stringify({ lineUserId, displayName, pictureUrl, instructorToken }))
+              return NextResponse.redirect(new URL(`/instructor?line_user=${userInfo}`, origin))
+            }
+            // 其他常見原因：講師登入 LINE 授權期間，後台又重新產生了一次邀請連結，
             // 舊的 claim_token 瞬間被覆蓋掉，導致這裡查不到對應的講師 —— 補上記錄方便日後對照
             console.error('instructor claim token not found, tokenPreview:', claimTokenPreview)
-            await logLineLoginFail({ stage: 'instructor_claim_token_mismatch', reason: 'claim_token_not_found', tokenPreview: claimTokenPreview })
+            await logLineLoginFail({ stage: 'instructor_claim_token_mismatch', reason: 'claim_token_not_found', tokenPreview: claimTokenPreview, lineUserId })
             return NextResponse.redirect(new URL('/instructor/claim?error=invalid', origin))
           }
           if (matched.claim_token_expires_at && new Date(matched.claim_token_expires_at) < new Date()) {
@@ -192,7 +205,10 @@ export async function GET(request: NextRequest) {
               instructorId: matched.id,
               lineUserId,
             })
-            return NextResponse.redirect(new URL('/instructor/claim?error=invalid', origin))
+            // 違反 UNIQUE 代表這個 LINE 帳號已經是另一位講師（常見：用自己的 LINE 打開了別位講師的邀請連結），
+            // 給講師看專屬訊息，不要跟「連結失效」混在一起
+            const errorCode = bindError.code === '23505' ? 'already_bound' : 'invalid'
+            return NextResponse.redirect(new URL(`/instructor/claim?error=${errorCode}`, origin))
           }
 
           const instructorToken = signInstructorToken(matched.id)
