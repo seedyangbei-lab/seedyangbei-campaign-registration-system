@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { BUILDINGS, UNIT_NUMBERS, SUB_UNITS, getFloors, formatRoomNumber } from '@/lib/address'
 import { staffAuthHeaders } from '@/lib/staffAuthHeaders'
 
@@ -10,7 +10,12 @@ type CreatedReg = { id: string; status: string; is_walk_in: boolean; users: Exis
 // 搜尋結果可能來自兩張表：
 // - users：曾經完整報名過（前臺報名表單或現場報到建過檔）
 // - line_members：LINE 官方帳號的會員，但可能從沒報名過任何一堂課，users 表裡還沒有他的紀錄
-type Candidate = { key: string; name: string; roomNumber: string; lineId?: string | null; source: 'user' | 'line_member' }
+// inCourse：已經在這堂課的點名名單上，搜尋結果照樣列出來（標示「已在名單」、不能點），
+// 不然講師會以為「搜不到這個人」
+type Candidate = { key: string; name: string; roomNumber: string; lineId?: string | null; source: 'user' | 'line_member'; inCourse?: boolean }
+
+// 注音輸入法組字中（手機最常見），輸入框裡會暫時是「ㄨㄤˊ」這種注音符號，拿去查一定查不到，等選完字再查
+const BOPOMOFO_RE = /[\u3100-\u312F\u31A0-\u31BFˊˇˋ˙]/
 
 // 已加入本次現場報到批次、但尚未寫入資料庫的暫存名單
 type PendingItem = {
@@ -65,8 +70,14 @@ export default function WalkInRegistrationModal({
   const [error, setError] = useState('')
   const [pendingList, setPendingList] = useState<PendingItem[]>([])
 
+  // 每次搜尋編號，回應回來時不是最新一次就丟掉：手機網路慢時，前一個字的搜尋結果可能比最後一次晚回來，
+  // 把正確結果蓋成空的（例如注音組字中途的查詢），講師就會看到「搜不到」
+  const searchSeq = useRef(0)
+
+  const isInCourse = (c: Candidate) => c.source === 'user' && existingUserIds.includes(c.key)
+
   const isDuplicateCandidate = (c: Candidate) => {
-    if (c.source === 'user' && existingUserIds.includes(c.key)) return true
+    if (isInCourse(c)) return true
     return pendingList.some(p =>
       (c.source === 'user' && p.existingUserId === c.key) ||
       (c.source === 'line_member' && p.lineMemberId === c.key)
@@ -74,6 +85,7 @@ export default function WalkInRegistrationModal({
   }
 
   const runSearch = async (q: string) => {
+    const seq = ++searchSeq.current
     if (!q) { setSuggestions([]); return }
     // 曾報名過的居民（users）跟 LINE 會員（line_members）都含個資，一律走驗證過的 API（後台或講師 token），
     // 才能同時搜到「是 LINE 會員但沒報名過活動」的人
@@ -84,6 +96,7 @@ export default function WalkInRegistrationModal({
     const { users: userRows, lineMembers: memberRows } = await fetch(`/api/search-members?q=${encodeURIComponent(q)}`, { headers: staffAuthHeaders() })
       .then(r => r.ok ? r.json() : { users: [], lineMembers: [] })
       .catch(() => ({ users: [], lineMembers: [] })) as SearchResult
+    if (seq !== searchSeq.current) return
     const userLineIds = new Set((userRows || []).map(u => u.line_id).filter(Boolean))
     const userCandidates: Candidate[] = (userRows || []).map(u => ({
       key: u.id, name: u.name, roomNumber: u.room_number, lineId: u.line_id, source: 'user',
@@ -98,15 +111,20 @@ export default function WalkInRegistrationModal({
         lineId: m.line_user_id,
         source: 'line_member',
       }))
-    const merged = [...userCandidates, ...memberCandidates].filter(c => !isDuplicateCandidate(c))
-    setSuggestions(merged.slice(0, 8))
+    // 已在暫存名單的不再列出；已在點名名單的照樣列出但標示出來，排在最後
+    const merged = [...userCandidates, ...memberCandidates]
+      .map(c => ({ ...c, inCourse: isInCourse(c) }))
+      .filter(c => c.inCourse || !isDuplicateCandidate(c))
+      .sort((a, b) => Number(a.inCourse) - Number(b.inCourse))
+    setSuggestions(merged.slice(0, 10))
   }
 
   // 輸入時自動搜尋（防手震縮短為 150ms，加快回饋速度），旁邊的搜尋按鈕可以立即觸發，不用等
   useEffect(() => {
-    if (selected) { setSuggestions([]); return }
+    if (selected) { searchSeq.current++; setSuggestions([]); return }
     const q = query.trim()
-    if (!q) { setSuggestions([]); return }
+    if (!q) { searchSeq.current++; setSuggestions([]); return }
+    if (BOPOMOFO_RE.test(q)) return
     let active = true
     const t = setTimeout(() => { if (active) runSearch(q) }, 150)
     return () => { active = false; clearTimeout(t) }
@@ -129,6 +147,7 @@ export default function WalkInRegistrationModal({
   // 點選搜尋結果 → 直接加入暫存名單，不寫入資料庫
   const handlePickCandidate = (c: Candidate) => {
     setError('')
+    if (isInCourse(c)) { setError('這位居民已經在點名名單上，請直接在名單勾選出席'); return }
     if (isDuplicateCandidate(c)) { setError('這位居民已經在名單中了'); return }
     setPendingList(list => [...list, {
       key: `${c.source}-${c.key}-${Date.now()}`,
@@ -256,12 +275,14 @@ export default function WalkInRegistrationModal({
                   <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-stone-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
                     {suggestions.map(c => (
                       <button key={c.key + c.source} type="button" onClick={() => handlePickCandidate(c)}
-                        className="w-full text-left px-3 py-2.5 hover:bg-orange-50 transition-colors border-b border-stone-50 last:border-0">
+                        disabled={c.inCourse}
+                        className="w-full text-left px-3 py-2.5 hover:bg-orange-50 disabled:hover:bg-white disabled:cursor-not-allowed transition-colors border-b border-stone-50 last:border-0">
                         <div className="flex items-center gap-1.5">
-                          <p className="text-sm text-stone-700">{c.name}</p>
+                          <p className={`text-sm ${c.inCourse ? 'text-stone-400' : 'text-stone-700'}`}>{c.name}</p>
                           {c.source === 'line_member' && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 shrink-0">LINE 會員</span>}
+                          {c.inCourse && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-green-50 text-green-600 shrink-0">已在名單</span>}
                         </div>
-                        <p className="text-xs text-stone-400">{c.roomNumber}</p>
+                        <p className="text-xs text-stone-400">{c.inCourse ? `${c.roomNumber}・請直接在點名名單勾選出席` : c.roomNumber}</p>
                       </button>
                     ))}
                   </div>
