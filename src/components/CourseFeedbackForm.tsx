@@ -134,8 +134,10 @@ export function feedbackToAnswers(f: any): FeedbackAnswers {
 export const MISSING_ANSWERS_MESSAGE = '還有題目沒有填寫，請看紅框標示的題目'
 
 // 題目元件＋送出前檢查：未答題目標紅並捲到第一題未答的位置
-export function useFeedbackDraft() {
-  const [answers, setAnswers] = useState<FeedbackAnswers>(EMPTY_ANSWERS)
+// initial：修改已送出的回饋時，用原本的答案預填
+export function useFeedbackDraft(initial: FeedbackAnswers = EMPTY_ANSWERS) {
+  const [answers, setAnswers] = useState<FeedbackAnswers>(initial)
+  const [baseline, setBaseline] = useState<FeedbackAnswers>(initial)
   const [missing, setMissing] = useState<string[]>([])
   const refs = useRef<Record<string, HTMLDivElement | null>>({})
 
@@ -150,11 +152,12 @@ export function useFeedbackDraft() {
     if (m.length) refs.current[m[0]]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     return m.length === 0
   }
-  const dirty = JSON.stringify(answers) !== JSON.stringify(EMPTY_ANSWERS)
-  const reset = () => { setAnswers(EMPTY_ANSWERS); setMissing([]) }
+  const dirty = JSON.stringify(answers) !== JSON.stringify(baseline)
+  const reset = () => { setAnswers(EMPTY_ANSWERS); setBaseline(EMPTY_ANSWERS); setMissing([]) }
+  const load = (next: FeedbackAnswers) => { setAnswers(next); setBaseline(next); setMissing([]) }
   const registerRef = (key: string, el: HTMLDivElement | null) => { refs.current[key] = el }
 
-  return { answers, onChange, missing, validate, dirty, reset, registerRef }
+  return { answers, onChange, missing, validate, dirty, reset, load, registerRef }
 }
 
 /* ---------- 居民填寫 ---------- */
@@ -204,6 +207,8 @@ export function ResidentFeedbackForm({
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [done, setDone] = useState(false)
+  // 已送出的回饋在填寫期限內可以按「修改回饋」重新編輯
+  const [editing, setEditing] = useState(false)
   const draft = useFeedbackDraft()
 
   // 漏填提示在補完所有紅框題目後自動消失，不必再按一次送出
@@ -229,9 +234,17 @@ export function ResidentFeedbackForm({
 
   const data = state.kind === 'ready' ? state.data : null
   const canFill = !!data && !data.feedback && data.eligible && data.window === 'open' && !done
+  const canEdit = !!data && !!data.feedback && data.window !== 'closed' && !done
+  const formActive = canFill || (canEdit && editing)
+
+  const startEdit = () => {
+    draft.load(feedbackToAnswers(data.feedback))
+    setSubmitError('')
+    setEditing(true)
+  }
 
   const handleClose = () => {
-    if (canFill && draft.dirty && !window.confirm('問卷還沒送出，確定要離開嗎？')) return
+    if (formActive && draft.dirty && !window.confirm('問卷還沒送出，確定要離開嗎？')) return
     onClose()
   }
 
@@ -242,7 +255,7 @@ export function ResidentFeedbackForm({
     setSubmitting(true)
     try {
       const res = await fetch('/api/feedback', {
-        method: 'POST',
+        method: editing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json', 'x-resident-token': token || '' },
         body: JSON.stringify({ registrationId, answers: draft.answers }),
       })
@@ -266,7 +279,7 @@ export function ResidentFeedbackForm({
     body = (
       <div className="bg-white border border-stone-200 rounded-2xl px-5 py-10 text-center flex flex-col items-center gap-3">
         <span className="w-14 h-14 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><IconCheck className="w-7 h-7" /></span>
-        <p className="text-xl font-bold text-stone-800">已送出，謝謝您！</p>
+        <p className="text-xl font-bold text-stone-800">{editing ? '已更新回饋，謝謝您！' : '已送出，謝謝您！'}</p>
         <p className="text-base text-stone-500 leading-relaxed">感謝您耐心的填寫，期待下次活動再相見 😊</p>
       </div>
     )
@@ -275,11 +288,22 @@ export function ResidentFeedbackForm({
     body = (
       <div className="flex flex-col gap-4">
         <CourseInfoCard course={d.course} />
-        {d.feedback ? (
+        {d.feedback && editing ? (
+          <>
+            <p className="text-base text-stone-600 leading-relaxed px-1">
+              修改您的回答後按「儲存修改」。
+              <span className="block mt-1 text-stone-500">修改期限：{formatDeadline(d.course)} 晚上 11:59 前</span>
+            </p>
+            <FeedbackQuestions answers={draft.answers} onChange={draft.onChange} missing={draft.missing} registerRef={draft.registerRef} />
+          </>
+        ) : d.feedback ? (
           <>
             <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 text-base font-medium">
               <IconCheck />您已經填寫過這堂課的回饋，以下是您的回答
             </div>
+            {canEdit && (
+              <p className="text-base text-stone-500 leading-relaxed px-1">想調整回答？{formatDeadline(d.course)} 晚上 11:59 前都可以按下方「修改回饋」。</p>
+            )}
             <FeedbackQuestions answers={feedbackToAnswers(d.feedback)} readOnly />
           </>
         ) : !d.eligible ? (
@@ -301,12 +325,31 @@ export function ResidentFeedbackForm({
     )
   }
 
-  const footer = canFill ? (
+  const footer = formActive ? (
     <div className="flex flex-col gap-2">
       {submitError && <p className="text-base font-medium text-red-600 text-center" role="alert">{submitError}</p>}
-      <button type="button" onClick={handleSubmit} disabled={submitting}
-        className="w-full min-h-[56px] bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white text-lg font-bold rounded-xl transition-colors">
-        {submitting ? '送出中…' : '送出問卷'}
+      <div className="flex gap-3">
+        {editing && (
+          <button type="button" onClick={() => { if (!draft.dirty || window.confirm('修改還沒儲存，確定要取消嗎？')) setEditing(false) }} disabled={submitting}
+            className="min-h-[56px] px-6 bg-stone-100 hover:bg-stone-200 text-stone-700 text-lg font-bold rounded-xl transition-colors">
+            取消
+          </button>
+        )}
+        <button type="button" onClick={handleSubmit} disabled={submitting}
+          className="flex-1 min-h-[56px] bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white text-lg font-bold rounded-xl transition-colors">
+          {submitting ? '送出中…' : editing ? '儲存修改' : '送出問卷'}
+        </button>
+      </div>
+    </div>
+  ) : canEdit ? (
+    <div className="flex gap-3">
+      <button type="button" onClick={onClose}
+        className="min-h-[56px] px-6 bg-stone-100 hover:bg-stone-200 text-stone-700 text-lg font-bold rounded-xl transition-colors">
+        關閉
+      </button>
+      <button type="button" onClick={startEdit}
+        className="flex-1 min-h-[56px] bg-white border-2 border-orange-500 text-orange-600 hover:bg-orange-50 text-lg font-bold rounded-xl transition-colors">
+        修改回饋
       </button>
     </div>
   ) : (

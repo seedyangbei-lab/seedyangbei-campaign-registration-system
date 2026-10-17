@@ -81,3 +81,11 @@ export function unbindInstructor(id: string) {
 export function deleteInstructor(id: string) {
   return adminFetch(`/api/admin/instructors/${id}`, { method: 'DELETE' })
 }
+
+export function mergeUnboundMember(userId: string, targetLineMemberId: string) {
+  return adminFetch(`/api/admin/members/${userId}/merge`, { method: 'POST', body: JSON.stringify({ targetLineMemberId }) })
+}
+
+export function deleteUnboundMember(userId: string) {
+  return adminFetch(`/api/admin/members/${userId}`, { method: 'DELETE' })
+}

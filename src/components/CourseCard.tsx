@@ -159,6 +159,10 @@ function isExpired(c: Course) {
   return new Date(`${c.date}T${c.time_end}`) < new Date()
 }
 
+function hasStarted(c: Course) {
+  return new Date(`${c.date}T${c.time_start}`) <= new Date()
+}
+
 function InfoRow({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2">
@@ -307,7 +311,9 @@ export default function CourseCard({ courses, categories }: {
     return next
   })
 
-  const courseIsFull = (c: Course) => !!c.max_seats && (c.registered_count ?? 0) >= c.max_seats
+  // 課程開始後不再擋名額：開課後還在報名的多半是人已經在現場，名額常被報了名沒來的人佔著
+  // （資料庫 trigger 同步放行，見 sql/2026-10-17_registrations_capacity_after_start.sql）
+  const courseIsFull = (c: Course) => !!c.max_seats && (c.registered_count ?? 0) >= c.max_seats && !hasStarted(c)
 
   const filtered = (activeCategory === 'all' ? courses : courses.filter(c => c.course_categories?.id === activeCategory))
     .slice()

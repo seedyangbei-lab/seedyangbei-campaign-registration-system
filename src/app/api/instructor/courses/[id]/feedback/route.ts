@@ -69,3 +69,28 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   return NextResponse.json({ ok: true })
 }
+
+// 修改代填內容（填錯人、勾錯選項）：期限內可改，只能改「講師代填」的那幾份，學員本人填的不能動
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const auth = await authorize(req, id)
+  if ('error' in auth) return auth.error
+
+  const { registrationId, answers } = await req.json().catch(() => ({}))
+  const clean = sanitizeAnswers(answers)
+  if (!registrationId || !clean) return NextResponse.json({ error: '還有題目沒有填寫' }, { status: 400 })
+
+  if (feedbackWindow(auth.course) === 'closed') return NextResponse.json({ error: '已超過填寫期限，無法修改' }, { status: 403 })
+
+  const { data: existing } = await auth.supabase.from('course_feedbacks')
+    .select('id, course_id, submitted_by').eq('registration_id', registrationId).maybeSingle()
+  if (!existing || existing.course_id !== id) return NextResponse.json({ error: '找不到這份回饋' }, { status: 404 })
+  if (existing.submitted_by !== 'instructor') return NextResponse.json({ error: '這份是學員本人填寫的，無法由講師修改' }, { status: 403 })
+
+  const { error } = await auth.supabase.from('course_feedbacks')
+    .update({ ...clean, proxy_instructor_id: auth.instructorId, form_version: FEEDBACK_FORM_VERSION })
+    .eq('id', existing.id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ ok: true })
+}

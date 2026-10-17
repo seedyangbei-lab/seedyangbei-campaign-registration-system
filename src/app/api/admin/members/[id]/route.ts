@@ -32,3 +32,26 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   return NextResponse.json({ error: 'Invalid table' }, { status: 400 })
 }
+
+// 刪除未綁定 LINE 的居民紀錄（打錯、重複建檔）。只開放刪沒有任何報名紀錄的人，
+// 有報名紀錄的應該用「合併到 LINE 會員」，不然出席紀錄會跟著不見
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  if (!verifyAdminToken(req.headers.get('x-admin-token'))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  const { id } = await params
+  const supabase = createServerClient()
+
+  const { data: user } = await supabase.from('users').select('id, line_id').eq('id', id).maybeSingle()
+  if (!user) return NextResponse.json({ error: '找不到這筆紀錄' }, { status: 404 })
+  if (user.line_id) return NextResponse.json({ error: '已綁定 LINE 的會員不能從這裡刪除' }, { status: 400 })
+
+  const { count } = await supabase.from('registrations').select('id', { count: 'exact', head: true }).eq('user_id', id)
+  if (count && count > 0) {
+    return NextResponse.json({ error: `這筆紀錄還有 ${count} 筆報名紀錄，請改用「合併到 LINE 會員」` }, { status: 400 })
+  }
+
+  const { error } = await supabase.from('users').delete().eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
