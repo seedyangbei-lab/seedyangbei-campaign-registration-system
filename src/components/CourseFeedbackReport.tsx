@@ -160,13 +160,15 @@ function ResponseAnswers({ f }: { f: any }) {
 }
 
 export function FeedbackResponseList({
-  participants, onProxyFill, proxyAnyone = false,
+  participants, onProxyFill, onEditProxy, proxyAnyone = false,
 }: {
   participants: FeedbackDetail['participants']
   // 單次例外開放的課程：有 LINE 的學員也顯示「代填」
   proxyAnyone?: boolean
   // 有傳才顯示「代填」按鈕（講師中台用；後台不代填）
   onProxyFill?: (p: FeedbackDetail['participants'][number]) => void
+  // 有傳才在「講師代填」的回饋上顯示「修改」（講師中台、填寫期限內）
+  onEditProxy?: (p: FeedbackDetail['participants'][number]) => void
 }) {
   const [expanded, setExpanded] = useState<string | null>(null)
   const responded = participants.filter(p => p.feedback)
@@ -203,7 +205,17 @@ export function FeedbackResponseList({
                   {!open && p.feedback.comment && (
                     <p className="px-4 pb-3 -mt-1 text-sm text-stone-600 line-clamp-2 break-words">「{p.feedback.comment}」</p>
                   )}
-                  {open && <div className="px-4 pb-4 border-t border-stone-100 pt-3"><ResponseAnswers f={p.feedback} /></div>}
+                  {open && (
+                    <div className="px-4 pb-4 border-t border-stone-100 pt-3 flex flex-col gap-3">
+                      <ResponseAnswers f={p.feedback} />
+                      {onEditProxy && p.feedback.submitted_by === 'instructor' && (
+                        <button onClick={() => onEditProxy(p)}
+                          className="self-end text-sm font-medium px-4 py-2 rounded-lg border border-orange-300 text-orange-600 hover:bg-orange-50 transition-colors">
+                          修改代填內容
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </li>
               )
             })}

@@ -19,14 +19,15 @@ export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q')?.trim()
   if (!q) return NextResponse.json({ users: [], lineMembers: [] })
 
+  // 筆數抓寬一點：已在這堂課名單上的人前端會排到後面，常見姓氏（陳、林）只抓 6 筆容易把要找的人擠掉
   const supabase = createServerClient()
   const [userRes, memberRes] = await Promise.all([
-    supabase.from('users').select('id, name, room_number, line_id').ilike('name', `%${q}%`).limit(6),
+    supabase.from('users').select('id, name, room_number, line_id').ilike('name', `%${q}%`).limit(15),
     supabase
       .from('line_members')
       .select('line_user_id, display_name, building, unit_number, floor_number')
       .ilike('display_name', `%${q}%`)
-      .limit(6),
+      .limit(15),
   ])
 
   if (userRes.error) console.error('search-members users error:', userRes.error)

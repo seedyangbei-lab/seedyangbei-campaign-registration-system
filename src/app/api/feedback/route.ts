@@ -94,3 +94,30 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true })
 }
+
+// 修改已送出的回饋：期限內都可以改。講師先前代填的，本人改過之後就算本人填寫
+export async function PUT(req: NextRequest) {
+  const lineUserId = verifyResidentToken(req.headers.get('x-resident-token'))
+  if (!lineUserId) return NextResponse.json({ error: '登入已過期，請重新用 LINE 登入' }, { status: 401 })
+
+  const { registrationId, answers } = await req.json().catch(() => ({}))
+  const clean = sanitizeAnswers(answers)
+  if (!registrationId || !clean) return NextResponse.json({ error: '還有題目沒有填寫' }, { status: 400 })
+
+  const supabase = createServerClient()
+  const userId = await getUserId(supabase, lineUserId)
+  const reg = userId ? await loadOwnRegistration(supabase, registrationId, userId) : null
+  if (!reg || !reg.courses) return NextResponse.json({ error: '找不到這筆報名紀錄' }, { status: 404 })
+
+  const win = feedbackWindow(reg.courses)
+  if (win === 'closed') return NextResponse.json({ error: '已超過填寫期限，無法修改' }, { status: 403 })
+
+  const { data, error } = await supabase.from('course_feedbacks')
+    .update({ ...clean, user_id: userId, submitted_by: 'resident', proxy_instructor_id: null, form_version: FEEDBACK_FORM_VERSION })
+    .eq('registration_id', reg.id)
+    .select('id')
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (!data || data.length === 0) return NextResponse.json({ error: '還沒有填寫過這堂課的回饋' }, { status: 404 })
+
+  return NextResponse.json({ ok: true })
+}

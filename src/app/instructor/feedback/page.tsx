@@ -3,9 +3,9 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { hasValidInstructorToken } from '@/lib/instructor-auth'
-import { getInstructorCourseFeedback, proxyFillCourseFeedback } from '@/lib/instructorCoursesApi'
+import { getInstructorCourseFeedback, proxyFillCourseFeedback, updateProxyCourseFeedback } from '@/lib/instructorCoursesApi'
 import { FeedbackSummaryPanel, FeedbackResponseList, type FeedbackDetail } from '@/components/CourseFeedbackReport'
-import { FeedbackQuestions, useFeedbackDraft, MISSING_ANSWERS_MESSAGE } from '@/components/CourseFeedbackForm'
+import { FeedbackQuestions, useFeedbackDraft, feedbackToAnswers, MISSING_ANSWERS_MESSAGE } from '@/components/CourseFeedbackForm'
 import { canProxyFillAnyone, formatDeadline } from '@/lib/courseFeedback'
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock'
 
@@ -20,10 +20,12 @@ function BackArrowIcon() {
 type Participant = FeedbackDetail['participants'][number]
 
 // 講師代填：沒有 LINE 帳號的學員（多為現場報名）無法自己登入，由講師口頭詢問後代為填寫
+// participant.feedback 有值＝修改先前的代填內容（期限內可改）
 function ProxyFillModal({ courseId, participant, onClose, onDone }: {
   courseId: string; participant: Participant; onClose: () => void; onDone: () => void
 }) {
-  const draft = useFeedbackDraft()
+  const isEdit = !!participant.feedback
+  const draft = useFeedbackDraft(isEdit ? feedbackToAnswers(participant.feedback) : undefined)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -40,7 +42,8 @@ function ProxyFillModal({ courseId, participant, onClose, onDone }: {
     if (!draft.validate()) { setError(MISSING_ANSWERS_MESSAGE); return }
     setSaving(true)
     try {
-      await proxyFillCourseFeedback(courseId, participant.registration_id, draft.answers)
+      if (isEdit) await updateProxyCourseFeedback(courseId, participant.registration_id, draft.answers)
+      else await proxyFillCourseFeedback(courseId, participant.registration_id, draft.answers)
       onDone()
     } catch (e: any) {
       setError(e?.message || '送出失敗，請稍後再試')
@@ -54,7 +57,7 @@ function ProxyFillModal({ courseId, participant, onClose, onDone }: {
       <div className="bg-stone-50 w-full md:max-w-[640px] md:max-h-[90vh] md:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
         <div className="flex-shrink-0 bg-white flex items-center justify-between px-5 py-4 border-b border-stone-200">
           <div className="min-w-0">
-            <h3 className="text-lg font-bold text-stone-800">代填課程回饋</h3>
+            <h3 className="text-lg font-bold text-stone-800">{isEdit ? '修改代填回饋' : '代填課程回饋'}</h3>
             <p className="text-sm text-stone-500">學員：{participant.name}{participant.room_number ? `（${participant.room_number}）` : ''}</p>
           </div>
           <button type="button" onClick={close} aria-label="關閉" className="p-2 hover:bg-stone-100 rounded-xl text-stone-500">
@@ -62,14 +65,14 @@ function ProxyFillModal({ courseId, participant, onClose, onDone }: {
           </button>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-5 py-4">
-          <p className="text-sm text-stone-500 mb-3">請逐題念給學員聽，依學員的回答勾選。送出後會標記為「講師代填」，無法修改。</p>
+          <p className="text-sm text-stone-500 mb-3">請逐題念給學員聽，依學員的回答勾選。送出後會標記為「講師代填」，填寫期限內都可以再修改。</p>
           <FeedbackQuestions answers={draft.answers} onChange={draft.onChange} missing={draft.missing} registerRef={draft.registerRef} />
         </div>
         <div className="flex-shrink-0 bg-white px-5 py-4 border-t border-stone-200 flex flex-col gap-2">
           {error && <p className="text-sm font-medium text-red-600 text-center" role="alert">{error}</p>}
           <button type="button" onClick={submit} disabled={saving}
             className="w-full min-h-[52px] bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white text-base font-bold rounded-xl transition-colors">
-            {saving ? '送出中…' : '送出代填'}
+            {saving ? '送出中…' : isEdit ? '儲存修改' : '送出代填'}
           </button>
         </div>
       </div>
@@ -149,7 +152,8 @@ function FeedbackPageInner() {
         {!canProxy && detail.window === 'closed' && (
           <p className="text-xs text-stone-500">已超過填寫期限，無法再代填。</p>
         )}
-        <FeedbackResponseList participants={detail.participants} onProxyFill={canProxy ? setProxyTarget : undefined} proxyAnyone={canProxyFillAnyone(detail.course.id)} />
+        <FeedbackResponseList participants={detail.participants} onProxyFill={canProxy ? setProxyTarget : undefined}
+          onEditProxy={detail.window !== 'closed' ? setProxyTarget : undefined} proxyAnyone={canProxyFillAnyone(detail.course.id)} />
 
         <FeedbackSummaryPanel summary={detail.summary} />
       </div>
@@ -157,7 +161,7 @@ function FeedbackPageInner() {
       {proxyTarget && courseId && (
         <ProxyFillModal courseId={courseId} participant={proxyTarget}
           onClose={() => setProxyTarget(null)}
-          onDone={async () => { setProxyTarget(null); setToast('已送出代填'); await load() }} />
+          onDone={async () => { const wasEdit = !!proxyTarget.feedback; setProxyTarget(null); setToast(wasEdit ? '已更新代填內容' : '已送出代填'); await load() }} />
       )}
 
       {toast && (

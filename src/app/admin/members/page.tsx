@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { updateUserRoomNumber, updateLineMember, getMembers, getRegistrations } from '@/lib/adminApi'
+import { updateUserRoomNumber, updateLineMember, getMembers, getRegistrations, mergeUnboundMember, deleteUnboundMember } from '@/lib/adminApi'
 import { staffAuthHeaders } from '@/lib/staffAuthHeaders'
 
 type Member = {
@@ -95,6 +95,11 @@ export default function MembersPage() {
   const [addPointForm, setAddPointForm] = useState({ delta: 1, reason: '' })
   const [addPointSaving, setAddPointSaving] = useState(false)
   const [showLegend, setShowLegend] = useState(false)
+  // 合併未綁定紀錄到 LINE 會員（現場報到找不到人而手動新建的重複帳號）
+  const [mergeSource, setMergeSource] = useState<Member | null>(null)
+  const [mergeQuery, setMergeQuery] = useState('')
+  const [mergeTarget, setMergeTarget] = useState<Member | null>(null)
+  const [merging, setMerging] = useState(false)
   const supabase = createClient()
 
   // 手機版：走勢圖 Y 軸/月份細項改用更適合窄螢幕的呈現方式（依 Figma node 504:29567）
@@ -288,6 +293,45 @@ export default function MembersPage() {
     await fetchMembers()
     setSaving(false)
   }
+
+  const openMerge = (member: Member) => {
+    setEditMember(null)
+    setMergeSource(member)
+    setMergeQuery(member.display_name || '')
+    setMergeTarget(null)
+  }
+
+  const handleMerge = async () => {
+    if (!mergeSource || !mergeTarget) return
+    if (!confirm(`確定把「${mergeSource.display_name}」的報名紀錄併到 LINE 會員「${mergeTarget.display_name}」？\n合併後未綁定的這筆紀錄會刪除，無法復原。`)) return
+    setMerging(true)
+    try {
+      const res = await mergeUnboundMember(mergeSource.id, mergeTarget.id)
+      alert(`合併完成：搬移 ${res.moved} 筆報名紀錄${res.awarded ? `，補發 ${res.awarded} 點出席點數` : ''}`)
+      setMergeSource(null)
+      await fetchMembers()
+    } catch (e: any) {
+      alert('合併失敗：' + (e?.message || '請稍後再試'))
+    }
+    setMerging(false)
+  }
+
+  const handleDeleteUnbound = async (member: Member) => {
+    if (!confirm(`確定刪除未綁定紀錄「${member.display_name}」？刪除後無法復原。`)) return
+    setSaving(true)
+    try {
+      await deleteUnboundMember(member.id)
+      setEditMember(null)
+      await fetchMembers()
+    } catch (e: any) {
+      alert('刪除失敗：' + (e?.message || '請稍後再試'))
+    }
+    setSaving(false)
+  }
+
+  const mergeCandidates = mergeSource
+    ? members.filter(m => m.source === 'line' && (!mergeQuery.trim() || (m.display_name || '').toLowerCase().includes(mergeQuery.trim().toLowerCase()))).slice(0, 20)
+    : []
 
   const handleAddPoint = async () => {
     if (!addPointModal || !addPointForm.reason.trim()) { alert('請填寫原因'); return }
@@ -804,6 +848,65 @@ export default function MembersPage() {
                 <button onClick={() => setEditMember(null)}
                   className="px-6 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-3 rounded-xl text-sm transition-colors">取消</button>
               </div>
+
+              {editMember.source === 'unbound' && (
+                <div className="border-t border-stone-100 pt-4 space-y-2">
+                  <p className="text-xs text-stone-400">這位其實已經有 LINE 會員帳號（例如現場報到時找不到人而重新建檔）？合併後報名紀錄會搬到 LINE 會員底下，並補發出席點數。</p>
+                  <div className="flex gap-2">
+                    <button onClick={() => openMerge(editMember)} disabled={saving}
+                      className="flex-1 border border-green-300 bg-green-50 hover:bg-green-100 text-green-700 font-medium py-2.5 rounded-xl text-sm transition-colors">
+                      合併到 LINE 會員
+                    </button>
+                    <button onClick={() => handleDeleteUnbound(editMember)} disabled={saving}
+                      className="px-4 border border-red-200 bg-white hover:bg-red-50 text-red-600 font-medium py-2.5 rounded-xl text-sm transition-colors">
+                      刪除紀錄
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 合併彈窗：選一位 LINE 會員，把這筆未綁定紀錄併過去 */}
+      {mergeSource && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+          onClick={e => { if (e.target === e.currentTarget && !merging) setMergeSource(null) }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-stone-200">
+              <div>
+                <h3 className="font-bold text-stone-800">合併到 LINE 會員</h3>
+                <p className="text-stone-400 text-xs mt-0.5">{mergeSource.display_name}・{mergeSource.room_number || '未填房號'}</p>
+              </div>
+              <button onClick={() => setMergeSource(null)} disabled={merging} className="p-2 hover:bg-stone-100 rounded-xl">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-3 overflow-y-auto">
+              <input value={mergeQuery} onChange={e => { setMergeQuery(e.target.value); setMergeTarget(null) }} placeholder="搜尋 LINE 會員名稱"
+                className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
+              <div className="space-y-2">
+                {mergeCandidates.length === 0 ? (
+                  <p className="text-center py-6 text-stone-400 text-sm">找不到符合的 LINE 會員（LINE 名稱可能跟本名不同，試試其他關鍵字）</p>
+                ) : mergeCandidates.map(m => (
+                  <button key={m.id} type="button" onClick={() => setMergeTarget(m)}
+                    className={`w-full flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${mergeTarget?.id === m.id ? 'border-orange-400 bg-orange-50' : 'border-stone-200 hover:bg-stone-50'}`}>
+                    {m.picture_url ? <img src={m.picture_url} alt="" className="w-8 h-8 rounded-full" />
+                      : <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center"><span className="text-green-600 font-bold text-sm">{m.display_name?.[0]}</span></div>}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-stone-700 truncate">{m.display_name}</p>
+                      <p className="text-xs text-stone-400 truncate">{m.user_room_number || (m.building ? `${m.building} ${m.unit_number || ''}-${m.floor_number || ''}F` : '尚未報名過活動')}・{m.points ?? 0} 點</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="p-6 border-t border-stone-100">
+              <button onClick={handleMerge} disabled={!mergeTarget || merging}
+                className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
+                {merging ? '合併中...' : mergeTarget ? `合併到「${mergeTarget.display_name}」` : '請選擇 LINE 會員'}
+              </button>
             </div>
           </div>
         </div>
