@@ -4,7 +4,8 @@ import { computeFeedbackStats, FEEDBACK_ELIGIBLE_STATUSES, type FeedbackStats } 
 // 講師中台與後台共用：一堂課的回饋明細＋統計。只在 API route 裡用 service_role client 呼叫。
 //
 // 填寫率的定義：分母 = 已出席人數（含現場報名），分子 = 已出席者當中有填回饋的人數。
-// 講師尚未點名（confirmed）就先填的回饋會出現在明細裡，但要等講師確認出席後才計入填寫率與統計，
+// 講師往往沒辦法第一時間點名，學員卻可能先填好回饋：尚未點名（confirmed）但已經填回饋的人，
+// 視同有來上課，直接計入出席人數、填寫率與統計，不必等講師點名。
 // 事後被標記未出席（absent）的人，回饋保留在明細但不計入。
 
 export const FEEDBACK_SELECT =
@@ -21,16 +22,21 @@ export type FeedbackParticipant = {
 }
 
 export type CourseFeedbackSummary = {
-  attendedCount: number
+  attendedCount: number    // 已出席＋尚未點名但已填回饋
   walkInCount: number
-  respondedCount: number   // 已出席且有填
-  totalFeedbackCount: number // 全部回饋（含未點名、未出席者）
+  respondedCount: number   // 上述人當中有填的
+  totalFeedbackCount: number // 全部回饋（含標記未出席者）
   responseRate: number | null
   stats: FeedbackStats
 }
 
+// 已點名出席，或還沒點名但已經填了回饋（填了就代表有來）
+export function countsAsAttended(status: string, hasFeedback: boolean) {
+  return status === 'attended' || (status === 'confirmed' && hasFeedback)
+}
+
 export function summarize(participants: FeedbackParticipant[]): CourseFeedbackSummary {
-  const attended = participants.filter(p => p.status === 'attended')
+  const attended = participants.filter(p => countsAsAttended(p.status, !!p.feedback))
   const counted = attended.filter(p => p.feedback).map(p => p.feedback)
   return {
     attendedCount: attended.length,
@@ -105,7 +111,7 @@ export function chunk<T>(list: T[], size: number): T[][] {
 }
 
 // 課程卡片／列表上的「學員回饋 已填/出席」數字，以及出席名單上「已填回饋」標籤要用的 registration_id。
-// 算法跟 summarize() 一致：分母＝已出席人數，分子＝已出席者中有填的人數。
+// 算法跟 summarize() 一致：分母＝已出席人數（含未點名但已填者），分子＝其中有填的人數。
 export async function loadFeedbackCounts(supabase: SupabaseClient, courseIds: string[]) {
   const counts: Record<string, { responded: number; attended: number }> = {}
   const submitted: string[] = []
@@ -114,15 +120,17 @@ export async function loadFeedbackCounts(supabase: SupabaseClient, courseIds: st
   for (const part of chunk(courseIds, 150)) {
     const [regs, feedbacks] = await Promise.all([
       fetchAllRows((from, to) => supabase.from('registrations')
-        .select('id, course_id').in('course_id', part).eq('status', 'attended').order('id').range(from, to)),
+        .select('id, course_id, status').in('course_id', part).in('status', FEEDBACK_ELIGIBLE_STATUSES).order('id').range(from, to)),
       fetchAllRows((from, to) => supabase.from('course_feedbacks')
         .select('registration_id').in('course_id', part).order('id').range(from, to)),
     ])
     const done = new Set(feedbacks.map(f => f.registration_id))
     submitted.push(...feedbacks.map(f => f.registration_id))
     regs.forEach(r => {
+      const hasFeedback = done.has(r.id)
+      if (!countsAsAttended(r.status, hasFeedback)) return
       counts[r.course_id].attended++
-      if (done.has(r.id)) counts[r.course_id].responded++
+      if (hasFeedback) counts[r.course_id].responded++
     })
   }
   return { counts, submitted }
