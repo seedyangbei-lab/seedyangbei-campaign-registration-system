@@ -103,7 +103,7 @@ export function FeedbackSummaryPanel({ summary }: { summary: FeedbackDetail['sum
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Tile label="填寫率" value={formatPercent(summary.responseRate)} sub="已出席者中有填回饋的比例" />
         <Tile label="回收份數／出席人數" value={`${summary.respondedCount} / ${summary.attendedCount}`}
-          sub={summary.walkInCount ? `出席含現場報名 ${summary.walkInCount} 人` : '出席含現場報名'} />
+          sub={summary.walkInCount ? `出席含現場報名 ${summary.walkInCount} 人、未點名已填者` : '出席含現場報名、未點名已填者'} />
         {YESNO_QUESTIONS.map(q => {
           const s = stats.yesno.find(y => y.key === q.key)
           return <Tile key={q.key} label={`${q.shortLabel}（答「是」）`} value={formatPercent(s?.yesRate)} sub={`${s?.yesCount ?? 0} / ${stats.count} 人`} />
@@ -112,7 +112,7 @@ export function FeedbackSummaryPanel({ summary }: { summary: FeedbackDetail['sum
 
       {summary.totalFeedbackCount > summary.respondedCount && (
         <p className="text-xs text-stone-500 bg-stone-50 border border-stone-200 rounded-lg px-3 py-2">
-          另有 {summary.totalFeedbackCount - summary.respondedCount} 份回饋來自尚未點名或標記未出席的學員，暫不計入填寫率與統計。
+          另有 {summary.totalFeedbackCount - summary.respondedCount} 份回饋來自標記未出席的學員，不計入填寫率與統計。
         </p>
       )}
 
