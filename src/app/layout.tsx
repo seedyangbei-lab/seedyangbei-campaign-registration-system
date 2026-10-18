@@ -10,6 +10,19 @@ const shareBanner = "/illustrations/share-link-banner.png";
 const isPreview = process.env.VERCEL_ENV !== "production";
 const titlePrefix = isPreview ? "[測試站] " : "";
 
+// 安卓手機用 LINE 開連結會進 LINE 內建瀏覽器，畫面高度算不準，像個人頁「填寫回饋問卷」按鈕會被底部工具列蓋住。
+// 網址帶 openExternalBrowser=1 是 LINE 官方支援的參數，LINE 會改用手機預設瀏覽器（Chrome）開啟。
+// 在 <head> 一開始就判斷並跳轉，居民不用另外拿到不同的連結；已帶參數就不再跳，避免無限迴圈。
+// 只處理安卓（iPhone 目前沒有這個問題）。注意：外部瀏覽器跟 LINE 的登入資料不共用，第一次會需要再用 LINE 登入一次。
+const openInExternalBrowserScript = `(function(){try{
+var ua=navigator.userAgent;
+if(!/Android/i.test(ua)||!/\\bLine\\//i.test(ua))return;
+var u=new URL(location.href);
+if(u.searchParams.has('openExternalBrowser'))return;
+u.searchParams.set('openExternalBrowser','1');
+location.replace(u.toString());
+}catch(e){}})();`
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: `${titlePrefix}央北社宅活動報名`,
@@ -49,6 +62,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-TW">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: openInExternalBrowserScript }} />
+      </head>
       <body className="antialiased">
         {isPreview && (
           <div
