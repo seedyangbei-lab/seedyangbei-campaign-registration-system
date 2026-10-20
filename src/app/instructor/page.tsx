@@ -3,15 +3,13 @@
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-import CoursePosterEditor from '@/components/CoursePosterEditor'
-import WalkInRegistrationModal from '@/components/WalkInRegistrationModal'
+import dynamic from 'next/dynamic'
 import AttendeeCheckItem from '@/components/AttendeeCheckItem'
 import {
   InstructorNavbar, InstructorProfileCard, InstructorTitle, InstructorTabBar,
   InstructorCourseCard, InstructorMonthFilter, InstructorProfileEditModal,
   CloseIcon, IssueReportFab, CheckSquareIcon,
 } from '@/components/InstructorMobileUI'
-import IssueReportModal from '@/components/IssueReportModal'
 import { MobileRegistrationCard, MobilePagination } from '@/components/AdminMobileUI'
 import CourseEditFormFields, { LOCATIONS, DESCRIPTION_MAX, COMMUNITY_HOST_LABEL, type InstructorMode } from '@/components/CourseEditFormFields'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
@@ -23,6 +21,11 @@ import {
   createInstructorCourse, updateInstructorCourseWithLog, cancelInstructorRegistration, deleteInstructorRegistration,
   getMyInstructorProfile, updateMyInstructorProfile, getInstructorCourseRegistrations,
 } from '@/lib/instructorCoursesApi'
+
+// 點了才會打開的彈窗／編輯器拆成獨立 chunk，講師中台首頁不用先下載
+const CoursePosterEditor = dynamic(() => import('@/components/CoursePosterEditor'), { ssr: false })
+const WalkInRegistrationModal = dynamic(() => import('@/components/WalkInRegistrationModal'), { ssr: false })
+const IssueReportModal = dynamic(() => import('@/components/IssueReportModal'), { ssr: false })
 
 const ROSTER_PAGE_SIZE = 10
 

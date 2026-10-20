@@ -1,5 +1,3 @@
-import { createClient } from '@/lib/supabase'
-
 function getSessionId(): string {
   let id = localStorage.getItem('funnel_session_id')
   if (!id) {
@@ -9,15 +7,19 @@ function getSessionId(): string {
   return id
 }
 
-// fire-and-forget：不 await，失敗也不影響使用者操作，長輩端完全無感
+// fire-and-forget：不 await，失敗也不影響使用者操作，長輩端完全無感。
+// supabase client 用動態 import 延後載入：前台首頁的課程卡片會引用這支檔案，
+// 靜態 import 會讓整包 supabase-js 跟著首頁一起下載，拖慢首頁可以操作的時間。
 export function logFunnelStep(step: string, courseIds?: string, detail?: Record<string, any>) {
   try {
-    const supabase = createClient()
-    supabase.from('funnel_logs').insert({
+    const row = {
       session_id: getSessionId(),
       step,
       course_ids: courseIds || null,
       detail: detail || null,
-    }).then(() => {})
+    }
+    import('@/lib/supabase')
+      .then(({ createClient }) => createClient().from('funnel_logs').insert(row))
+      .then(() => {}, () => {})
   } catch {}
 }

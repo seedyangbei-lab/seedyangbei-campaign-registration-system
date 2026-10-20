@@ -4,12 +4,15 @@ import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import AttendeeCheckItem from '@/components/AttendeeCheckItem'
-import WalkInRegistrationModal from '@/components/WalkInRegistrationModal'
 import { staffAuthHeaders, fetchFeedbackCounts } from '@/lib/staffAuthHeaders'
 import { hasValidInstructorToken } from '@/lib/instructor-auth'
 import { courseEndAt } from '@/lib/courseFeedback'
 import { onePerPerson } from '@/lib/attendanceList'
 import { getInstructorCourseRegistrations } from '@/lib/instructorCoursesApi'
+import dynamic from 'next/dynamic'
+
+// 現場報名彈窗點了才會開，拆成獨立 chunk
+const WalkInRegistrationModal = dynamic(() => import('@/components/WalkInRegistrationModal'), { ssr: false })
 
 function BackArrowIcon() {
   return (

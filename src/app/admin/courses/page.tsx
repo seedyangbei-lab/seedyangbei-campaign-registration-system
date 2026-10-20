@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-import CourseScheduleExporter from '@/components/CourseScheduleExporter'
-import WalkInRegistrationModal from '@/components/WalkInRegistrationModal'
+import dynamic from 'next/dynamic'
 import AttendeeCheckItem from '@/components/AttendeeCheckItem'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import AdminCourseEditFormFields, {
@@ -15,8 +14,13 @@ import type { ExportableReport } from '@/lib/exportCourseReport'
 import { createCourse, updateCourse, deleteCourse } from '@/lib/adminCoursesApi'
 import { getRegistrations } from '@/lib/adminApi'
 import { staffAuthHeaders, fetchFeedbackCounts } from '@/lib/staffAuthHeaders'
-import AdminCourseFeedbackModal from '@/components/AdminCourseFeedbackModal'
 import { onePerPerson } from '@/lib/attendanceList'
+
+// 這幾個都是點了才會打開的大型彈窗（課表匯出器光原始碼就兩千行、還帶 html-to-image／取色器），
+// 拆成獨立 chunk，進課程管理頁時不用先下載
+const CourseScheduleExporter = dynamic(() => import('@/components/CourseScheduleExporter'), { ssr: false })
+const WalkInRegistrationModal = dynamic(() => import('@/components/WalkInRegistrationModal'), { ssr: false })
+const AdminCourseFeedbackModal = dynamic(() => import('@/components/AdminCourseFeedbackModal'), { ssr: false })
 
 interface Instructor { id: string; name: string }
 interface Category { id: string; name: string; color: string }
@@ -464,7 +468,10 @@ export default function CoursesPage() {
               </div>
             </div>
           </div>
-          <CourseScheduleExporter courses={courses} scheduleSettings={scheduleSettings} hideTrigger openSignal={scheduleExportSignal} />
+          {/* 第一次按「匯出課表」才掛載（才去下載匯出器的程式碼）；掛載後就一直留著，關掉再開會保留編輯中的設定 */}
+          {scheduleExportSignal > 0 && (
+            <CourseScheduleExporter courses={courses} scheduleSettings={scheduleSettings} hideTrigger openSignal={scheduleExportSignal} />
+          )}
 
           {courseTab === 'ended' && availableMonths.length > 0 && (
             <>

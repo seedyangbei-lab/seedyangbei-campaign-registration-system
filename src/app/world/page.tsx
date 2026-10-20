@@ -6,7 +6,7 @@ import RegistrationSteps from '@/components/RegistrationSteps'
 import GreetingBar from '@/components/GreetingBar'
 import { getCourseDisplayRangeEnd } from '@/lib/courseDateRange'
 import { withRegisteredCounts } from '@/lib/courseCapacity'
-import { COMMUNITY_HOST_LABEL } from '@/components/CourseEditFormFields'
+import { COMMUNITY_HOST_LABEL } from '@/lib/communityHost'
 
 export const revalidate = 60
 export const metadata = { title: '央北社宅 · 滾動世界試看' }

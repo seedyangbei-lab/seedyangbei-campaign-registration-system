@@ -8,7 +8,7 @@ import FirstVisitLoginModal from '@/components/FirstVisitLoginModal'
 import SiteNavbar from '@/components/SiteNavbar'
 import { getCourseDisplayRangeEnd } from '@/lib/courseDateRange'
 import { withRegisteredCounts } from '@/lib/courseCapacity'
-import { COMMUNITY_HOST_LABEL } from '@/components/CourseEditFormFields'
+import { COMMUNITY_HOST_LABEL } from '@/lib/communityHost'
 
 export const revalidate = 60
 

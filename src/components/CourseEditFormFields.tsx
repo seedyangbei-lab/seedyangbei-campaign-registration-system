@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ChevronDownIcon } from '@/components/InstructorMobileUI'
 import CoursePhotoGrid from '@/components/CoursePhotoGrid'
 import SuitableAgeSelector from '@/components/SuitableAgeSelector'
+import { COMMUNITY_HOST_LABEL } from '@/lib/communityHost'
 
 export const LOCATIONS = ['C 小客廳', 'D 小客廳', '閱覽室 1', '閱覽室 2', '其他']
 export const DESCRIPTION_MAX = 100
@@ -42,9 +43,7 @@ export type CourseForm = {
 
 export type InstructorOption = { id: string; name: string }
 
-// 卡片對外顯示用的固定文字：選「央北種子戶聯合主辦」時，不管合作講師/簽到名單實際填了誰，
-// 對外一律顯示這行字，真正出力的人靠簽到表核實，不靠這個欄位
-export const COMMUNITY_HOST_LABEL = '央北種子戶聯合主辦'
+export { COMMUNITY_HOST_LABEL }
 
 const INSTRUCTOR_MODE_OPTIONS: { value: InstructorMode; label: string }[] = [
   { value: 'single', label: '單一講師' },

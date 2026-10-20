@@ -1,38 +1,31 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Huninn&family=Mochiy+Pop+One&display=swap');
-/* 源泉黑體 GenSenRounded2TW — 放在 public/fonts/ */
+/* Google Fonts（Noto Sans TC／Huninn）改在 src/app/layout.tsx 用 <link> 載入，不在這裡 @import：
+   CSS 裡的 @import 要等這支 CSS 下載完才會開始抓，多一段串行等待。
+
+   源泉圓體 GenSenRounded2TW 只有 Medium(500)／Bold(700) 兩個字重，切成 woff2 分片放在
+   public/fonts/gensen/，@font-face 定義在 public/fonts/gensen/gensen.css（同樣由 layout.tsx 載入）。
+   其餘字重（100／300／400／900）沒有字型檔，原本指向不存在的 OTF、每頁白打好幾個 404，
+   改成 local()：行為不變（沒裝這套字就退回下一個字型 Noto Sans TC），但不再發出網路請求。 */
 @font-face {
   font-family: 'GenSenRounded2TW';
-  src: url('/fonts/GenSenRounded2TW-EL.otf') format('opentype');
+  src: local('GenSenRounded2TW-EL');
   font-weight: 100;
   font-display: swap;
 }
 @font-face {
   font-family: 'GenSenRounded2TW';
-  src: url('/fonts/GenSenRounded2TW-L.otf') format('opentype');
+  src: local('GenSenRounded2TW-L');
   font-weight: 300;
   font-display: swap;
 }
 @font-face {
   font-family: 'GenSenRounded2TW';
-  src: url('/fonts/GenSenRounded2TW-R.otf') format('opentype');
+  src: local('GenSenRounded2TW-R');
   font-weight: 400;
   font-display: swap;
 }
 @font-face {
   font-family: 'GenSenRounded2TW';
-  src: url('/fonts/GenSenRounded2TW-M.otf') format('opentype');
-  font-weight: 500;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'GenSenRounded2TW';
-  src: url('/fonts/GenSenRounded2TW-B.otf') format('opentype');
-  font-weight: 700;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'GenSenRounded2TW';
-  src: url('/fonts/GenSenRounded2TW-H.otf') format('opentype');
+  src: local('GenSenRounded2TW-H');
   font-weight: 900;
   font-display: swap;
 }
