@@ -125,6 +125,7 @@ export interface MonthlyPosterCourse {
   time_end?: string
   location?: string
   instructor_names?: string[]
+  display_instructor_names?: string[]
   instructor_ids?: string[]
   instructor_mode?: string | null
   photo_urls?: string[]
@@ -171,7 +172,7 @@ export async function exportMonthlyPosters(courses: MonthlyPosterCourse[], month
       id: course.id, title: course.title, date: course.date,
       timeStart: (course.time_start || '').slice(0, 5), timeEnd: (course.time_end || '').slice(0, 5),
       location: course.location,
-      instructor: course.instructor_mode === 'community' ? COMMUNITY_HOST_LABEL : (course.instructor_names || []).join('、'),
+      instructor: course.instructor_mode === 'community' ? COMMUNITY_HOST_LABEL : (course.display_instructor_names || course.instructor_names || []).join('、'),
     }
     const params: ExportPosterParams = {
       course: posterCourse, activeBg: style.activeBg, tc: style.tc, enTc: style.enTc, iconColor: style.iconColor,

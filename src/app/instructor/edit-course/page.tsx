@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { normalizeDisplayInstructorIds } from '@/lib/courseInstructors'
 import CourseEditFormFields, { LOCATIONS, type CourseForm } from '@/components/CourseEditFormFields'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import { createInstructorCourse, updateInstructorCourseWithLog } from '@/lib/instructorCoursesApi'
@@ -21,7 +22,7 @@ function BackArrowIcon() {
 const emptyForm: CourseForm = {
   title: '', description: '', date: '', time_start: '', time_end: '',
   location: '', custom_location: '', notes: '', suitable_age: '全年齡', custom_age: '',
-  photos: [], max_seats: 20, co_instructor_ids: [], instructor_mode: 'single',
+  photos: [], max_seats: 20, co_instructor_ids: [], instructor_mode: 'single', display_instructor_ids: [],
 }
 
 function buildForm(course: any, mode: 'edit' | 'copy' | 'create', currentInstructorId: string): CourseForm {
@@ -37,6 +38,7 @@ function buildForm(course: any, mode: 'edit' | 'copy' | 'create', currentInstruc
     max_seats: course.max_seats || 20,
     co_instructor_ids: (course.instructor_ids || []).filter((id: string) => id !== currentInstructorId),
     instructor_mode: course.instructor_mode || 'single',
+    display_instructor_ids: course.display_instructor_ids || [],
   }
 }
 
@@ -113,6 +115,7 @@ function EditCoursePageInner() {
       location, notes: form.notes, suitable_age: suitableAge,
       photo_urls: form.photos, poster_url: form.photos[0] || null, max_seats: form.max_seats,
       instructor_ids: instructorIds, instructor_mode: form.instructor_mode,
+      display_instructor_ids: form.instructor_mode === 'multiple' ? normalizeDisplayInstructorIds(form.display_instructor_ids, instructorIds) : null,
     }
 
     try {
@@ -149,6 +152,7 @@ function EditCoursePageInner() {
         <CourseEditFormFields
           form={form} setForm={setForm} uploadCoursePhoto={uploadCoursePhoto}
           instructorOptions={allInstructors.filter(i => i.id !== instructor?.id)}
+          currentInstructor={instructor ? { id: instructor.id, name: instructor.name } : null}
         />
 
         {error && <p className="text-red-500 text-xs mt-3">{error}</p>}

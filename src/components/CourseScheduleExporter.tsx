@@ -14,6 +14,7 @@ interface Course {
   notes?: string; suitable_age?: string
   instructors?: { name: string } | null
   instructor_names?: string[]
+  display_instructor_names?: string[]
   instructor_mode?: string | null
   course_categories?: { name: string; color: string } | null
 }
@@ -21,7 +22,8 @@ interface Course {
 // 央北種子戶聯合主辦的活動，課表上一律顯示固定文字，不顯示落落長的合作講師名單
 function instructorDisplay(course: Course): string {
   if (course.instructor_mode === 'community') return COMMUNITY_HOST_LABEL
-  return (course.instructor_names?.length ? course.instructor_names.join('、') : course.instructors?.name) || ''
+  const names = course.display_instructor_names?.length ? course.display_instructor_names : course.instructor_names
+  return (names?.length ? names.join('、') : course.instructors?.name) || ''
 }
 
 interface Props {
