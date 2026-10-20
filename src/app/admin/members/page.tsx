@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import dynamic from 'next/dynamic'
+
+// recharts 很大，圖表延後載入，會員列表不用等它
+const chartFallback = (height: number) => () => <div style={{ height }} />
+const PersonalTrendChart = dynamic(() => import('@/components/MemberCharts').then(m => m.PersonalTrendChart), { ssr: false, loading: chartFallback(200) })
+const OverallTrendChart = dynamic(() => import('@/components/MemberCharts').then(m => m.OverallTrendChart), { ssr: false, loading: chartFallback(200) })
+const MonthBarChart = dynamic(() => import('@/components/MemberCharts').then(m => m.MonthBarChart), { ssr: false, loading: chartFallback(280) })
 import { updateUserRoomNumber, updateLineMember, getMembers, getRegistrations, mergeUnboundMember, deleteUnboundMember } from '@/lib/adminApi'
 import { staffAuthHeaders } from '@/lib/staffAuthHeaders'
 
@@ -363,17 +369,6 @@ export default function MembersPage() {
   ]
 
   // 自訂折線圖 Tooltip
-  const OverallTooltip = ({ active, payload }: any) => {
-    if (!active || !payload?.length) return null
-    return (
-      <div style={{ background: 'white', border: '1px solid #e7e5e4', borderRadius: 12, padding: '10px 14px', fontSize: 12 }}>
-        <p style={{ color: '#78716c', marginBottom: 4 }}>{payload[0]?.payload?.month}</p>
-        <p style={{ color: '#f97316', fontWeight: 600 }}>報名次數：{payload[0]?.value} 次</p>
-        <p style={{ color: '#a8a29e', fontSize: 11, marginTop: 6 }}>點擊查看當月課程細項 →</p>
-      </div>
-    )
-  }
-
   const visibleMembers = members.filter(m => groupFilter === 'all' || m.source === groupFilter)
   const chipLabel = (scope: 'all' | 'line' | 'unbound') => scope === 'all' ? '全部會員' : scope === 'line' ? 'LINE會員' : '未綁定會員'
 
@@ -445,18 +440,7 @@ export default function MembersPage() {
             {personalChartData.length === 0 ? (
               <div className="text-center py-8 text-stone-400 text-sm">此會員尚無參與記錄</div>
             ) : (
-              <ResponsiveContainer width="100%" height={isMobile === true ? 150 : 200}>
-                <LineChart data={personalChartData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f4" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#78716c' }} />
-                  {isMobile !== true && <YAxis tick={{ fontSize: 12, fill: '#78716c' }} allowDecimals={false} />}
-                  <Tooltip
-                    contentStyle={{ borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: 12 }}
-                    formatter={(v: any) => [`${v} 次`, selectedMemberForChart.display_name]}
-                  />
-                  <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2.5} dot={{ fill: '#3b82f6', r: 4 }} activeDot={{ r: 6 }} />
-                </LineChart>
-              </ResponsiveContainer>
+              <PersonalTrendChart data={personalChartData} isMobile={isMobile} memberName={selectedMemberForChart.display_name} />
             )}
           </div>
         ) : (
@@ -466,33 +450,14 @@ export default function MembersPage() {
               {chartData.length === 0 ? (
                 <div className="text-center py-8 text-stone-400 text-sm">尚無資料</div>
               ) : (
-                <ResponsiveContainer width="100%" height={isMobile === true ? 150 : 200}>
-                  <LineChart
-                    data={chartData}
-                    margin={{ top: 5, right: 20, left: -20, bottom: 5 }}
-                    onClick={(e) => {
-                      if (e?.activePayload?.[0]) {
-                        const key = e.activePayload[0].payload.key
-                        setSelectedMonth(key)
-                        fetchMonthBar(key)
-                      }
-                    }}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f4" />
-                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#78716c' }} />
-                    {isMobile !== true && <YAxis tick={{ fontSize: 12, fill: '#78716c' }} allowDecimals={false} />}
-                    <Tooltip content={<OverallTooltip />} />
-                    <Line
-                      type="monotone"
-                      dataKey="count"
-                      stroke="#f97316"
-                      strokeWidth={2.5}
-                      dot={{ fill: '#f97316', r: 5, cursor: 'pointer' }}
-                      activeDot={{ r: 7, stroke: '#f97316', strokeWidth: 2, fill: 'white' }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                <OverallTrendChart
+                  data={chartData}
+                  isMobile={isMobile}
+                  onMonthClick={(key) => {
+                    setSelectedMonth(key)
+                    fetchMonthBar(key)
+                  }}
+                />
               )}
             </div>
           </div>
@@ -534,28 +499,7 @@ export default function MembersPage() {
               })}
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart
-                data={monthBarData}
-                margin={{ top: 10, right: 10, left: -10, bottom: 80 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f4" vertical={false} />
-                <XAxis
-                  dataKey="title"
-                  tick={{ fontSize: 11, fill: '#57534e' }}
-                  angle={-45}
-                  textAnchor="end"
-                  interval={0}
-                  dy={4}
-                />
-                <YAxis tick={{ fontSize: 11, fill: '#78716c' }} allowDecimals={false} />
-                <Tooltip
-                  contentStyle={{ borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: 12 }}
-                  formatter={(v: any) => [`${v} 人`, '報名人數']}
-                />
-                <Bar dataKey="count" fill="#f97316" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <MonthBarChart data={monthBarData} />
           )}
         </div>
       )}

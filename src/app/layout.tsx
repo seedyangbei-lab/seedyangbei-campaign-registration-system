@@ -49,6 +49,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-TW">
+      <head>
+        {/* 字型直接在 <head> 用 <link> 載入（原本寫在 globals.css 的 @import，要等主 CSS 下載完才開始抓）；
+            preconnect 讓瀏覽器提早跟 Google Fonts 建好連線。Mochiy Pop One 全站沒用到，已拿掉。 */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Huninn&display=swap"
+        />
+        <link rel="stylesheet" href="/fonts/gensen/gensen.css" />
+      </head>
       <body className="antialiased">
         {isPreview && (
           <div
