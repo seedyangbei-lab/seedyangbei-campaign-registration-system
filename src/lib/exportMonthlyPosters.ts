@@ -69,7 +69,7 @@ const DEFAULT_POSTER_SETTINGS: SavedPosterSettings = {
   dotShape: 'circle', dotCustomChar: '央', dotColor: '', dotOpacity: 30, dotSize: 6,
   dotDensity: 50, dotCoverage: 'photo', dotArrangement: 'grid',
   textColorOverride: '', enTextColorOverride: '',
-  borderOn: true, borderText: 'YANGBEI COMMUNITY · SEED COURSE · ',
+  borderOn: false, borderText: 'YANGBEI COMMUNITY · SEED COURSE · ',
   zhFontValue: ZH_FONT_VALUES[0], enFontValue: EN_FONT_VALUES[0],
   zhFontSize: 17, enFontSize: 9, letterSpacingPct: 2, lineSpacingMult: 1.5,
 }

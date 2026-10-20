@@ -78,7 +78,7 @@ function PosterEditorMobile({ course, photos, instructorId }: { course: PosterCo
 
   const [textColorOverride, setTextColorOverride]     = useState('')
   const [enTextColorOverride, setEnTextColorOverride] = useState('')
-  const [borderOn, setBorderOn] = useState(true)
+  const [borderOn, setBorderOn] = useState(false)
   const [borderText, setBorderText] = useState('YANGBEI COMMUNITY · SEED COURSE · ')
 
   const [zhFontIdx, setZhFontIdx] = useState(0)
@@ -186,7 +186,7 @@ function PosterEditorMobile({ course, photos, instructorId }: { course: PosterCo
       // 先把照片存回課程拿到正式網址，再記錄這張照片的縮放／位置，下次打開編輯器才會還原
       const savedSrc = await persistSelectedPhoto()
       if (savedSrc && savedSrc !== imgSrc) setImgSrc(savedSrc)  // 剛上傳的照片改指向正式網址，再存一次不會重複上傳
-      const adjust = savedSrc ? { src:savedSrc, x:imgPos.x, y:imgPos.y, scale:imgScale } : null
+      const adjust = savedSrc ? { src:savedSrc, x:imgPos.x, y:imgPos.y, scale:imgScale, fit:'cover' as const } : null
       const photoAdjust = await buildPhotoAdjustMap(instructorId, photoAdjustRef.current, course.id, adjust)
       photoAdjustRef.current = photoAdjust
       const payload = {
@@ -358,7 +358,7 @@ function PosterEditorMobile({ course, photos, instructorId }: { course: PosterCo
                   {imgSrc ? (
                     <div style={{ position:'absolute', inset:0, overflow:'hidden' }}>
                       <img src={imgSrc} alt="" draggable={false} style={{
-                        position:'absolute', width:'100%', height:'100%', objectFit:'contain',
+                        position:'absolute', width:'100%', height:'100%', objectFit:'cover',
                         transform:`translate(${imgPos.x}px,${imgPos.y}px) scale(${imgScale})`,
                         transformOrigin:'center center', pointerEvents:'none', userSelect:'none', zIndex:0,
                       }} />
