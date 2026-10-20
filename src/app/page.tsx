@@ -14,18 +14,30 @@ export const revalidate = 60
 
 export default async function HomePage() {
   const supabase = createServerClient()
-  const [{ data: settings }, { data: courses }, { data: categories }, { data: allInstructors }, { data: registrations }] = await Promise.all([
+  // 報名筆數只撈「這次會顯示的課程」的：原本不分課程整張表撈回來，資料越多越慢，
+  // 而且 Supabase 單次查詢預設最多回 1000 筆，總報名數超過後名額會少算。
+  // 課程查完就接著查報名，跟其他三個查詢仍然並行，不會多等一輪。
+  const coursesWithRegistrations = supabase.from('courses')
+    .select('*, instructors(id, name, phone, line_id), course_categories(id, name, color)')
+    .eq('is_active', true)
+    .gte('date', new Date().toISOString().split('T')[0])
+    .lte('date', getCourseDisplayRangeEnd())
+    .order('date', { ascending: true })
+    .order('time_start', { ascending: true })
+    .then(async ({ data: courses }) => {
+      const ids = (courses || []).map((c: any) => c.id)
+      if (ids.length === 0) return { courses, registrations: [] }
+      const { data: registrations } = await supabase.from('registrations')
+        .select('course_id')
+        .in('status', ['confirmed', 'attended'])
+        .in('course_id', ids)
+      return { courses, registrations }
+    })
+  const [{ data: settings }, { courses, registrations }, { data: categories }, { data: allInstructors }] = await Promise.all([
     supabase.from('site_settings').select('key, value'),
-    supabase.from('courses')
-      .select('*, instructors(id, name, phone, line_id), course_categories(id, name, color)')
-      .eq('is_active', true)
-      .gte('date', new Date().toISOString().split('T')[0])
-      .lte('date', getCourseDisplayRangeEnd())
-      .order('date', { ascending: true })
-      .order('time_start', { ascending: true }),
+    coursesWithRegistrations,
     supabase.from('course_categories').select('*').order('created_at'),
     supabase.from('instructors').select('id, name'),
-    supabase.from('registrations').select('course_id').in('status', ['confirmed', 'attended']),
   ])
 
   // 合作講師：courses.instructor_ids 是多人陣列，這裡解析成完整姓名清單給 CourseCard 顯示（對照 Figma node 224-11542/128-7754）

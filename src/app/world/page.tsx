@@ -17,18 +17,30 @@ export const metadata = { title: '央北社宅 · 滾動世界試看' }
 // 改這裡不會動到首頁的 src/app/page.tsx。
 export default async function WorldPage() {
   const supabase = createServerClient()
-  const [{ data: settings }, { data: courses }, { data: categories }, { data: allInstructors }, { data: registrations }] = await Promise.all([
+  // 報名筆數只撈「這次會顯示的課程」的：原本不分課程整張表撈回來，資料越多越慢，
+  // 而且 Supabase 單次查詢預設最多回 1000 筆，總報名數超過後名額會少算。
+  // 課程查完就接著查報名，跟其他三個查詢仍然並行，不會多等一輪。
+  const coursesWithRegistrations = supabase.from('courses')
+    .select('*, instructors(id, name, phone, line_id), course_categories(id, name, color)')
+    .eq('is_active', true)
+    .gte('date', new Date().toISOString().split('T')[0])
+    .lte('date', getCourseDisplayRangeEnd())
+    .order('date', { ascending: true })
+    .order('time_start', { ascending: true })
+    .then(async ({ data: courses }) => {
+      const ids = (courses || []).map((c: any) => c.id)
+      if (ids.length === 0) return { courses, registrations: [] }
+      const { data: registrations } = await supabase.from('registrations')
+        .select('course_id')
+        .in('status', ['confirmed', 'attended'])
+        .in('course_id', ids)
+      return { courses, registrations }
+    })
+  const [{ data: settings }, { courses, registrations }, { data: categories }, { data: allInstructors }] = await Promise.all([
     supabase.from('site_settings').select('key, value'),
-    supabase.from('courses')
-      .select('*, instructors(id, name, phone, line_id), course_categories(id, name, color)')
-      .eq('is_active', true)
-      .gte('date', new Date().toISOString().split('T')[0])
-      .lte('date', getCourseDisplayRangeEnd())
-      .order('date', { ascending: true })
-      .order('time_start', { ascending: true }),
+    coursesWithRegistrations,
     supabase.from('course_categories').select('*').order('created_at'),
     supabase.from('instructors').select('id, name'),
-    supabase.from('registrations').select('course_id').in('status', ['confirmed', 'attended']),
   ])
 
   const instructorMap = new Map((allInstructors || []).map((i: any) => [i.id, i]))
