@@ -15,6 +15,7 @@ import {
 import { updateInstructorCourse } from '@/lib/instructorCoursesApi'
 import { getMyInstructorProfile } from '@/lib/instructorCoursesApi'
 import { getInstructorToken } from '@/lib/instructor-auth'
+import { displayInstructorIds } from '@/lib/courseInstructors'
 
 // ── 小型共用 UI（手機版專用） ──────────────────────────────────────────────────
 function BackArrowIcon() {
@@ -77,7 +78,7 @@ function PosterEditorMobile({ course, photos, instructorId }: { course: PosterCo
 
   const [textColorOverride, setTextColorOverride]     = useState('')
   const [enTextColorOverride, setEnTextColorOverride] = useState('')
-  const [borderOn, setBorderOn] = useState(true)
+  const [borderOn, setBorderOn] = useState(false)
   const [borderText, setBorderText] = useState('YANGBEI COMMUNITY · SEED COURSE · ')
 
   const [zhFontIdx, setZhFontIdx] = useState(0)
@@ -185,7 +186,7 @@ function PosterEditorMobile({ course, photos, instructorId }: { course: PosterCo
       // 先把照片存回課程拿到正式網址，再記錄這張照片的縮放／位置，下次打開編輯器才會還原
       const savedSrc = await persistSelectedPhoto()
       if (savedSrc && savedSrc !== imgSrc) setImgSrc(savedSrc)  // 剛上傳的照片改指向正式網址，再存一次不會重複上傳
-      const adjust = savedSrc ? { src:savedSrc, x:imgPos.x, y:imgPos.y, scale:imgScale } : null
+      const adjust = savedSrc ? { src:savedSrc, x:imgPos.x, y:imgPos.y, scale:imgScale, fit:'cover' as const } : null
       const photoAdjust = await buildPhotoAdjustMap(instructorId, photoAdjustRef.current, course.id, adjust)
       photoAdjustRef.current = photoAdjust
       const payload = {
@@ -357,7 +358,7 @@ function PosterEditorMobile({ course, photos, instructorId }: { course: PosterCo
                   {imgSrc ? (
                     <div style={{ position:'absolute', inset:0, overflow:'hidden' }}>
                       <img src={imgSrc} alt="" draggable={false} style={{
-                        position:'absolute', width:'100%', height:'100%', objectFit:'contain',
+                        position:'absolute', width:'100%', height:'100%', objectFit:'cover',
                         transform:`translate(${imgPos.x}px,${imgPos.y}px) scale(${imgScale})`,
                         transformOrigin:'center center', pointerEvents:'none', userSelect:'none', zIndex:0,
                       }} />
@@ -702,10 +703,12 @@ function PosterEditorLoader() {
       if (c.instructor_mode === 'community') {
         instructorName = COMMUNITY_HOST_LABEL
       } else {
-        const ids: string[] = (c.instructor_ids && c.instructor_ids.length) ? c.instructor_ids : (c.instructor_id ? [c.instructor_id] : [])
+        // 只掛「海報／課程卡顯示講師」勾選的人，順序照 instructor_ids
+        const ids = displayInstructorIds(c)
         if (ids.length) {
-          const { data: instr } = await supabase.from('instructors').select('name').in('id', ids)
-          instructorName = (instr || []).map((i: any) => i.name).filter(Boolean).join('、')
+          const { data: instr } = await supabase.from('instructors').select('id, name').in('id', ids)
+          const nameById = new Map((instr || []).map((i: any) => [i.id, i.name]))
+          instructorName = ids.map(id => nameById.get(id)).filter(Boolean).join('、')
         }
       }
       setCourse({

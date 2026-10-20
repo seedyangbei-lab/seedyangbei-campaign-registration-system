@@ -11,6 +11,7 @@ import {
   CloseIcon, IssueReportFab, CheckSquareIcon,
 } from '@/components/InstructorMobileUI'
 import { MobileRegistrationCard, MobilePagination } from '@/components/AdminMobileUI'
+import { normalizeDisplayInstructorIds, displayInstructorIds } from '@/lib/courseInstructors'
 import CourseEditFormFields, { LOCATIONS, DESCRIPTION_MAX, COMMUNITY_HOST_LABEL, type InstructorMode } from '@/components/CourseEditFormFields'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import { staffAuthHeaders, fetchFeedbackCounts } from '@/lib/staffAuthHeaders'
@@ -51,6 +52,7 @@ const emptyForm = {
   location: '', custom_location: '', notes: '', suitable_age: '全年齡', custom_age: '',
   photos: [] as string[], max_seats: 20, co_instructor_ids: [] as string[],
   instructor_mode: 'single' as InstructorMode,
+  display_instructor_ids: [] as string[],
 }
 
 const emptyProfileForm = { name: '', bio: '', avatar_url: '', phone: '', line_id: '' }
@@ -326,6 +328,7 @@ function InstructorPortal() {
       max_seats: course.max_seats || 20,
       co_instructor_ids: (course.instructor_ids || []).filter((id: string) => id !== instructor?.id),
       instructor_mode: course.instructor_mode || 'single',
+      display_instructor_ids: course.display_instructor_ids || [],
     })
     setShowModal(true)
   }
@@ -346,6 +349,7 @@ function InstructorPortal() {
       max_seats: course.max_seats || 20,
       co_instructor_ids: (course.instructor_ids || []).filter((id: string) => id !== instructor?.id),
       instructor_mode: course.instructor_mode || 'single',
+      display_instructor_ids: course.display_instructor_ids || [],
     })
     setShowModal(true)
   }
@@ -385,6 +389,7 @@ function InstructorPortal() {
       location, notes: form.notes, suitable_age: suitableAge,
       photo_urls: form.photos, poster_url: form.photos[0] || null, max_seats: form.max_seats,
       instructor_ids: instructorIds, instructor_mode: form.instructor_mode,
+      display_instructor_ids: form.instructor_mode === 'multiple' ? normalizeDisplayInstructorIds(form.display_instructor_ids, instructorIds) : null,
     }
 
     try {
@@ -419,7 +424,10 @@ function InstructorPortal() {
     }
     setPosterEditorCourse({
       id: course.id, title: course.title,
-      instructor: course.instructor_mode === 'community' ? COMMUNITY_HOST_LABEL : instructor?.name,
+      // 海報掛名照「海報／課程卡顯示講師」，不是固定寫登入的人——幫其他種子戶開的課才不會掛上自己的名字
+      instructor: course.instructor_mode === 'community'
+        ? COMMUNITY_HOST_LABEL
+        : displayInstructorIds(course).map(id => allInstructors.find(i => i.id === id)?.name || (id === instructor?.id ? instructor?.name : '')).filter(Boolean).join('、'),
       date: course.date,
       timeStart: (course.time_start || '').slice(0, 5), timeEnd: (course.time_end || '').slice(0, 5),
       location: course.location, suitableAge: course.suitable_age, notes: course.notes,
@@ -735,6 +743,7 @@ function InstructorPortal() {
               <CourseEditFormFields
                 form={form} setForm={setForm} uploadCoursePhoto={uploadCoursePhoto}
                 instructorOptions={allInstructors.filter(i => i.id !== instructor?.id)}
+                currentInstructor={instructor ? { id: instructor.id, name: instructor.name } : null}
               />
 
               <div className="flex flex-col gap-3 pt-2">

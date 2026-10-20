@@ -6,7 +6,7 @@ import CoursePhotoGrid from '@/components/CoursePhotoGrid'
 import SuitableAgeSelector from '@/components/SuitableAgeSelector'
 import {
   LOCATIONS, DESCRIPTION_MAX, MAX_SEATS_OPTIONS, TIME_OPTIONS,
-  InstructorMultiSelect, InstructorModeSelector, withCurrentValue,
+  InstructorMultiSelect, InstructorModeSelector, DisplayInstructorPicker, withCurrentValue,
   type InstructorOption, type InstructorMode,
 } from '@/components/CourseEditFormFields'
 
@@ -26,6 +26,7 @@ export type AdminCourseForm = {
   photo_urls: string[]
   instructor_ids: string[]
   instructor_mode: InstructorMode
+  display_instructor_ids: string[]
   category_id: string
   notes: string
   suitable_age: string
@@ -35,7 +36,7 @@ export type AdminCourseForm = {
 export const emptyAdminCourseForm: AdminCourseForm = {
   title: '', description: '', date: '', time_start: '', time_end: '',
   location: '', custom_location: '', max_seats: 20,
-  photo_urls: [], instructor_ids: [], instructor_mode: 'single', category_id: '',
+  photo_urls: [], instructor_ids: [], instructor_mode: 'single', display_instructor_ids: [], category_id: '',
   notes: '', suitable_age: '全年齡', custom_age: '',
 }
 
@@ -200,7 +201,7 @@ export default function AdminCourseEditFormFields({
 
       <InstructorModeSelector
         value={form.instructor_mode}
-        onChange={mode => setForm({ ...form, instructor_mode: mode, ...(mode === 'single' ? { instructor_ids: form.instructor_ids.slice(0, 1) } : {}) })}
+        onChange={mode => setForm({ ...form, instructor_mode: mode, ...(mode === 'single' ? { instructor_ids: form.instructor_ids.slice(0, 1), display_instructor_ids: [] } : {}) })}
       />
 
       {form.instructor_mode === 'single' && (
@@ -233,6 +234,14 @@ export default function AdminCourseEditFormFields({
             onChange={ids => setForm({ ...form, instructor_ids: ids })}
           />
         </div>
+      )}
+
+      {form.instructor_mode === 'multiple' && (
+        <DisplayInstructorPicker
+          candidates={form.instructor_ids.map(id => instructorOptions.find(o => o.id === id)).filter((o): o is InstructorOption => !!o)}
+          selectedIds={form.display_instructor_ids}
+          onChange={ids => setForm({ ...form, display_instructor_ids: ids })}
+        />
       )}
 
       <CoursePhotoGrid

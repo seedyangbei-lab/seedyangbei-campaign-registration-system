@@ -39,6 +39,7 @@ export type CourseForm = {
   max_seats: number
   co_instructor_ids: string[]
   instructor_mode: InstructorMode
+  display_instructor_ids: string[]
 }
 
 export type InstructorOption = { id: string; name: string }
@@ -151,6 +152,54 @@ export function InstructorMultiSelect({
   )
 }
 
+// 對外顯示講師（海報、課程卡）：從這堂課的講師裡勾選要掛名的人，預設全部勾選。
+// 幫其他種子戶開課時（例如一凡姐幫油漆哥開），只勾實際授課的人，海報就不會掛上開課者的名字。
+// selectedIds 空陣列代表全部顯示；至少要留一位，最後一位不能取消
+export function DisplayInstructorPicker({
+  candidates, selectedIds, onChange,
+}: {
+  candidates: InstructorOption[]
+  selectedIds: string[]
+  onChange: (ids: string[]) => void
+}) {
+  if (candidates.length < 2) return null
+  const shownIds = candidates.map(c => c.id).filter(id => selectedIds.includes(id))
+  const effective = shownIds.length > 0 ? shownIds : candidates.map(c => c.id)
+
+  const toggle = (id: string) => {
+    const next = effective.includes(id) ? effective.filter(x => x !== id) : [...effective, id]
+    if (next.length === 0) return
+    onChange(next.length === candidates.length ? [] : candidates.map(c => c.id).filter(x => next.includes(x)))
+  }
+
+  return (
+    <div>
+      <label className="block text-stone-600 text-sm font-medium mb-1.5">
+        海報／課程卡顯示講師 <span className="text-stone-400 font-normal">（預設全部顯示）</span>
+      </label>
+      <div className="flex flex-wrap gap-2">
+        {candidates.map(c => {
+          const on = effective.includes(c.id)
+          return (
+            <button
+              key={c.id}
+              type="button"
+              aria-pressed={on}
+              onClick={() => toggle(c.id)}
+              className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-colors ${
+                on ? 'bg-orange-500 border-orange-500 text-white' : 'border-stone-300 text-stone-400 hover:bg-stone-50'
+              }`}
+            >
+              {c.name}
+            </button>
+          )
+        })}
+      </div>
+      <p className="text-xs text-stone-400 mt-1.5">幫其他種子戶開課時，可以只留實際授課的講師；沒勾到的人照樣是這堂課的講師，只是不會出現在海報和課程卡上</p>
+    </div>
+  )
+}
+
 // 下拉選單裡若目前值不在預設清單中（例如舊資料是 15 分鐘為單位），把它加進去，避免選單顯示空白
 export function withCurrentValue(options: string[], current: string) {
   if (current && !options.includes(current)) return [current, ...options]
@@ -166,10 +215,11 @@ type Props = {
   setForm: (next: CourseForm) => void
   uploadCoursePhoto: (blob: Blob) => Promise<string | null>
   instructorOptions?: InstructorOption[]
+  currentInstructor?: InstructorOption | null
 }
 
 // 課程編輯表單欄位（不含外層 modal/page 外框與送出按鈕），供桌機彈窗與手機獨立頁共用
-export default function CourseEditFormFields({ form, setForm, uploadCoursePhoto, instructorOptions = [] }: Props) {
+export default function CourseEditFormFields({ form, setForm, uploadCoursePhoto, instructorOptions = [], currentInstructor }: Props) {
   const timeStartOptions = withCurrentValue(TIME_OPTIONS, form.time_start)
   const timeEndOptions = withCurrentValue(TIME_OPTIONS, form.time_end)
   const seatOptions = withCurrentSeats(MAX_SEATS_OPTIONS, form.max_seats)
@@ -297,7 +347,7 @@ export default function CourseEditFormFields({ form, setForm, uploadCoursePhoto,
 
       <InstructorModeSelector
         value={form.instructor_mode}
-        onChange={mode => setForm({ ...form, instructor_mode: mode, ...(mode === 'single' ? { co_instructor_ids: [] } : {}) })}
+        onChange={mode => setForm({ ...form, instructor_mode: mode, ...(mode === 'single' ? { co_instructor_ids: [], display_instructor_ids: [] } : {}) })}
       />
 
       {form.instructor_mode === 'multiple' && instructorOptions.length > 0 && (
@@ -311,6 +361,17 @@ export default function CourseEditFormFields({ form, setForm, uploadCoursePhoto,
             onChange={ids => setForm({ ...form, co_instructor_ids: ids })}
           />
         </div>
+      )}
+
+      {form.instructor_mode === 'multiple' && (
+        <DisplayInstructorPicker
+          candidates={[
+            ...(currentInstructor ? [currentInstructor] : []),
+            ...instructorOptions.filter(o => form.co_instructor_ids.includes(o.id)),
+          ]}
+          selectedIds={form.display_instructor_ids}
+          onChange={ids => setForm({ ...form, display_instructor_ids: ids })}
+        />
       )}
 
       <CoursePhotoGrid

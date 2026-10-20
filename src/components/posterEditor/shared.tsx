@@ -113,13 +113,16 @@ export async function saveInstructorPosterSettings(instructorId: string, payload
 // ── 照片縮放／位置（每堂課各自獨立）──────────────────────────────────────────────
 // 存在講師 poster_settings.photoAdjust[courseId]，一併記下當時是哪張照片（src）：
 // 換了照片就不套用舊的縮放，避免新照片被舊比例裁掉
-export interface PhotoAdjust { src: string; x: number; y: number; scale: number }
+// fit：'cover' 代表縮放基準是「填滿照片區」。舊版存的是以 contain（完整顯示、會留邊）為基準的縮放，
+// 換成 cover 後數值意義不同，讀取時直接略過，回到預設的滿版置中
+export interface PhotoAdjust { src: string; x: number; y: number; scale: number; fit?: 'cover' }
 
 export function getPhotoAdjust(settings: Record<string, any> | null | undefined, courseId: string | undefined, src: string | null): PhotoAdjust | null {
   if (!settings || !courseId || !src) return null
   const a = settings.photoAdjust?.[courseId]
   if (!a || a.src !== src) return null
   if (typeof a.x !== 'number' || typeof a.y !== 'number' || typeof a.scale !== 'number') return null
+  if (a.fit !== 'cover') return null
   return a
 }
 
@@ -432,8 +435,8 @@ export async function renderPosterCanvas(p: ExportPosterParams): Promise<HTMLCan
   if (p.imgSrc) {
     const img=await new Promise<HTMLImageElement>((res,rej)=>{ const i=new Image(); i.crossOrigin='anonymous'; i.onload=()=>res(i); i.onerror=rej; i.src=p.imgSrc! })
     const iw=img.naturalWidth, ih=img.naturalHeight
-    const containScale=Math.min(W/iw, PH/ih)
-    const scaledW=iw*containScale*p.imgScale, scaledH=ih*containScale*p.imgScale
+    const coverScale=Math.max(W/iw, PH/ih)  // 預設滿版（跟預覽的 object-fit: cover 一致）
+    const scaledW=iw*coverScale*p.imgScale, scaledH=ih*coverScale*p.imgScale
     ctx.drawImage(img, W/2-scaledW/2+p.imgPos.x, PH/2-scaledH/2+p.imgPos.y, scaledW, scaledH)
   } else {
     ctx.fillStyle='#d6d3d1'; ctx.fillRect(0,0,W,PH)

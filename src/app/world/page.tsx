@@ -7,6 +7,7 @@ import GreetingBar from '@/components/GreetingBar'
 import { getCourseDisplayRangeEnd } from '@/lib/courseDateRange'
 import { withRegisteredCounts } from '@/lib/courseCapacity'
 import { COMMUNITY_HOST_LABEL } from '@/lib/communityHost'
+import { displayInstructorIds } from '@/lib/courseInstructors'
 
 export const revalidate = 60
 export const metadata = { title: '央北社宅 · 滾動世界試看' }
@@ -48,8 +49,8 @@ export default async function WorldPage() {
     if (c.instructor_mode === 'community') {
       return { ...c, instructors_list: [{ id: 'community', name: COMMUNITY_HOST_LABEL }], instructors: null }
     }
-    const ids: string[] = (c.instructor_ids && c.instructor_ids.length > 0) ? c.instructor_ids : (c.instructor_id ? [c.instructor_id] : [])
-    const instructors_list = ids.map(id => instructorMap.get(id)).filter(Boolean)
+    // 只列「海報／課程卡顯示講師」勾選的人（幫其他種子戶開的課，不會掛上開課者的名字）
+    const instructors_list = displayInstructorIds(c).map(id => instructorMap.get(id)).filter(Boolean)
     return { ...c, instructors_list }
   }), registrations || [])
 
