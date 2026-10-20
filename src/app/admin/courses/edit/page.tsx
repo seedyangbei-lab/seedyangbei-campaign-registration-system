@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { normalizeDisplayInstructorIds } from '@/lib/courseInstructors'
 import AdminCourseEditFormFields, {
   LOCATIONS, emptyAdminCourseForm, type AdminCourseForm, type AdminCategory,
 } from '@/components/AdminCourseEditFormFields'
@@ -28,6 +29,7 @@ function buildForm(course: any, mode: 'edit' | 'copy'): AdminCourseForm {
     photo_urls: (course.photo_urls && course.photo_urls.length > 0) ? course.photo_urls : (course.poster_url ? [course.poster_url] : []),
     instructor_ids: course.instructor_ids || (course.instructor_id ? [course.instructor_id] : []),
     instructor_mode: course.instructor_mode || 'single',
+    display_instructor_ids: course.display_instructor_ids || [],
     category_id: course.category_id || '',
     notes: course.notes || '', suitable_age: agePreset,
     custom_age: agePreset === '其他' ? (course.suitable_age || '') : '',
@@ -102,6 +104,7 @@ function EditCoursePageInner() {
       instructor_id: form.instructor_ids[0] || null,
       instructor_ids: form.instructor_ids,
       instructor_mode: form.instructor_mode,
+      display_instructor_ids: form.instructor_mode === 'multiple' ? normalizeDisplayInstructorIds(form.display_instructor_ids, form.instructor_ids) : null,
       category_id: form.category_id || null,
       notes: form.notes || null, suitable_age: suitableAge || '全年齡',
     }

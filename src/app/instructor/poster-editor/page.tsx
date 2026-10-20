@@ -15,6 +15,7 @@ import {
 import { updateInstructorCourse } from '@/lib/instructorCoursesApi'
 import { getMyInstructorProfile } from '@/lib/instructorCoursesApi'
 import { getInstructorToken } from '@/lib/instructor-auth'
+import { displayInstructorIds } from '@/lib/courseInstructors'
 
 // ── 小型共用 UI（手機版專用） ──────────────────────────────────────────────────
 function BackArrowIcon() {
@@ -702,10 +703,12 @@ function PosterEditorLoader() {
       if (c.instructor_mode === 'community') {
         instructorName = COMMUNITY_HOST_LABEL
       } else {
-        const ids: string[] = (c.instructor_ids && c.instructor_ids.length) ? c.instructor_ids : (c.instructor_id ? [c.instructor_id] : [])
+        // 只掛「海報／課程卡顯示講師」勾選的人，順序照 instructor_ids
+        const ids = displayInstructorIds(c)
         if (ids.length) {
-          const { data: instr } = await supabase.from('instructors').select('name').in('id', ids)
-          instructorName = (instr || []).map((i: any) => i.name).filter(Boolean).join('、')
+          const { data: instr } = await supabase.from('instructors').select('id, name').in('id', ids)
+          const nameById = new Map((instr || []).map((i: any) => [i.id, i.name]))
+          instructorName = ids.map(id => nameById.get(id)).filter(Boolean).join('、')
         }
       }
       setCourse({

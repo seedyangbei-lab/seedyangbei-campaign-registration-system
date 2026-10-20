@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
 import { verifyResidentToken } from '@/lib/resident-auth-server'
+import { displayInstructorIds } from '@/lib/courseInstructors'
 
 // 居民個人頁（/profile）的資料：原本前端只信任 localStorage 裡自稱的 lineUserId，
 // 直接用 anon key 查 users／registrations／redemptions／point_logs，
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
     user
       ? supabase
           .from('registrations')
-          .select('*, courses(title, date, time_start, time_end, location, instructors(name))')
+          .select('*, courses(title, date, time_start, time_end, location, instructor_id, instructor_ids, instructor_mode, display_instructor_ids, instructors(name))')
           .eq('user_id', user.id)
           // 已出席（attended）的也要列出來；講師標記未出席（absent）的則不顯示
           .in('status', ['confirmed', 'attended'])
@@ -44,8 +45,22 @@ export async function GET(req: NextRequest) {
       : Promise.resolve({ data: [] }),
   ])
 
+  // 報名紀錄上的講師：照課程的「海報／課程卡顯示講師」顯示，跟首頁課程卡一致
+  // （原本只抓 instructor_id 那一位，幫其他種子戶開的課會變成顯示開課者）
+  const registrations: any[] = regsRes.data || []
+  const shownIds = Array.from(new Set(registrations.flatMap(r => (r.courses && r.courses.instructor_mode !== 'community') ? displayInstructorIds(r.courses) : [])))
+  if (shownIds.length > 0) {
+    const { data: instructors } = await supabase.from('instructors').select('id, name').in('id', shownIds)
+    const nameById = new Map((instructors || []).map((i: any) => [i.id, i.name]))
+    for (const r of registrations) {
+      if (!r.courses || r.courses.instructor_mode === 'community') continue
+      const name = displayInstructorIds(r.courses).map(id => nameById.get(id)).filter(Boolean).join('、')
+      if (name) r.courses.instructors = { name }
+    }
+  }
+
   return NextResponse.json({
-    registrations: regsRes.data || [],
+    registrations,
     member: member ? { id: member.id, points: member.points ?? 0 } : null,
     redemptions: redemptionsRes.data || [],
     pointLogs: logsRes.data || [],
