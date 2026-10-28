@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useCallback, useEffect } from 'react'
+import React, { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { HexColorPicker } from 'react-colorful'
 import { COMMUNITY_HOST_LABEL } from '@/components/CourseEditFormFields'
@@ -40,6 +40,7 @@ const QR_API = (url: string, size = 200) =>
 
 const A4L_W = 1123; const A4L_H = 794
 const A4P_W = 794;  const A4P_H = 1123
+const ZOOM_MIN = 0.5; const ZOOM_MAX = 4; const ZOOM_STEP = 1.25
 
 function toROC(dateStr: string) {
   const d = new Date(dateStr + 'T00:00:00')
@@ -1119,6 +1120,82 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
   const [activePanelTab, setActivePanelTab] = useState<PanelTab>('文字')
   const [exportScale, setExportScale] = useState<2 | 3>(3)
   const previewRef = useRef<HTMLDivElement>(null)
+  // 預覽縮放：fitScale 是讓整頁剛好塞進預覽區的比例，zoom 是使用者在這之上再放大縮小的倍數（1 = 符合畫面）。
+  // 以前用 Tailwind scale-[0.28] 只縮外觀、不縮版面，手機上置中時以原尺寸 1123px 計算，課表會跑到畫面外要往左滑才看得到。
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const [fitScale, setFitScale] = useState(0.3)
+  const [zoom, setZoom] = useState(1)
+  const zoomRef = useRef(zoom)
+  zoomRef.current = zoom
+  const pageW = orientation === 'landscape' ? A4L_W : A4P_W
+  const pageH = orientation === 'landscape' ? A4L_H : A4P_H
+  const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z))
+
+  useEffect(() => {
+    const el = viewportRef.current
+    if (step !== 'editor' || !el) return
+    const measure = () => {
+      const cs = getComputedStyle(el)
+      const availW = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+      const availH = el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)
+      if (availW > 0 && availH > 0) setFitScale(Math.min(availW / pageW, availH / pageH))
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [step, pageW, pageH])
+
+  // 縮放時以預覽區中心為基準調整捲動位置，放大後看到的還是原本中間那一塊，而不是跳回左上角
+  const prevScaleRef = useRef(fitScale * zoom)
+  useLayoutEffect(() => {
+    const el = viewportRef.current
+    const next = fitScale * zoom
+    const prev = prevScaleRef.current
+    prevScaleRef.current = next
+    if (!el || prev === next) return
+    const ratio = next / prev
+    el.scrollLeft = (el.scrollLeft + el.clientWidth / 2) * ratio - el.clientWidth / 2
+    el.scrollTop = (el.scrollTop + el.clientHeight / 2) * ratio - el.clientHeight / 2
+  }, [fitScale, zoom])
+
+  // 切換橫直式時回到符合畫面
+  useEffect(() => { setZoom(1) }, [orientation])
+
+  // 手機雙指縮放、桌機 Ctrl/⌘ + 滾輪縮放（需要 passive: false 才能擋掉瀏覽器整頁縮放）
+  useEffect(() => {
+    const el = viewportRef.current
+    if (step !== 'editor' || !el) return
+    let pinchStart: { dist: number; zoom: number } | null = null
+    const dist = (t: TouchList) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY)
+    const onTouchStart = (ev: TouchEvent) => {
+      if (ev.touches.length === 2) pinchStart = { dist: dist(ev.touches), zoom: zoomRef.current }
+    }
+    const onTouchMove = (ev: TouchEvent) => {
+      if (ev.touches.length !== 2 || !pinchStart) return
+      ev.preventDefault()
+      setZoom(clampZoom(pinchStart.zoom * dist(ev.touches) / pinchStart.dist))
+    }
+    const onTouchEnd = (ev: TouchEvent) => { if (ev.touches.length < 2) pinchStart = null }
+    const onWheel = (ev: WheelEvent) => {
+      if (!ev.ctrlKey && !ev.metaKey) return
+      ev.preventDefault()
+      setZoom(z => clampZoom(z * Math.exp(-ev.deltaY * 0.01)))
+    }
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd)
+    el.addEventListener('touchcancel', onTouchEnd)
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+      el.removeEventListener('touchcancel', onTouchEnd)
+      el.removeEventListener('wheel', onWheel)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step])
 
   // 外部（後台頁面頂部的「匯出」選單）觸發：signal 每變一次就跳去月份選擇畫面，
   // 不用在這個元件裡再顯示一顆自己的觸發按鈕
@@ -1881,7 +1958,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         <div className="flex rounded-xl overflow-hidden border border-stone-200">
           {([['landscape','橫'] as const, ['portrait','直'] as const]).map(([v,label]) => (
             <button key={v} onClick={() => setOrientation(v)}
-              className={`px-3 py-1.5 text-xs font-bold transition-colors ${orientation===v?'bg-orange-500 text-white':'bg-white text-stone-500 hover:bg-stone-50'}`}>{label}式</button>
+              className={`px-3 py-1.5 text-xs font-bold whitespace-nowrap transition-colors ${orientation===v?'bg-orange-500 text-white':'bg-white text-stone-500 hover:bg-stone-50'}`}>{label}式</button>
           ))}
         </div>
         <button onClick={() => setShowMobilePanel(true)} className="md:hidden p-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 ml-1">
@@ -1899,7 +1976,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
             <span className="hidden sm:inline">{savedOk ? '已儲存' : '儲存'}</span>
           </button>
           <button onClick={() => setShowDownloadModal(true)} disabled={downloading}
-            className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white px-3 py-2 rounded-xl text-sm font-bold transition-colors">
+            className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white px-3 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors">
             {downloading
               ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -1920,19 +1997,37 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         >
           <PanelContent editor={editor} set={set} setEditor={setEditor} handleImgUpload={handleImgUpload} activeTab={activePanelTab} setActiveTab={setActivePanelTab} />
         </div>
-        <div className="flex-1 overflow-auto p-4 md:p-6 flex items-start justify-center bg-stone-100">
-          <div className="flex flex-col items-center gap-3">
-            <div ref={previewRef} style={{ transformOrigin: 'top left' }} className="scale-[0.28] sm:scale-[0.42] md:scale-[0.52] lg:scale-[0.65] xl:scale-75 2xl:scale-90 origin-top-left">
-              <PreviewPage
-                monthCourses={monthCourses}
-                selectedMonth={selectedMonth}
-                rowsPerPage={rowsPerPage}
-                orientation={orientation}
-                editor={editor}
-                pageIdx={currentPage}
-                totalPages={totalPages}
-              />
+        <div className="flex-1 relative bg-stone-100" style={{ minWidth: 0 }}>
+          {/* 外層 flex + 內層 m-auto：放大超過畫面時仍可完整捲動到上/左邊緣，不會像 justify-center 那樣被裁掉 */}
+          <div ref={viewportRef} className="absolute inset-0 overflow-auto p-4 md:p-6 flex" style={{ touchAction: 'pan-x pan-y' }}>
+            <div className="m-auto shrink-0" style={{ width: pageW * fitScale * zoom, height: pageH * fitScale * zoom }}>
+              <div ref={previewRef} style={{ width: pageW, height: pageH, transform: `scale(${fitScale * zoom})`, transformOrigin: 'top left' }}>
+                <PreviewPage
+                  monthCourses={monthCourses}
+                  selectedMonth={selectedMonth}
+                  rowsPerPage={rowsPerPage}
+                  orientation={orientation}
+                  editor={editor}
+                  pageIdx={currentPage}
+                  totalPages={totalPages}
+                />
+              </div>
             </div>
+          </div>
+          {/* 縮放控制 */}
+          <div className="absolute bottom-4 right-4 z-10 flex items-center gap-1 bg-white/95 border border-stone-200 rounded-xl shadow-md p-1">
+            <button onClick={() => setZoom(z => clampZoom(z / ZOOM_STEP))} disabled={zoom <= ZOOM_MIN} aria-label="縮小"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-stone-600 hover:bg-stone-100 disabled:text-stone-300">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <button onClick={() => setZoom(1)} aria-label="符合畫面"
+              className="min-w-[52px] h-8 px-1 rounded-lg text-xs font-bold text-stone-600 hover:bg-stone-100 tabular-nums">
+              {Math.round(fitScale * zoom * 100)}%
+            </button>
+            <button onClick={() => setZoom(z => clampZoom(z * ZOOM_STEP))} disabled={zoom >= ZOOM_MAX} aria-label="放大"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-stone-600 hover:bg-stone-100 disabled:text-stone-300">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
           </div>
         </div>
       </div>
