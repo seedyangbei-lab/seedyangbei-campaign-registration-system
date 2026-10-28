@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { logFunnelStep } from '@/lib/funnelLog'
 import { getTutorialStep, setTutorialStep as saveTutorialStep, shouldAutoStartTutorial, DEMO_COURSE_ID } from '@/lib/tutorial'
 import { useTutorialRect } from '@/lib/useTutorialRect'
@@ -194,6 +194,67 @@ function InfoSpriteIcon({ y }: { y: number }) {
     </div>
   )
 }
+// 課程名稱自動縮字：右側欄位高度是固定的（手機 156px），名稱太長時原本只會被 line-clamp 截掉、
+// 或跟下方講師列擠在一起把第一行頂出框外。改成量測「名稱實際可用的高度」，從預設字級往下一級一級
+// 縮，直到整個名稱塞得進去為止；縮到下限還是放不下才交給 line-clamp 收尾。
+const TITLE_MAX_PX = 20
+const TITLE_MIN_PX = 13
+// 在畫面繪製前就量好字級，避免先閃一下大字再縮小；伺服器端沒有 layout，退回 useEffect 免得 React 警告
+const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
+function FitTitle({ text }: { text: string }) {
+  const boxRef = useRef<HTMLDivElement>(null)
+  const textRef = useRef<HTMLParagraphElement>(null)
+  const [size, setSize] = useState(TITLE_MAX_PX)
+  const [clampLines, setClampLines] = useState(0) // 0 = 不截字
+
+  useIsoLayoutEffect(() => {
+    const box = boxRef.current
+    const el = textRef.current
+    if (!box || !el) return
+    const fit = () => {
+      // 量測前先拿掉截字樣式，scrollHeight 才會是完整名稱的高度；量完要還原成 React 設的值，
+      // 不然 React 看 state 沒變就不會再寫一次，截字樣式會就此消失
+      const prevDisplay = el.style.display
+      const prevClamp = el.style.webkitLineClamp
+      el.style.display = 'block'
+      el.style.webkitLineClamp = 'unset'
+      let px = TITLE_MAX_PX
+      el.style.fontSize = `${px}px`
+      while (px > TITLE_MIN_PX && el.scrollHeight > box.clientHeight + 1) {
+        px -= 1
+        el.style.fontSize = `${px}px`
+      }
+      const overflow = el.scrollHeight > box.clientHeight + 1
+      el.style.display = prevDisplay
+      el.style.webkitLineClamp = prevClamp
+      setSize(px)
+      setClampLines(overflow ? Math.max(1, Math.floor(box.clientHeight / (px * 1.375))) : 0)
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(box)
+    // 自訂字型晚一點才載入完，字寬會變，載完再量一次
+    document.fonts?.ready.then(fit).catch(() => {})
+    return () => ro.disconnect()
+  }, [text])
+
+  return (
+    // pr-6／md:pr-7：卡片右上角的勾選圓圈是絕對定位疊在這一欄上面的，名稱要讓開，不然第一行最後一兩個字會被蓋住
+    <div ref={boxRef} className="flex-1 min-h-0 overflow-hidden flex flex-col justify-center md:justify-end w-full pr-6 md:pr-7">
+      <p
+        ref={textRef}
+        className="font-bold text-stone-800 leading-snug break-words overflow-hidden"
+        style={{
+          fontSize: size,
+          ...(clampLines ? { display: '-webkit-box', WebkitBoxOrient: 'vertical' as const, WebkitLineClamp: clampLines } : null),
+        }}
+      >
+        {text}
+      </p>
+    </div>
+  )
+}
+
 const IconPerson = () => <InfoSpriteIcon y={0} />
 const IconClock = () => <InfoSpriteIcon y={28} />
 const IconPin = () => <InfoSpriteIcon y={56} />
@@ -500,17 +561,15 @@ export default function CourseCard({ courses, categories }: {
                     </div>
 
                     <div className="flex-1 min-w-0 bg-white border-l border-stone-200 h-full flex flex-col justify-end gap-2 p-2 md:p-3">
-                      <div className="flex-1 flex flex-col justify-center md:justify-end w-full">
-                        <p className="font-bold text-xl md:text-[20px] md:leading-[28px] text-stone-800 leading-snug line-clamp-3 md:line-clamp-2 min-h-[3.6em] md:min-h-0">{course.title}</p>
-                      </div>
+                      <FitTitle text={course.title} />
                       {/* 電腦版：meta 移進圖片右側欄位，順序改為 時間→地點→年齡（比照 Figma List Row） */}
-                      <div className="hidden md:flex md:flex-col md:gap-1.5">
+                      <div className="hidden md:flex md:flex-col md:gap-1.5 flex-shrink-0">
                         <InfoRow icon={<IconClock />}>{dateStr} {course.time_start?.slice(0,5)}–{course.time_end?.slice(0,5)}</InfoRow>
                         <InfoRow icon={<IconPin />}>{course.location}</InfoRow>
                         <InfoRow icon={<IconPerson />}>{course.suitable_age || '全年齡'}</InfoRow>
                       </div>
                       {(course.instructors_list && course.instructors_list.length > 0 ? course.instructors_list : (course.instructors ? [course.instructors] : [])).length > 0 && (
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0 flex-shrink-0">
                           <span className="bg-orange-500 text-white text-xs font-medium px-2 py-0.5 rounded flex-shrink-0">講師</span>
                           <div className="flex flex-wrap items-center gap-x-1 gap-y-1 min-w-0">
                             {(course.instructors_list && course.instructors_list.length > 0 ? course.instructors_list : (course.instructors ? [course.instructors] : [])).map((inst, idx, arr) => (

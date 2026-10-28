@@ -1,5 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Huninn&family=Mochiy+Pop+One&display=swap');
-/* 源泉黑體 GenSenRounded2TW — 放在 public/fonts/ */
+/* 源泉黑體 GenSenRounded2TW — 放在 public/fonts/
+   原始 OTF 每個字重 15.8MB，手機開首頁要多下載 30MB 以上，會跟首頁影片搶頻寬。
+   改優先載入 .subset.woff2（只含 Big5 常用字＋符號＋程式碼裡出現過的字，約 1.3MB），
+   子集裡沒有的罕用字瀏覽器會自動逐字退回 Noto Sans TC。 */
 @font-face {
   font-family: 'GenSenRounded2TW';
   src: url('/fonts/GenSenRounded2TW-EL.otf') format('opentype');
@@ -20,13 +23,13 @@
 }
 @font-face {
   font-family: 'GenSenRounded2TW';
-  src: url('/fonts/GenSenRounded2TW-M.otf') format('opentype');
+  src: url('/fonts/GenSenRounded2TW-M.subset.woff2') format('woff2'), url('/fonts/GenSenRounded2TW-M.otf') format('opentype');
   font-weight: 500;
   font-display: swap;
 }
 @font-face {
   font-family: 'GenSenRounded2TW';
-  src: url('/fonts/GenSenRounded2TW-B.otf') format('opentype');
+  src: url('/fonts/GenSenRounded2TW-B.subset.woff2') format('woff2'), url('/fonts/GenSenRounded2TW-B.otf') format('opentype');
   font-weight: 700;
   font-display: swap;
 }

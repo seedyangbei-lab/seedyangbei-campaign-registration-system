@@ -9,6 +9,11 @@ import { useEffect, useRef, useState } from 'react'
 
 const DESKTOP_VIDEO_SRC = '/videos/world/gate-scene-v3.mp4'
 const MOBILE_VIDEO_SRC = '/videos/world/gate-scene-mobile.mp4' // 原生 9:16 直式素材，不用再靠模糊背景墊底湊版面
+// 影片第一幀的靜態截圖（webp，手機版約 80KB）。影片要先下載一段、解碼完才畫得出第一個畫面，
+// 手機網路下這段空窗常常好幾秒，只看得到一片暖色底。改成伺服器吐出的 HTML 裡就直接放這張圖，
+// 一打開就有完整畫面，影片真的能畫出畫格之後再無縫疊上去（第一幀跟截圖一模一樣，看不出切換）。
+const DESKTOP_POSTER_SRC = '/videos/world/gate-scene-v3-poster.webp'
+const MOBILE_POSTER_SRC = '/videos/world/gate-scene-mobile-poster.webp'
 const VH_MULTIPLIER = 2.2 // 這一幕給多少倍視窗高度的捲動空間，越大代表滾動起來越慢、越細緻
 
 export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: boolean } = {}) {
@@ -16,7 +21,8 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
   const videoRef = useRef<HTMLVideoElement>(null)
   const viewportHRef = useRef(0) // 只在 mount／resize 時更新，滾動時不重算，避免手機工具列跳動造成抖動
   const [progress, setProgress] = useState(0) // 0~1
-  const [videoOk, setVideoOk] = useState(false)
+  const [videoOk, setVideoOk] = useState(false) // metadata 到了、知道 duration，可以開始依捲動設定 currentTime
+  const [videoPainted, setVideoPainted] = useState(false) // 影片真的解碼出畫格了，才把它疊到截圖上面
   const [videoError, setVideoError] = useState(false) // 真的載入失敗（跟「還在載入中」分開），只有這個才顯示除錯文字
   const [reducedMotion, setReducedMotion] = useState(false)
   const [entered, setEntered] = useState(false) // 進場動畫用：剛載入時是否已經「定位」
@@ -93,8 +99,12 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
     const el = videoRef.current
     if (!el) return
     const onLoaded = () => setVideoOk(true)
+    // iOS Safari 有時要等第一次 seek 完才會解出畫格，所以 seeked 也算「畫得出來了」
+    const onPainted = () => setVideoPainted(true)
     const onError = () => setVideoError(true)
     el.addEventListener('loadedmetadata', onLoaded)
+    el.addEventListener('loadeddata', onPainted)
+    el.addEventListener('seeked', onPainted)
     el.addEventListener('error', onError)
     // 只有目標影片真的換了（例如斷點切換、或還沒透過 initialSrc 先載過）才重新指定 src + load()。
     // 重複指定同一個 src 會打斷瀏覽器正在進行中的下載，從頭重新起跑一次連線，白白浪費已經
@@ -102,14 +112,18 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
     if (requestedSrcRef.current !== videoSrc) {
       requestedSrcRef.current = videoSrc
       setVideoOk(false)
+      setVideoPainted(false)
       setVideoError(false)
       el.src = videoSrc
       el.load()
-    } else if (el.readyState >= 1) {
-      setVideoOk(true)
+    } else {
+      if (el.readyState >= 1) setVideoOk(true)
+      if (el.readyState >= 2) setVideoPainted(true)
     }
     return () => {
       el.removeEventListener('loadedmetadata', onLoaded)
+      el.removeEventListener('loadeddata', onPainted)
+      el.removeEventListener('seeked', onPainted)
       el.removeEventListener('error', onError)
     }
   }, [reducedMotion, videoSrc])
@@ -181,11 +195,26 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
           className="absolute inset-0"
           style={{
             background: '#FDEBD3',
+            // 原本還有一段從 opacity 0 淡入，但那代表 hydrate 完 + 0.9 秒之前畫面都是空的，
+            // 現在有截圖可以第一時間就顯示，只保留輕微的縮放「對焦」感，不再整片隱藏
             transform: entered ? 'scale(1)' : 'scale(1.06)',
-            opacity: entered ? 1 : 0,
-            transition: 'transform 1.15s cubic-bezier(0.16,1,0.3,1), opacity 0.9s ease-out',
+            transition: 'transform 1.15s cubic-bezier(0.16,1,0.3,1)',
           }}
         >
+          {/* 第一幀截圖：mobileOnly 確定是手機版；/world 全頁版用 <picture> 依螢幕寬度挑，
+              不用等 JS 判斷斷點，伺服器 HTML 一到瀏覽器就開始抓對的那張 */}
+          <picture>
+            {!mobileOnly && <source media="(max-width: 767px)" srcSet={MOBILE_POSTER_SRC} />}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={mobileOnly ? MOBILE_POSTER_SRC : DESKTOP_POSTER_SRC}
+              alt=""
+              aria-hidden="true"
+              fetchPriority="high"
+              decoding="async"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          </picture>
           {/* 手機現在有原生 9:16 直式素材、桌機維持 16:9，兩邊比例都跟螢幕貼近，
               不用再靠模糊背景墊底湊版面，直接 object-cover 滿版顯示即可 */}
           <video
@@ -195,7 +224,7 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
             playsInline
             preload="auto"
             className="absolute inset-0 w-full h-full object-cover"
-            style={{ opacity: videoOk ? 1 : 0, transition: 'opacity 0.4s' }}
+            style={{ opacity: videoPainted ? 1 : 0, transition: 'opacity 0.3s' }}
           />
           {/* 影片載入中：不顯示任何文字，後面暖色佔位色塊就夠了，淡入過程才不會先閃一段除錯字樣。
               只有真的載入失敗（例如檔案不存在）才提示，方便之後除錯用 */}
