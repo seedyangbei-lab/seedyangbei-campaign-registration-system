@@ -249,7 +249,7 @@ export default function CoursesPage() {
     setPosterExporting(true)
     try {
       const { exportMonthlyPosters } = await import('@/lib/exportMonthlyPosters')
-      const { exportedCount, skippedCount } = await exportMonthlyPosters(courses, month)
+      const { exportedCount, skippedCount } = await exportMonthlyPosters(publishedCourses, month)
       if (exportedCount === 0) { alert('該月份內沒有可匯出的課程海報（課程需至少有一張照片）'); return }
       alert(`已匯出 ${exportedCount} 張課程海報${skippedCount > 0 ? `，其中 ${skippedCount} 堂課因尚未上傳照片而略過` : ''}`)
       setPosterExportModalOpen(false)
@@ -360,8 +360,10 @@ export default function CoursesPage() {
   const endedCourses = courses.filter((c: any) => isExpired(c))
   const availableMonths = Array.from(new Set(endedCourses.map((c: any) => c.date?.slice(0, 7)).filter(Boolean))).sort().reverse() as string[]
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  // 課表／海報是對外公告，只放有開放（is_active）的課；關掉開關的課在「開放中」列表也看不到，使用者會當成已刪除
+  const publishedCourses = courses.filter((c: any) => c.is_active)
   // 海報匯出以「全部課程」（不限已結束／開放中）取月份，因為海報通常是活動開始前就要準備好
-  const posterAvailableMonths = Array.from(new Set(courses.map((c: any) => c.date?.slice(0, 7)).filter(Boolean))).sort().reverse() as string[]
+  const posterAvailableMonths = Array.from(new Set(publishedCourses.map((c: any) => c.date?.slice(0, 7)).filter(Boolean))).sort().reverse() as string[]
   const displayCourses = courseTab === 'active'
     ? courses.filter((c: any) => c.is_active && !isExpired(c))
     : endedCourses.filter((c: any) => filterMonth ? c.date?.startsWith(filterMonth) : true)
@@ -471,7 +473,7 @@ export default function CoursesPage() {
               </div>
             </div>
           </div>
-          <CourseScheduleExporter courses={courses} scheduleSettings={scheduleSettings} hideTrigger openSignal={scheduleExportSignal} />
+          <CourseScheduleExporter courses={publishedCourses} scheduleSettings={scheduleSettings} hideTrigger openSignal={scheduleExportSignal} />
 
           {courseTab === 'ended' && availableMonths.length > 0 && (
             <>
