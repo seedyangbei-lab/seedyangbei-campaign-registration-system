@@ -40,6 +40,29 @@ export const emptyAdminCourseForm: AdminCourseForm = {
   notes: '', suitable_age: '全年齡', custom_age: '',
 }
 
+// 送出前檢查必填欄位。表單改用 noValidate，不再依賴瀏覽器原生 required 提示：
+// 手機上使用者通常捲到最底才按「更新課程」，原生提示停在頁面最上方（例如舊課程沒有類別），看起來就像按鈕沒反應。
+// 回傳的 field 對應下方欄位外框的 data-field，讓呼叫端捲動到該欄位。
+export function validateAdminCourseForm(form: AdminCourseForm): { field: string; message: string } | null {
+  if (!form.title.trim()) return { field: 'title', message: '請填寫課程名稱' }
+  if (!form.category_id) return { field: 'category_id', message: '請選擇課程類別' }
+  if (form.suitable_age === '其他' && !form.custom_age.trim()) return { field: 'suitable_age', message: '請填寫適合年齡的說明' }
+  if (!form.date) return { field: 'date', message: '請選擇活動日期' }
+  if (!form.time_start || !form.time_end) return { field: 'time', message: '請選擇開始與結束時間' }
+  if (form.time_end <= form.time_start) return { field: 'time', message: '結束時間不能早於或等於開始時間' }
+  if (!form.location) return { field: 'location', message: '請選擇地點' }
+  if (form.location === '其他' && !form.custom_location.trim()) return { field: 'location', message: '請填寫實際地點' }
+  if (form.photo_urls.length === 0) return { field: 'photos', message: '請至少上傳 1 張課程照片' }
+  return null
+}
+
+export function scrollToAdminCourseField(field: string) {
+  const el = document.querySelector<HTMLElement>(`[data-field="${field}"]`)
+  if (!el) return
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  el.querySelector<HTMLElement>('input, select, textarea, button')?.focus({ preventScroll: true })
+}
+
 // 活動日期下拉月曆（從 admin/courses/page.tsx 搬過來，不含資料邏輯，供桌機彈窗與手機獨立頁共用）
 export function CalendarPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const today = new Date()
@@ -106,7 +129,7 @@ export default function AdminCourseEditFormFields({
 
   return (
     <div className="space-y-4">
-      <div>
+      <div data-field="title">
         <label className="block text-stone-600 text-sm font-medium mb-1.5">課程名稱 *</label>
         <input required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
       </div>
@@ -117,7 +140,7 @@ export default function AdminCourseEditFormFields({
         <p className="text-right text-stone-400 text-xs mt-1">{form.description.length}/{DESCRIPTION_MAX}</p>
       </div>
 
-      <div>
+      <div data-field="category_id">
         <label className="block text-stone-600 text-sm font-medium mb-1.5">課程類別 *</label>
         <div className="relative">
           <select required value={form.category_id} onChange={e => setForm({ ...form, category_id: e.target.value })}
@@ -131,7 +154,7 @@ export default function AdminCourseEditFormFields({
         </div>
       </div>
 
-      <div>
+      <div data-field="suitable_age">
         <label className="block text-stone-600 text-sm font-medium mb-1.5">適合年齡</label>
         <SuitableAgeSelector
           value={form.suitable_age}
@@ -141,7 +164,7 @@ export default function AdminCourseEditFormFields({
         />
       </div>
 
-      <div className="relative">
+      <div className="relative" data-field="date">
         <label className="block text-stone-600 text-sm font-medium mb-1.5">活動日期 *</label>
         <button type="button" onClick={() => setShowCalendar(!showCalendar)} className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-orange-300">
           <span className={form.date ? 'text-stone-800' : 'text-stone-400'}>{form.date || '選擇日期'}</span>
@@ -150,7 +173,7 @@ export default function AdminCourseEditFormFields({
         {showCalendar && <div className="absolute top-full left-0 mt-1 z-20"><CalendarPicker value={form.date} onChange={v => { setForm({ ...form, date: v }); setShowCalendar(false) }} /></div>}
       </div>
 
-      <div>
+      <div data-field="time">
         <label className="block text-stone-600 text-sm font-medium mb-2">時間 *</label>
         <div className="flex items-center gap-2">
           <div className="relative flex-1 min-w-0">
@@ -174,7 +197,7 @@ export default function AdminCourseEditFormFields({
         {timeError && <p className="text-red-500 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-2">{timeError}</p>}
       </div>
 
-      <div>
+      <div data-field="location">
         <label className="block text-stone-600 text-sm font-medium mb-1.5">地點 *</label>
         <div className="relative">
           <select required value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} className="w-full appearance-none border border-stone-300 rounded-xl pl-4 pr-9 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
@@ -244,11 +267,13 @@ export default function AdminCourseEditFormFields({
         />
       )}
 
-      <CoursePhotoGrid
-        photos={form.photo_urls}
-        onChange={photo_urls => setForm({ ...form, photo_urls })}
-        uploadImage={uploadCoursePhoto}
-      />
+      <div data-field="photos">
+        <CoursePhotoGrid
+          photos={form.photo_urls}
+          onChange={photo_urls => setForm({ ...form, photo_urls })}
+          uploadImage={uploadCoursePhoto}
+        />
+      </div>
     </div>
   )
 }

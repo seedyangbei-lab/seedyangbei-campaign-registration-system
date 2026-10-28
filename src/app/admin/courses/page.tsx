@@ -9,7 +9,7 @@ import AttendeeCheckItem from '@/components/AttendeeCheckItem'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import { normalizeDisplayInstructorIds, displayInstructorIds } from '@/lib/courseInstructors'
 import AdminCourseEditFormFields, {
-  LOCATIONS, emptyAdminCourseForm, type AdminCourseForm, type AdminCategory,
+  LOCATIONS, emptyAdminCourseForm, validateAdminCourseForm, scrollToAdminCourseField, type AdminCourseForm, type AdminCategory,
 } from '@/components/AdminCourseEditFormFields'
 import { COMMUNITY_HOST_LABEL } from '@/components/CourseEditFormFields'
 import type { ExportableReport } from '@/lib/exportCourseReport'
@@ -269,10 +269,9 @@ export default function CoursesPage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); if (timeError) return
-    if (form.photo_urls.length === 0) { alert('請至少上傳 1 張課程照片'); return }
-    if (!form.category_id) { alert('請選擇課程類別'); return }
-    if (form.suitable_age === '其他' && !form.custom_age.trim()) { alert('請填寫適合年齡的說明'); return }
+    e.preventDefault()
+    const invalid = validateAdminCourseForm(form)
+    if (invalid) { scrollToAdminCourseField(invalid.field); alert(invalid.message); return }
     setLoading(true)
     const location = form.location === '其他' ? form.custom_location : form.location
     const suitableAge = form.suitable_age === '其他' ? form.custom_age : form.suitable_age
@@ -869,7 +868,7 @@ export default function CoursesPage() {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} noValidate className="p-6 space-y-4">
               <AdminCourseEditFormFields
                 form={form}
                 setForm={setForm}

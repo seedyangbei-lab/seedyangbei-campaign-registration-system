@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { normalizeDisplayInstructorIds } from '@/lib/courseInstructors'
 import AdminCourseEditFormFields, {
-  LOCATIONS, emptyAdminCourseForm, type AdminCourseForm, type AdminCategory,
+  LOCATIONS, emptyAdminCourseForm, validateAdminCourseForm, scrollToAdminCourseField, type AdminCourseForm, type AdminCategory,
 } from '@/components/AdminCourseEditFormFields'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import { createCourse, updateCourse, deleteCourse } from '@/lib/adminCoursesApi'
@@ -88,10 +88,8 @@ function EditCoursePageInner() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (timeError) return
-    if (form.photo_urls.length === 0) { setError('請至少上傳 1 張課程照片'); return }
-    if (!form.category_id) { setError('請選擇課程類別'); return }
-    if (form.suitable_age === '其他' && !form.custom_age.trim()) { setError('請填寫適合年齡的說明'); return }
+    const invalid = validateAdminCourseForm(form)
+    if (invalid) { setError(invalid.message); scrollToAdminCourseField(invalid.field); return }
     setError('')
     setSaving(true)
 
@@ -148,7 +146,7 @@ function EditCoursePageInner() {
         <div className="w-6 h-6 shrink-0" />
       </div>
 
-      <form onSubmit={handleSave} className="p-4">
+      <form onSubmit={handleSave} noValidate className="p-4">
         <AdminCourseEditFormFields
           form={form}
           setForm={setForm}
@@ -160,20 +158,22 @@ function EditCoursePageInner() {
           uploadCoursePhoto={uploadCoursePhoto}
         />
 
-        {error && <p className="text-red-500 text-xs mt-3">{error}</p>}
-
         {/* 刪除課程／更新課程 左右並排（對應 Figma node 432-9979；新增/複製時沒有課程可刪，只顯示單一送出按鈕） */}
-        <div className="fixed bottom-0 inset-x-0 z-30 bg-white p-4 shadow-[0px_-3px_4px_0px_rgba(0,0,0,0.08)] flex gap-3">
-          {mode === 'edit' && courseRow && (
-            <button type="button" onClick={handleDelete} disabled={saving}
-              className="flex-1 border border-rose-600 text-rose-600 hover:bg-rose-50 disabled:opacity-50 font-medium py-3 rounded-xl text-sm transition-colors">
-              刪除課程
+        {/* 錯誤訊息放在固定底欄裡，使用者不論捲到哪都看得到按下去為什麼沒送出 */}
+        <div className="fixed bottom-0 inset-x-0 z-30 bg-white p-4 shadow-[0px_-3px_4px_0px_rgba(0,0,0,0.08)]">
+          {error && <p role="alert" className="text-red-600 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{error}</p>}
+          <div className="flex gap-3">
+            {mode === 'edit' && courseRow && (
+              <button type="button" onClick={handleDelete} disabled={saving}
+                className="flex-1 border border-rose-600 text-rose-600 hover:bg-rose-50 disabled:opacity-50 font-medium py-3 rounded-xl text-sm transition-colors">
+                刪除課程
+              </button>
+            )}
+            <button type="submit" disabled={saving || !!timeError}
+              className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
+              {saving ? '儲存中...' : mode === 'edit' ? '更新課程' : '新增課程'}
             </button>
-          )}
-          <button type="submit" disabled={saving || !!timeError}
-            className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
-            {saving ? '儲存中...' : mode === 'edit' ? '更新課程' : '新增課程'}
-          </button>
+          </div>
         </div>
       </form>
     </div>
