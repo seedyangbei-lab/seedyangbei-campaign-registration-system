@@ -360,12 +360,15 @@ export default function CoursesPage() {
   const endedCourses = courses.filter((c: any) => isExpired(c))
   const availableMonths = Array.from(new Set(endedCourses.map((c: any) => c.date?.slice(0, 7)).filter(Boolean))).sort().reverse() as string[]
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  // 課表／海報是對外公告，只放有開放（is_active）的課；關掉開關的課在「開放中」列表也看不到，使用者會當成已刪除
+  // 課表／海報是對外公告，只放有開放（is_active）的課
   const publishedCourses = courses.filter((c: any) => c.is_active)
   // 海報匯出以「全部課程」（不限已結束／開放中）取月份，因為海報通常是活動開始前就要準備好
   const posterAvailableMonths = Array.from(new Set(publishedCourses.map((c: any) => c.date?.slice(0, 7)).filter(Boolean))).sort().reverse() as string[]
+  // 「開放中」分頁＝尚未結束的課，不論報名開關是否打開；
+  // 之前只列 is_active 的課，關掉開關後課程在兩個分頁都消失，後台會以為課被刪了
+  const upcomingCourses = courses.filter((c: any) => !isExpired(c))
   const displayCourses = courseTab === 'active'
-    ? courses.filter((c: any) => c.is_active && !isExpired(c))
+    ? upcomingCourses
     : endedCourses.filter((c: any) => filterMonth ? c.date?.startsWith(filterMonth) : true)
 
   const primaryBtnCls = "bg-orange-500 hover:bg-orange-600 text-white p-2 md:px-4 md:py-2 rounded-md md:rounded-lg text-xs md:text-sm font-medium transition-colors whitespace-nowrap"
@@ -386,7 +389,7 @@ export default function CoursesPage() {
           className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${courseTab === t ? 'bg-white text-stone-800 border-stone-200/70 shadow-[0_1px_2px_rgba(0,0,0,0.08)]' : 'text-stone-400 hover:text-stone-600 border-transparent'}`}>
           {label}
           <span className={`ml-1 text-xs px-1 py-0.5 rounded-full ${courseTab === t ? 'bg-stone-100 text-stone-500' : 'bg-stone-100 text-stone-400'}`}>
-            {t === 'active' ? courses.filter((c: any) => c.is_active && !isExpired(c)).length : endedCourses.length}
+            {t === 'active' ? upcomingCourses.length : endedCourses.length}
           </span>
         </button>
       ))}
@@ -525,6 +528,10 @@ export default function CoursesPage() {
             )}
             {displayCourses.map((course: any) => {
               const expired = isExpired(course)
+              const statusLabel = expired ? '已結束' : course.is_active ? '開放報名' : '已關閉報名'
+              const statusCls = expired
+                ? 'bg-stone-100 text-stone-500 border border-stone-300'
+                : course.is_active ? 'bg-green-100 text-green-700' : 'bg-amber-50 text-amber-700 border border-amber-200'
               const displayInstructors = course.instructor_mode === 'community'
                 ? COMMUNITY_HOST_LABEL
                 : course.instructor_names?.length > 0
@@ -534,8 +541,8 @@ export default function CoursesPage() {
                 <div key={course.id}>
                   {/* 手機版：直式卡片（< md） */}
                   <div className="md:hidden relative bg-white border border-stone-200 rounded-2xl p-5 shadow-[0px_1px_1px_rgba(0,0,0,0.05)]">
-                    <span className={`absolute top-2 right-2 text-sm font-medium px-2 py-0.5 rounded-md ${expired ? 'bg-stone-100 text-stone-500 border border-stone-300' : 'bg-green-100 text-green-700'}`}>
-                      {expired ? '已結束' : '開放報名'}
+                    <span className={`absolute top-2 right-2 text-sm font-medium px-2 py-0.5 rounded-md ${statusCls}`}>
+                      {statusLabel}
                     </span>
 
                     <div className="flex gap-4 items-center mb-3">
@@ -639,8 +646,8 @@ export default function CoursesPage() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-stone-800 font-bold text-base truncate">{course.title}</p>
-                          <span className={`shrink-0 text-sm font-medium px-2 py-0.5 rounded-md ${expired ? 'bg-stone-100 text-stone-500 border border-stone-300' : 'bg-green-100 text-green-700'}`}>
-                            {expired ? '已結束' : '開放報名'}
+                          <span className={`shrink-0 text-sm font-medium px-2 py-0.5 rounded-md ${statusCls}`}>
+                            {statusLabel}
                           </span>
                         </div>
                         <p className="text-stone-400 text-sm truncate">
