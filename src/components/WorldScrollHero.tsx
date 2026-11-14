@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 // 「滾動進入央北社宅」單幕版——一鏡到底：社區大門外觀 → 走進大門 → 穿過建築間走道
 // → 抵達入口門 → 開門見光。滾動只驅動這支影片的播放進度（currentTime），不是真的在切頁。
@@ -25,13 +25,17 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
   const videoRef = useRef<HTMLVideoElement>(null)
   const viewportHRef = useRef(0) // 只在 mount／resize 時更新，滾動時不重算，避免手機工具列跳動造成抖動
   const [progress, setProgress] = useState(0) // 0~1
-  const [videoOk, setVideoOk] = useState(false) // metadata 到了、知道 duration，可以開始依捲動設定 currentTime
+  const progressRef = useRef(0) // 跟 progress 同步，給事件回呼裡讀最新值用
   // loading：先顯示截圖等影片；video：影片已能畫出畫格，捲動驅動播放；static：等太久，改成靜態主視覺。
   // 一旦進入 video 或 static 就定案，不再切換，避免頁面高度在使用者捲動途中突然變動
   const [phase, setPhase] = useState<'loading' | 'video' | 'static'>('loading')
   const phaseRef = useRef(phase)
   phaseRef.current = phase
-  const [videoError, setVideoError] = useState(false) // 真的載入失敗（跟「還在載入中」分開），只有這個才顯示除錯文字
+  // 改成靜態版的那一刻，使用者如果已經往下滑進這一幕了，就維持原本的高度不收合，
+  // 否則頁面高度突然少一大截，畫面會直接跳到課程列表中間
+  const [keepTall, setKeepTall] = useState(false)
+  // 進場「對焦」動畫最晚 1.5 秒就播，不綁死在影片準備好：影片慢的時候也不會一直停在偏暗失焦的狀態
+  const [entered, setEntered] = useState(false)
   const [reducedMotion, setReducedMotion] = useState(false)
   // 現在有兩支原生比例都對的素材（桌機 16:9／手機 9:16），不用再靠「模糊背景墊底＋object-contain」
   // 硬湊版面，直接依斷點切換來源、用 object-cover 滿版顯示即可
@@ -90,17 +94,42 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
   const navH = isMobile ? 52 : 56
   const stickyTop = navH + stepsH
 
-  // 等太久就改靜態：順便把影片的下載停掉，頻寬讓給下面的課程卡片
   useEffect(() => {
-    if (reducedMotion) return
+    const t = setTimeout(() => setEntered(true), 1500)
+    return () => clearTimeout(t)
+  }, [])
+
+  // 依目前捲動進度把影片跳到對應的時間點。nudge：強制重新解碼一次畫格用（見下面回到分頁的處理）
+  const seekToProgress = useCallback((nudge = false) => {
+    const v = videoRef.current
+    if (!v || !Number.isFinite(v.duration) || v.duration <= 0) return
+    if (!v.paused) v.pause()
+    let t = Math.min(progressRef.current * v.duration, Math.max(v.duration - 0.05, 0))
+    if (nudge && Math.abs(v.currentTime - t) < 0.001) t = t > 0.05 ? t - 0.02 : t + 0.02
+    if (Math.abs(v.currentTime - t) < 0.001) return
+    v.currentTime = t
+  }, [])
+
+  // 改成靜態主視覺，並把影片的下載停掉，頻寬讓給下面的課程卡片
+  const goStatic = useCallback(() => {
+    if (phaseRef.current !== 'loading') return
+    phaseRef.current = 'static'
+    setKeepTall(window.scrollY > 8)
+    setPhase('static')
+    const el = videoRef.current
+    if (el) { el.pause(); el.removeAttribute('src'); el.load() }
+  }, [])
+
+  // 等太久就改靜態。但使用者已經往下滑進這一幕的話就不收合、繼續等影片：
+  // 這時候收合會讓頁面高度突然少一大截、畫面亂跳，不如維持現狀，影片一好就從目前捲到的位置接上
+  useEffect(() => {
+    if (reducedMotion) { goStatic(); return }
     const t = setTimeout(() => {
-      if (phaseRef.current !== 'loading') return
-      setPhase('static')
-      const el = videoRef.current
-      if (el) { el.removeAttribute('src'); el.load() }
+      if (window.scrollY > 8) return
+      goStatic()
     }, STATIC_FALLBACK_MS)
     return () => clearTimeout(t)
-  }, [reducedMotion])
+  }, [reducedMotion, goStatic])
 
   // 直接把網址設成 <video src>，讓瀏覽器自己用 HTTP Range Request 邊下載邊播放／跳轉，
   // 不用等整支影片抓完才看得到畫面。Vercel 對 /public 底下的靜態檔案有支援 range request，
@@ -110,50 +139,71 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
     if (reducedMotion) return
     const el = videoRef.current
     if (!el) return
-    const onPainted = () => {
-      if (phaseRef.current === 'loading') setPhase('video')
+    let cancelled = false
+    let frameCb: number | null = null
+    const hasFrameCb = typeof (el as any).requestVideoFrameCallback === 'function'
+    // 「影片確定畫得出畫格」才算數，這時才切成捲動驅動的動態版。
+    // 之前拿 loadeddata／seeked 當訊號，但 iOS Safari 對「從沒真的播放過」的影片（低電量模式、
+    // 省流量、play() 被打斷）這些事件照樣會發，畫面上卻一格都沒畫出來——截圖淡掉之後
+    // 底下是空的，就是首頁「動態跑不出來、變一片空白」的原因。
+    const ready = () => {
+      if (cancelled || phaseRef.current === 'static') return
+      seekToProgress()
+      if (phaseRef.current === 'loading') { phaseRef.current = 'video'; setPhase('video') }
+    }
+    const onTimeUpdate = () => { if (el.currentTime > 0) ready() }
+    const armFrameCallback = () => {
+      // requestVideoFrameCallback：瀏覽器真的把一格影片畫到畫面上才會回呼，是最可靠的訊號
+      if (!hasFrameCb || frameCb !== null) return
+      frameCb = (el as any).requestVideoFrameCallback(() => { frameCb = null; ready() })
     }
     const onLoaded = () => {
-      setVideoOk(true)
-      // iOS Safari 對「從沒播放過」的影片，常常只抓 metadata、不解碼畫格，之後設定 currentTime
-      // 也不會更新畫面（上一版就是卡在這：截圖一直蓋著，往下滑影片完全不動）。
-      // 靜音＋playsInline 的影片允許自動播放，這裡先 play() 一下馬上 pause()，逼它真的開始解碼；
-      // 低電量模式下 play() 會被拒絕，那就等上面的逾時改成靜態版。
+      if (phaseRef.current !== 'loading') return
+      armFrameCallback()
+      // iOS Safari 對「從沒播放過」的影片常常只抓 metadata、不解碼畫格，之後設定 currentTime
+      // 也不會更新畫面。靜音＋playsInline 的影片允許自動播放，這裡先 play() 逼它真的開始解碼，
+      // 等確定畫出畫格（上面的 ready）才暫停、交給捲動控制。
+      // 注意：畫格確認之前不能去 pause() 或設定 currentTime，會把這次 play() 打斷（舊版踩過這個坑）。
       const p = el.play()
-      if (p) p.then(() => { el.pause(); onPainted() }).catch(() => {})
+      if (p) p.then(() => { if (!hasFrameCb) onTimeUpdate() }).catch(() => {
+        // play() 被拒絕（低電量模式、瀏覽器擋自動播放）：改用跳轉試一次，有些瀏覽器不用播放也畫得出畫格，
+        // 畫得出來 requestVideoFrameCallback 就會回呼；畫不出來（iOS）就維持截圖，等逾時改成靜態版
+        if (cancelled || !hasFrameCb || phaseRef.current !== 'loading') return
+        seekToProgress(true)
+      })
     }
     const onError = () => {
       // 逾時改靜態時是我們自己把 src 拿掉的，那不算載入失敗
       if (phaseRef.current === 'static') return
-      setVideoError(true)
-      setPhase(prev => (prev === 'loading' ? 'static' : prev))
+      console.warn('[WorldScrollHero] 影片載入失敗，改用靜態主視覺：', videoSrc)
+      goStatic()
     }
     el.addEventListener('loadedmetadata', onLoaded)
-    el.addEventListener('loadeddata', onPainted)
-    el.addEventListener('seeked', onPainted)
-    el.addEventListener('playing', onPainted)
+    if (!hasFrameCb) el.addEventListener('timeupdate', onTimeUpdate)
     el.addEventListener('error', onError)
     // 只有目標影片真的換了（例如斷點切換、或還沒透過 initialSrc 先載過）才重新指定 src + load()。
     // 重複指定同一個 src 會打斷瀏覽器正在進行中的下載，從頭重新起跑一次連線，白白浪費已經
     // 下載到一半的進度——mobileOnly 情境下 src 已經在 initialSrc 先寫進 HTML 了，這裡要避開。
     if (requestedSrcRef.current !== videoSrc) {
       requestedSrcRef.current = videoSrc
-      setVideoOk(false)
-      setVideoError(false)
-      el.src = videoSrc
-      el.load()
+      if (phaseRef.current !== 'static') {
+        el.src = videoSrc
+        el.load()
+      }
+    } else if (el.error) {
+      // 影片在 hydrate 之前就載入失敗，error 事件早就發完了，這裡補處理
+      onError()
     } else if (el.readyState >= 1) {
       onLoaded()
-      if (el.readyState >= 2) onPainted()
     }
     return () => {
+      cancelled = true
+      if (frameCb !== null) (el as any).cancelVideoFrameCallback?.(frameCb)
       el.removeEventListener('loadedmetadata', onLoaded)
-      el.removeEventListener('loadeddata', onPainted)
-      el.removeEventListener('seeked', onPainted)
-      el.removeEventListener('playing', onPainted)
+      el.removeEventListener('timeupdate', onTimeUpdate)
       el.removeEventListener('error', onError)
     }
-  }, [reducedMotion, videoSrc])
+  }, [reducedMotion, videoSrc, seekToProgress, goStatic])
 
   useEffect(() => {
     if (reducedMotion) return
@@ -167,7 +217,9 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
       const rect = el.getBoundingClientRect()
       const total = rect.height - viewportHRef.current
       const scrolled = Math.min(Math.max(-rect.top, 0), total)
-      setProgress(total > 0 ? scrolled / total : 0)
+      const next = total > 0 ? scrolled / total : 0
+      progressRef.current = next
+      setProgress(next)
     }
     updateViewportH()
     window.addEventListener('scroll', onScroll, { passive: true })
@@ -181,27 +233,32 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
     }
   }, [reducedMotion])
 
+  // 只有確定影片畫得出畫格（phase === 'video'）之後才讓捲動去控制影片時間
   useEffect(() => {
-    if (reducedMotion) return
-    const v = videoRef.current
-    if (!v || !videoOk || !v.duration || phase === 'static') return
-    if (!v.paused) v.pause()
-    v.currentTime = Math.min(progress * v.duration, v.duration - 0.05)
-  }, [progress, videoOk, reducedMotion, phase])
+    if (phase !== 'video') return
+    seekToProgress()
+  }, [progress, phase, seekToProgress])
 
-  const settled = phase !== 'loading' // 進場動畫是否已經「對焦」完成
-  const isStatic = phase === 'static'
+  // 切到別的 App／分頁再回來、或按「上一頁」從快取還原時，手機瀏覽器（尤其 iOS）常把暫停中影片
+  // 解好的畫格丟掉，回來只剩空白，要等下一次捲動才會重畫。這裡回來時主動微調一下時間點逼它重畫。
+  useEffect(() => {
+    const repaint = () => {
+      if (document.visibilityState !== 'visible' || phaseRef.current !== 'video') return
+      seekToProgress(true)
+    }
+    // pageshow 第一次載入也會發，只處理「從上一頁快取還原」（persisted）的那種
+    const onPageShow = (e: PageTransitionEvent) => { if (e.persisted) repaint() }
+    document.addEventListener('visibilitychange', repaint)
+    window.addEventListener('pageshow', onPageShow)
+    return () => {
+      document.removeEventListener('visibilitychange', repaint)
+      window.removeEventListener('pageshow', onPageShow)
+    }
+  }, [seekToProgress])
 
-  if (reducedMotion) {
-    // 尊重「減少動態效果」：直接用靜態內容呈現，不放影片
-    return (
-      <section className="min-h-[70vh] flex flex-col items-center justify-center text-center px-6" style={{ background: '#FDEBD3' }}>
-        <p className="text-orange-600 text-sm font-medium mb-2">歡迎回家</p>
-        <h2 className="text-3xl font-bold text-stone-800 mb-3">走進央北社宅</h2>
-        <p className="text-stone-600">從社區大門開始，帶你看看這裡的生活</p>
-      </section>
-    )
-  }
+  // 「減少動態效果」：不放影片、不做捲動動畫，直接顯示靜態主視覺（同一張首幀截圖），不是一塊只有字的空版面
+  const isStatic = phase === 'static' || reducedMotion
+  const settled = phase !== 'loading' || reducedMotion || entered // 進場動畫是否已經「對焦」完成
 
   // 文字疊字：開頭在建築物上方（天空區），滾動時往下移到畫面正中央，同時淡出，讓出畫面給開門瞬間
   const moveT = Math.min(progress / 0.35, 1)
@@ -213,7 +270,7 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
     // 靜態版不需要捲動驅動，高度收成剛好一個畫面，往下滑直接接課程列表
     <div
       ref={containerRef}
-      style={{ height: isStatic ? `calc(100dvh - ${stickyTop}px)` : `${VH_MULTIPLIER * 100}dvh` }}
+      style={{ height: isStatic && !keepTall ? `calc(100dvh - ${stickyTop}px)` : `${VH_MULTIPLIER * 100}dvh` }}
       className="relative bg-stone-900"
     >
       {/* top 跟高度都要扣掉導覽列 + 報名步驟條的高度（見上面 stepsH 量測），
@@ -241,21 +298,11 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
           }}
         >
           {/* 第一幀截圖：mobileOnly 確定是手機版；/world 全頁版用 <picture> 依螢幕寬度挑，
-              不用等 JS 判斷斷點，伺服器 HTML 一到瀏覽器就開始抓對的那張 */}
-          {/* 影片放在截圖下面、本身永遠不透明：iOS Safari 對 opacity 0 的影片可能不解碼畫格，
-              所以改成由上面的截圖淡出來「露出」影片 */}
-          <video
-            ref={videoRef}
-            src={initialSrc}
-            muted
-            playsInline
-            preload="auto"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          <picture
-            className="absolute inset-0"
-            style={{ opacity: phase === 'video' ? 0 : 1, transition: 'opacity 0.3s', pointerEvents: 'none' }}
-          >
+              不用等 JS 判斷斷點，伺服器 HTML 一到瀏覽器就開始抓對的那張。
+              截圖永遠墊在影片「下面」、永遠不透明：影片還沒畫出畫格（或畫格被瀏覽器丟掉）時
+              影片本身是透明的，會直接透出這張圖，任何情況都不會出現空白畫面。
+              之前是截圖蓋在上面、影片好了就把截圖淡掉——一旦「影片好了」判斷錯，底下就是空的。 */}
+          <picture className="absolute inset-0" style={{ pointerEvents: 'none' }}>
             {!mobileOnly && <source media="(max-width: 767px)" srcSet={MOBILE_POSTER_SRC} />}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -267,13 +314,16 @@ export default function WorldScrollHero({ mobileOnly = false }: { mobileOnly?: b
               className="absolute inset-0 w-full h-full object-cover"
             />
           </picture>
-          {/* 影片載入中：不顯示任何文字，後面暖色佔位色塊就夠了，淡入過程才不會先閃一段除錯字樣。
-              只有真的載入失敗（例如檔案不存在）才提示，方便之後除錯用 */}
-          {videoError && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <p className="text-stone-500 text-sm">〔影片載入失敗：{videoSrc}〕</p>
-            </div>
-          )}
+          {/* 影片本身永遠不透明（iOS Safari 對 opacity 0 的影片可能不解碼畫格），疊在截圖上面；
+              第一幀跟截圖一模一樣，畫出來的那一刻看不出切換 */}
+          <video
+            ref={videoRef}
+            src={initialSrc}
+            muted
+            playsInline
+            preload="auto"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
         </div>
 
         {/* 文字卡片：試過半透明暖色卡片＋backdrop-blur，但透明底跟下面素樸手繪插畫的紙感不搭，
