@@ -1,5 +1,6 @@
 'use client'
 
+import { SERIES_NEW, type SeriesOption } from '@/lib/courseSeries'
 import { useEffect, useRef, useState } from 'react'
 import { ChevronDownIcon } from '@/components/InstructorMobileUI'
 import CoursePhotoGrid from '@/components/CoursePhotoGrid'
@@ -39,6 +40,7 @@ export type CourseForm = {
   co_instructor_ids: string[]
   instructor_mode: InstructorMode
   display_instructor_ids: string[]
+  series_key?: string   // '' 單次課程 / SERIES_NEW 新建系列 / 既有 series_key
 }
 
 export type InstructorOption = { id: string; name: string }
@@ -202,6 +204,11 @@ export function DisplayInstructorPicker({
 }
 
 // 下拉選單裡若目前值不在預設清單中（例如舊資料是 15 分鐘為單位），把它加進去，避免選單顯示空白
+// 編輯／複製時，目前的系列若不在選項裡（例如剛建立還沒出現在列表）也要能顯示，避免下拉變成空白
+function withCurrentSeries(options: SeriesOption[], current?: string) {
+  if (current && current !== SERIES_NEW && !options.some(o => o.key === current)) return [{ key: current, label: '目前的系列' }, ...options]
+  return options
+}
 export function withCurrentValue(options: string[], current: string) {
   if (current && !options.includes(current)) return [current, ...options]
   return options
@@ -217,10 +224,11 @@ type Props = {
   uploadCoursePhoto: (blob: Blob) => Promise<string | null>
   instructorOptions?: InstructorOption[]
   currentInstructor?: InstructorOption | null
+  seriesOptions?: SeriesOption[]   // 有傳才顯示「系列課程」欄位（講師中台用；後台不傳＝不顯示）
 }
 
 // 課程編輯表單欄位（不含外層 modal/page 外框與送出按鈕），供桌機彈窗與手機獨立頁共用
-export default function CourseEditFormFields({ form, setForm, uploadCoursePhoto, instructorOptions = [], currentInstructor }: Props) {
+export default function CourseEditFormFields({ form, setForm, uploadCoursePhoto, instructorOptions = [], currentInstructor, seriesOptions }: Props) {
   const timeStartOptions = withCurrentValue(TIME_OPTIONS, form.time_start)
   const timeEndOptions = withCurrentValue(TIME_OPTIONS, form.time_end)
   const seatOptions = withCurrentSeats(MAX_SEATS_OPTIONS, form.max_seats)
@@ -238,6 +246,22 @@ export default function CourseEditFormFields({ form, setForm, uploadCoursePhoto,
           className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
         />
       </div>
+
+      {seriesOptions && (
+        <div>
+          <label className="block text-stone-600 text-sm font-medium mb-1.5">系列課程</label>
+          <select
+            value={form.series_key || ''}
+            onChange={e => setForm({ ...form, series_key: e.target.value })}
+            className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-300"
+          >
+            <option value="">單次課程</option>
+            <option value={SERIES_NEW}>＋ 新建系列（這是系列的第一堂）</option>
+            {withCurrentSeries(seriesOptions, form.series_key).map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+          </select>
+          <p className="text-stone-400 text-xs mt-1">同一門課在不同日期開很多堂？選同一個系列，製作海報時會自動合併成一張。</p>
+        </div>
+      )}
 
       <div>
         <label className="block text-stone-600 text-sm font-medium mb-1.5">課程簡介</label>

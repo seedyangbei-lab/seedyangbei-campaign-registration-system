@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { normalizeDisplayInstructorIds } from '@/lib/courseInstructors'
+import { buildSeriesOptions, resolveSeriesKey, type SeriesOption } from '@/lib/courseSeries'
 import CourseEditFormFields, { LOCATIONS, type CourseForm } from '@/components/CourseEditFormFields'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import { createInstructorCourse, updateInstructorCourseWithLog } from '@/lib/instructorCoursesApi'
@@ -22,7 +23,7 @@ function BackArrowIcon() {
 const emptyForm: CourseForm = {
   title: '', description: '', date: '', time_start: '', time_end: '',
   location: '', custom_location: '', notes: '', suitable_age: '全年齡', custom_age: '',
-  photos: [], max_seats: 20, co_instructor_ids: [], instructor_mode: 'single', display_instructor_ids: [],
+  photos: [], max_seats: 20, co_instructor_ids: [], instructor_mode: 'single', display_instructor_ids: [], series_key: '',
 }
 
 function buildForm(course: any, mode: 'edit' | 'copy' | 'create', currentInstructorId: string): CourseForm {
@@ -39,6 +40,7 @@ function buildForm(course: any, mode: 'edit' | 'copy' | 'create', currentInstruc
     co_instructor_ids: (course.instructor_ids || []).filter((id: string) => id !== currentInstructorId),
     instructor_mode: course.instructor_mode || 'single',
     display_instructor_ids: course.display_instructor_ids || [],
+    series_key: course.series_key || '',
   }
 }
 
@@ -60,6 +62,7 @@ function EditCoursePageInner() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [allInstructors, setAllInstructors] = useState<{ id: string; name: string }[]>([])
+  const [seriesOptions, setSeriesOptions] = useState<SeriesOption[]>([])
 
   useEffect(() => {
     (async () => {
@@ -74,6 +77,10 @@ function EditCoursePageInner() {
 
       const { data: roster } = await supabase.from('instructors').select('id, name').eq('is_active', true).order('name')
       setAllInstructors(roster || [])
+
+      // 這位講師已有的系列（供「系列課程」下拉選擇）
+      const { data: mine } = await supabase.from('courses').select('series_key, title, date').contains('instructor_ids', [instr.id]).not('series_key', 'is', null)
+      setSeriesOptions(buildSeriesOptions(mine || []))
 
       if (courseId) {
         const { data: course } = await supabase.from('courses').select('*').eq('id', courseId).maybeSingle()
@@ -116,6 +123,7 @@ function EditCoursePageInner() {
       photo_urls: form.photos, poster_url: form.photos[0] || null, max_seats: form.max_seats,
       instructor_ids: instructorIds, instructor_mode: form.instructor_mode,
       display_instructor_ids: form.instructor_mode === 'multiple' ? normalizeDisplayInstructorIds(form.display_instructor_ids, instructorIds) : null,
+      series_key: resolveSeriesKey(form.series_key),
     }
 
     try {
@@ -153,6 +161,7 @@ function EditCoursePageInner() {
           form={form} setForm={setForm} uploadCoursePhoto={uploadCoursePhoto}
           instructorOptions={allInstructors.filter(i => i.id !== instructor?.id)}
           currentInstructor={instructor ? { id: instructor.id, name: instructor.name } : null}
+          seriesOptions={seriesOptions}
         />
 
         {error && <p className="text-red-500 text-xs mt-3">{error}</p>}

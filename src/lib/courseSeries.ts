@@ -53,3 +53,33 @@ export function mergeSeriesForPoster(poster: PosterCourseData, siblings: SeriesS
     timeEnd: withTime ? poster.timeEnd : '',
   }
 }
+
+// ── 開課表單的「系列課程」下拉 ─────────────────────────────────────────────────
+export const SERIES_NEW = '__new__'   // 下拉的「＋新建系列」；存檔時才換成真正的 series_key
+
+export interface SeriesOption { key: string; label: string }
+
+export function newSeriesKey(): string {
+  return `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
+}
+
+// 表單的下拉值 → 要寫進 courses.series_key 的值（空字串＝單次課程，寫 null 才能把舊系列清掉）
+export function resolveSeriesKey(formValue?: string): string | null {
+  if (!formValue) return null
+  return formValue === SERIES_NEW ? newSeriesKey() : formValue
+}
+
+// 從講師自己的課程列表整理出「既有系列」選項，標籤像「央北散步趣（12/3、10、17、24）」
+export function buildSeriesOptions(courses: { series_key?: string | null; title?: string | null; date?: string | null }[]): SeriesOption[] {
+  const groups = new Map<string, { title: string; dates: string[] }>()
+  for (const c of courses) {
+    if (!c.series_key) continue
+    const g = groups.get(c.series_key) || { title: '', dates: [] }
+    if (c.date) g.dates.push(c.date)
+    // 標題取最早那堂（去掉日期尾巴）
+    if (!g.title || (c.date && c.date <= (g.dates.slice().sort()[0] || ''))) g.title = seriesBaseTitle(c.title || '')
+    groups.set(c.series_key, g)
+  }
+  return Array.from(groups, ([key, g]) => ({ key, label: `${g.title || '未命名'}（${formatSeriesDates(g.dates)}）` }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+}

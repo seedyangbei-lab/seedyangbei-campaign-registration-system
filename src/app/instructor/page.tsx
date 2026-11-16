@@ -1,6 +1,6 @@
 'use client'
 
-import { mergeSeriesForPoster } from '@/lib/courseSeries'
+import { mergeSeriesForPoster, buildSeriesOptions, resolveSeriesKey } from '@/lib/courseSeries'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
@@ -15,7 +15,7 @@ import {
 import IssueReportModal from '@/components/IssueReportModal'
 import { MobileRegistrationCard, MobilePagination } from '@/components/AdminMobileUI'
 import { normalizeDisplayInstructorIds, displayInstructorIds } from '@/lib/courseInstructors'
-import CourseEditFormFields, { LOCATIONS, DESCRIPTION_MAX, COMMUNITY_HOST_LABEL, type InstructorMode } from '@/components/CourseEditFormFields'
+import CourseEditFormFields, { LOCATIONS, DESCRIPTION_MAX, COMMUNITY_HOST_LABEL, type InstructorMode, type CourseForm } from '@/components/CourseEditFormFields'
 import { AGE_OPTIONS } from '@/components/SuitableAgeSelector'
 import { staffAuthHeaders, fetchFeedbackCounts } from '@/lib/staffAuthHeaders'
 import { hasValidInstructorToken, clearInstructorSession } from '@/lib/instructor-auth'
@@ -51,6 +51,7 @@ const emptyForm = {
   photos: [] as string[], max_seats: 20, co_instructor_ids: [] as string[],
   instructor_mode: 'single' as InstructorMode,
   display_instructor_ids: [] as string[],
+  series_key: '',
 }
 
 const emptyProfileForm = { name: '', bio: '', avatar_url: '', phone: '', line_id: '' }
@@ -85,7 +86,7 @@ function InstructorPortal() {
   const [showModal, setShowModal] = useState(false)
   const [editTarget, setEditTarget] = useState<any>(null)
   const [createMode, setCreateMode] = useState<'copy' | 'create'>('create')
-  const [form, setForm] = useState(emptyForm)
+  const [form, setForm] = useState<CourseForm>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [allInstructors, setAllInstructors] = useState<{ id: string; name: string }[]>([])
 
@@ -327,6 +328,7 @@ function InstructorPortal() {
       co_instructor_ids: (course.instructor_ids || []).filter((id: string) => id !== instructor?.id),
       instructor_mode: course.instructor_mode || 'single',
       display_instructor_ids: course.display_instructor_ids || [],
+      series_key: course.series_key || '',
     })
     setShowModal(true)
   }
@@ -348,6 +350,7 @@ function InstructorPortal() {
       co_instructor_ids: (course.instructor_ids || []).filter((id: string) => id !== instructor?.id),
       instructor_mode: course.instructor_mode || 'single',
       display_instructor_ids: course.display_instructor_ids || [],
+      series_key: course.series_key || '',
     })
     setShowModal(true)
   }
@@ -388,6 +391,7 @@ function InstructorPortal() {
       photo_urls: form.photos, poster_url: form.photos[0] || null, max_seats: form.max_seats,
       instructor_ids: instructorIds, instructor_mode: form.instructor_mode,
       display_instructor_ids: form.instructor_mode === 'multiple' ? normalizeDisplayInstructorIds(form.display_instructor_ids, instructorIds) : null,
+      series_key: resolveSeriesKey(form.series_key),
     }
 
     try {
@@ -746,6 +750,7 @@ function InstructorPortal() {
                 form={form} setForm={setForm} uploadCoursePhoto={uploadCoursePhoto}
                 instructorOptions={allInstructors.filter(i => i.id !== instructor?.id)}
                 currentInstructor={instructor ? { id: instructor.id, name: instructor.name } : null}
+                seriesOptions={buildSeriesOptions(courses)}
               />
 
               <div className="flex flex-col gap-3 pt-2">
