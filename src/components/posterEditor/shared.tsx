@@ -485,10 +485,14 @@ export async function renderPosterCanvas(p: ExportPosterParams): Promise<HTMLCan
   // time badge
   if (p.course.timeStart||p.course.timeEnd||p.course.date) {
     const timeParts=[p.course.date||'',(p.course.date&&(p.course.timeStart||p.course.timeEnd))?'·':'',p.course.timeStart||'',p.course.timeEnd?`– ${p.course.timeEnd}`:''].filter(Boolean).join(' ')
-    ctx.font=`${EN_WEIGHT} ${p.enFontSize}px ${p.enFontValue}`
-    const tw=measureSpaced(ctx,timeParts,p.enLetterPx)+10
+    // 系列課程的日期較長：超出海報可用寬度時把徽章字體縮小到放得下（單次課程不會觸發）
+    let badgeSize=p.enFontSize
+    ctx.font=`${EN_WEIGHT} ${badgeSize}px ${p.enFontValue}`
+    while (badgeSize>6 && measureSpaced(ctx,timeParts,p.enLetterPx*(badgeSize/p.enFontSize))+10>maxTitleW) { badgeSize-=0.5; ctx.font=`${EN_WEIGHT} ${badgeSize}px ${p.enFontValue}` }
+    const badgeLetterPx=p.enLetterPx*(badgeSize/p.enFontSize)
+    const tw=measureSpaced(ctx,timeParts,badgeLetterPx)+10
     ctx.fillStyle=timeBgC; roundRect(ctx,INFO_PAD,cy,tw,p.enFontSize+7,4); ctx.fill()
-    ctx.fillStyle=p.enTc; fillTextSpaced(ctx,timeParts,INFO_PAD+5,cy+p.enFontSize+2,p.enLetterPx)
+    ctx.fillStyle=p.enTc; fillTextSpaced(ctx,timeParts,INFO_PAD+5,cy+p.enFontSize+2,badgeLetterPx)
     cy+=p.enFontSize+11
   }
   // location

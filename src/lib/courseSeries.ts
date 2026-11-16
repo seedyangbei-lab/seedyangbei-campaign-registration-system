@@ -10,7 +10,7 @@ export interface SeriesSibling {
 }
 
 // 日期徽章（海報寬只有 210px、可用約 178px）塞得下的字數上限；超過就不再附時間，避免超出海報邊界
-const BADGE_MAX_CHARS = 28
+const BADGE_MAX_CHARS = 30
 
 // 「央北散步趣12/3」→「央北散步趣」。講師原本靠標題尾巴的日期區分每一天，併成一張後要拿掉
 export function seriesBaseTitle(title: string): string {
@@ -18,13 +18,17 @@ export function seriesBaseTitle(title: string): string {
   return base || title
 }
 
-// ['2026-12-10','2026-12-03'] → '12/3、12/10'
+// ['2026-12-10','2026-12-03','2026-12-17'] → '12/3、10、17'（同一個月只寫一次月份；跨月才再寫月份：'11/28、12/5'）
 export function formatSeriesDates(dates: string[]): string {
+  let prevMonth = -1
   return Array.from(new Set(dates.filter(Boolean)))
     .sort()
     .map(d => {
       const [, m, day] = d.split('-')
-      return `${parseInt(m, 10)}/${parseInt(day, 10)}`
+      const month = parseInt(m, 10)
+      const text = month === prevMonth ? `${parseInt(day, 10)}` : `${month}/${parseInt(day, 10)}`
+      prevMonth = month
+      return text
     })
     .join('、')
 }
