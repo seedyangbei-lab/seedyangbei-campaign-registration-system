@@ -1,5 +1,6 @@
 'use client'
 
+import { mergeSeriesForPoster } from '@/lib/courseSeries'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
@@ -419,7 +420,7 @@ function InstructorPortal() {
       router.push(`/instructor/poster-editor?courseId=${course.id}`)
       return
     }
-    setPosterEditorCourse({
+    const basePoster = {
       id: course.id, title: course.title,
       // 海報掛名照「海報／課程卡顯示講師」，不是固定寫登入的人——幫其他種子戶開的課才不會掛上自己的名字
       instructor: course.instructor_mode === 'community'
@@ -428,7 +429,11 @@ function InstructorPortal() {
       date: course.date,
       timeStart: (course.time_start || '').slice(0, 5), timeEnd: (course.time_end || '').slice(0, 5),
       location: course.location, suitableAge: course.suitable_age, notes: course.notes,
-    })
+    }
+    // 系列課程：同一個 series_key 的各堂課併成一張海報
+    setPosterEditorCourse(course.series_key
+      ? mergeSeriesForPoster(basePoster, courses.filter((c: any) => c.series_key === course.series_key && c.status !== 'cancelled'))
+      : basePoster)
     const photoList = (course.photo_urls && course.photo_urls.length) ? course.photo_urls : (course.poster_url ? [course.poster_url] : [])
     setPosterPhotos(photoList)
     setPosterInitialImage(photoList[0] || null)

@@ -1,5 +1,6 @@
 'use client'
 
+import { mergeSeriesForPoster } from '@/lib/courseSeries'
 import JSZip from 'jszip'
 import {
   PosterCourseData, ExportPosterParams, renderPosterBlob, loadAllGoogleFonts, SCHEMES,
@@ -130,6 +131,8 @@ export interface MonthlyPosterCourse {
   instructor_mode?: string | null
   photo_urls?: string[]
   poster_url?: string | null
+  series_key?: string | null
+  status?: string | null
 }
 
 export interface MonthlyPosterExportResult {
@@ -144,9 +147,17 @@ function safeFileName(s: string) {
 export async function exportMonthlyPosters(courses: MonthlyPosterCourse[], month: string): Promise<MonthlyPosterExportResult> {
   loadAllGoogleFonts()
 
+  // 同一個系列（series_key 相同）只出一張：取當月最早那堂的照片與版面，日期欄併入整個系列的所有日期
+  const seenSeries = new Set<string>()
   const target = courses
     .filter(c => month ? c.date?.startsWith(month) : true)
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+    .filter(c => {
+      if (!c.series_key) return true
+      if (seenSeries.has(c.series_key)) return false
+      seenSeries.add(c.series_key)
+      return true
+    })
 
   // 每堂課以「主要講師」（instructor_ids[0]）的已儲存設定為準；一次批次查詢，避免逐堂課各打一次 API
   // 照片縮放／位置可能是任一位共同講師存的，所以所有講師的設定都要查
@@ -168,12 +179,15 @@ export async function exportMonthlyPosters(courses: MonthlyPosterCourse[], month
       .map(id => getPhotoAdjust(settingsByInstructor[id], course.id, imgSrc))
       .find(a => a) || null
 
-    const posterCourse: PosterCourseData = {
+    const basePoster: PosterCourseData = {
       id: course.id, title: course.title, date: course.date,
       timeStart: (course.time_start || '').slice(0, 5), timeEnd: (course.time_end || '').slice(0, 5),
       location: course.location,
       instructor: course.instructor_mode === 'community' ? COMMUNITY_HOST_LABEL : (course.display_instructor_names || course.instructor_names || []).join('、'),
     }
+    const posterCourse = course.series_key
+      ? mergeSeriesForPoster(basePoster, courses.filter(c => c.series_key === course.series_key && c.status !== 'cancelled'))
+      : basePoster
     const params: ExportPosterParams = {
       course: posterCourse, activeBg: style.activeBg, tc: style.tc, enTc: style.enTc, iconColor: style.iconColor,
       dotFill: style.dotFill, dotOn: style.dotOn, dotShape: style.dotShape, dotCustomChar: style.dotCustomChar,

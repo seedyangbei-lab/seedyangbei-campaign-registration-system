@@ -16,6 +16,7 @@ import { updateInstructorCourse } from '@/lib/instructorCoursesApi'
 import { getMyInstructorProfile } from '@/lib/instructorCoursesApi'
 import { getInstructorToken } from '@/lib/instructor-auth'
 import { displayInstructorIds } from '@/lib/courseInstructors'
+import { mergeSeriesForPoster } from '@/lib/courseSeries'
 
 // ── 小型共用 UI（手機版專用） ──────────────────────────────────────────────────
 function BackArrowIcon() {
@@ -711,11 +712,19 @@ function PosterEditorLoader() {
           instructorName = ids.map(id => nameById.get(id)).filter(Boolean).join('、')
         }
       }
-      setCourse({
+      const basePoster: PosterCourseData = {
         id: c.id, title: c.title, instructor: instructorName, date: c.date,
         timeStart: (c.time_start || '').slice(0, 5), timeEnd: (c.time_end || '').slice(0, 5),
         location: c.location, suitableAge: c.suitable_age, notes: c.notes,
-      })
+      }
+      // 系列課程：同一個 series_key 的各堂課併成一張海報（標題去掉日期尾巴、日期列出全部）
+      let posterCourse = basePoster
+      if (c.series_key) {
+        const { data: siblings } = await supabase.from('courses')
+          .select('date, time_start, time_end').eq('series_key', c.series_key).neq('status', 'cancelled')
+        posterCourse = mergeSeriesForPoster(basePoster, siblings || [])
+      }
+      setCourse(posterCourse)
       const photoList: string[] = (c.photo_urls && c.photo_urls.length) ? c.photo_urls : (c.poster_url ? [c.poster_url] : [])
       setPhotos(photoList)
 
