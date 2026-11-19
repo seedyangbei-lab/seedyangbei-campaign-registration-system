@@ -133,6 +133,13 @@ interface EditorState {
   // 左欄標題各自的文字色，'' = 沿用預設（主題色或左欄文字色）
   yearColor: string; title1Color: string; title2Color: string
   monthNumColor: string; monthLabelColor: string
+  bgOverlayColor: string; bgOverlayOpacity: number   // 整張海報底圖遮罩（暗化／淡化）
+  rightPanelEnabled: boolean                          // 右側課表做成圓角卡片
+  // 海報上的固定文案（可編輯）
+  brandText: string; yearSuffix: string; monthLabelText: string
+  introLine1: string; introLine2: string
+  qr1Label: string; qr1Sub: string; qr2Label: string; qr2Sub: string
+  feeText: string
   gradientEnabled: boolean; gradientDir: GradientDir
   gradientFrom: string; gradientTo: string; gradientOpacity: number
   rightBgColor: string; rightBgOpacity: number
@@ -176,6 +183,26 @@ interface EditorState {
   courseTextColor: string
 }
 
+const DEFAULT_COPY = {
+  brandText: 'XINDIAN · YANGBEI SOCIAL HOUSING', yearSuffix: '年活動', monthLabelText: '月份活動表',
+  introLine1: '各項活動皆歡迎居民們踴躍報名！', introLine2: '（數量有限，額滿為止）',
+  qr1Label: '活動報名', qr1Sub: '線上報名', qr2Label: '種子社區大學', qr2Sub: '加入社群',
+  feeText: '免費',
+}
+type CopyKey = keyof typeof DEFAULT_COPY
+const COPY_FIELDS: { key: CopyKey; label: string; ss: string }[] = [
+  { key: 'brandText', label: '頂部品牌列', ss: 'schedule_brand_text' },
+  { key: 'yearSuffix', label: '年份後綴（「115 ○○」）', ss: 'schedule_year_suffix' },
+  { key: 'monthLabelText', label: '月份後綴（「12 ○○」）', ss: 'schedule_month_label_text' },
+  { key: 'introLine1', label: '說明文字第 1 行（橫式）', ss: 'schedule_intro_1' },
+  { key: 'introLine2', label: '說明文字第 2 行（橫式）', ss: 'schedule_intro_2' },
+  { key: 'qr1Label', label: 'QR 1 標題', ss: 'schedule_qr1_label' },
+  { key: 'qr1Sub', label: 'QR 1 說明', ss: 'schedule_qr1_sub' },
+  { key: 'qr2Label', label: 'QR 2 標題', ss: 'schedule_qr2_label' },
+  { key: 'qr2Sub', label: 'QR 2 說明', ss: 'schedule_qr2_sub' },
+  { key: 'feeText', label: '費用欄文字', ss: 'schedule_fee_text' },
+]
+
 const DEFAULT_EDITOR: EditorState = {
   bgImage: '', bgOpacity: 0.22,
   accentColor: '#f97316', brandBgColor: '#1c1917',
@@ -184,6 +211,9 @@ const DEFAULT_EDITOR: EditorState = {
   patternColor: '', patternScale: 1, patternCustom: '',
   panelStyle: 'glass', panelColor: '#ffffff', panelOpacity: 0.6, panelBlur: 12, panelRadius: 16,
   yearColor: '', title1Color: '', title2Color: '', monthNumColor: '', monthLabelColor: '',
+  bgOverlayColor: '#000000', bgOverlayOpacity: 0,
+  rightPanelEnabled: false,
+  ...DEFAULT_COPY,
   gradientEnabled: true, gradientDir: 'to-b',
   gradientFrom: '#fed7aa', gradientTo: '#fff7ed', gradientOpacity: 0.6,
   rightBgColor: '#ffffff', rightBgOpacity: 0.92,
@@ -398,6 +428,160 @@ function getPatternCss(e: Pick<EditorState,'patternType'|'patternColor'|'pattern
   return { backgroundImage: `url("${patternDataUri(def, color, e.patternOpacity, e.patternScale)}")`, backgroundRepeat: 'repeat' }
 }
 
+// ── 樣式欄位（主題組合、恢復預設、復原／重做比對用）────────────────────────
+// 只包含「外觀」，不含標題文案、QR、Logo、聯絡資訊、底圖本身等內容
+const THEME_KEYS = [
+  'accentColor','brandBgColor','leftBgColor','leftBgOpacity','leftTextColor','rightBgColor','rightBgOpacity',
+  'courseTextColor','footerBgColor','footerTextColor',
+  'patternType','patternOpacity','patternColor','patternScale','patternCustom',
+  'panelStyle','panelColor','panelOpacity','panelBlur','panelRadius','rightPanelEnabled',
+  'yearColor','title1Color','title2Color','monthNumColor','monthLabelColor',
+  'gradientEnabled','gradientDir','gradientFrom','gradientTo','gradientOpacity',
+  'bgOpacity','bgOverlayColor','bgOverlayOpacity',
+] as const satisfies readonly (keyof EditorState)[]
+type ThemeValues = Partial<Pick<EditorState, typeof THEME_KEYS[number]>>
+interface ThemePreset { name: string; values: ThemeValues; builtin?: boolean }
+
+function pickTheme(e: EditorState): ThemeValues {
+  const out: Record<string, unknown> = {}
+  for (const k of THEME_KEYS) out[k] = e[k]
+  return out as ThemeValues
+}
+
+// 內建主題：只給顏色／圖樣／底板，套用時保留目前的底圖與文字內容
+const BUILTIN_THEMES: ThemePreset[] = [
+  { name: '暖橘預設', builtin: true, values: {} },
+  { name: '聖誕紅綠', builtin: true, values: {
+    accentColor: '#b91c1c', brandBgColor: '#14532d', footerBgColor: '#14532d', leftBgColor: '#fef2f2',
+    gradientFrom: '#fecaca', gradientTo: '#fef2f2', patternType: 'sparkles', patternColor: '#15803d', patternOpacity: 0.22,
+    title2Color: '#14532d', monthNumColor: '#14532d' } },
+  { name: '森林格紋', builtin: true, values: {
+    accentColor: '#4d7c0f', brandBgColor: '#1a2e05', footerBgColor: '#1a2e05', leftBgColor: '#f7fee7',
+    gradientFrom: '#d9f99d', gradientTo: '#f7fee7', patternType: 'plaid', patternColor: '#65a30d', patternOpacity: 0.18,
+    leftTextColor: '#1a2e05', courseTextColor: '#1a2e05' } },
+  { name: '春日櫻花', builtin: true, values: {
+    accentColor: '#db2777', brandBgColor: '#831843', footerBgColor: '#500724', leftBgColor: '#fdf2f8',
+    gradientFrom: '#fbcfe8', gradientTo: '#fdf2f8', patternType: 'scales', patternOpacity: 0.16,
+    leftTextColor: '#500724', courseTextColor: '#500724' } },
+  { name: '夏日海洋', builtin: true, values: {
+    accentColor: '#0e7490', brandBgColor: '#164e63', footerBgColor: '#083344', leftBgColor: '#ecfeff',
+    gradientFrom: '#a5f3fc', gradientTo: '#ecfeff', patternType: 'waves', patternOpacity: 0.2,
+    leftTextColor: '#083344', courseTextColor: '#083344' } },
+  { name: '秋收大地', builtin: true, values: {
+    accentColor: '#b45309', brandBgColor: '#422006', footerBgColor: '#422006', leftBgColor: '#fefce8',
+    gradientFrom: '#fde68a', gradientTo: '#fefce8', patternType: 'checker', patternOpacity: 0.08,
+    leftTextColor: '#422006', courseTextColor: '#422006' } },
+  { name: '紫色夜空', builtin: true, values: {
+    accentColor: '#7c3aed', brandBgColor: '#2e1065', footerBgColor: '#2e1065', leftBgColor: '#f5f3ff',
+    gradientFrom: '#ddd6fe', gradientTo: '#f5f3ff', patternType: 'sparkles', patternOpacity: 0.2,
+    leftTextColor: '#2e1065', courseTextColor: '#2e1065' } },
+  { name: '簡約黑白', builtin: true, values: {
+    accentColor: '#18181b', brandBgColor: '#18181b', footerBgColor: '#18181b', leftBgColor: '#fafafa',
+    gradientEnabled: false, patternType: 'grid', patternOpacity: 0.1,
+    leftTextColor: '#18181b', courseTextColor: '#18181b' } },
+]
+// 套用主題：內建主題先回到預設外觀再覆蓋（不動底圖透明度／遮罩）；自訂主題是完整快照，直接覆蓋
+function applyTheme(prev: EditorState, t: ThemePreset): EditorState {
+  if (!t.builtin) return { ...prev, ...t.values }
+  const base = pickTheme(DEFAULT_EDITOR)
+  delete base.bgOpacity; delete base.bgOverlayColor; delete base.bgOverlayOpacity
+  return { ...prev, ...base, ...t.values }
+}
+
+// ── 對比度（WCAG）────────────────────────────────────────────────
+function relLum(hex: string) {
+  const h = (hex || '').replace('#', '')
+  if (h.length !== 6) return 1
+  const ch = (i: number) => { const v = parseInt(h.slice(i, i+2), 16) / 255; return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4) }
+  return 0.2126*ch(0) + 0.7152*ch(2) + 0.0722*ch(4)
+}
+function contrastRatio(a: string, b: string) {
+  const la = relLum(a), lb = relLum(b)
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
+}
+// 半透明色疊在底色上的實際顏色
+function blendHex(fg: string, alpha: number, bg: string): string {
+  const p = (h: string, i: number) => parseInt(h.replace('#','').slice(i, i+2), 16) || 0
+  const mix = (i: number) => Math.round(p(fg, i) * alpha + p(bg, i) * (1 - alpha)).toString(16).padStart(2, '0')
+  return `#${mix(0)}${mix(2)}${mix(4)}`
+}
+const PAGE_BASE = '#fdf4ea'
+
+interface ContrastIssue { key: keyof EditorState; label: string; fg: string; bg: string; ratio: number; min: number }
+function checkContrast(e: EditorState): { issues: ContrastIssue[]; imageWarning: boolean } {
+  // 左欄實際底色：頁面底 → 左欄底色 → 漸層（取中間色）→ 文字底板
+  let left = blendHex(e.leftBgColor, e.leftBgOpacity, PAGE_BASE)
+  if (e.gradientEnabled) left = blendHex(blendHex(e.gradientFrom, 0.5, e.gradientTo), e.gradientOpacity, left)
+  if (e.panelStyle !== 'none') left = blendHex(e.panelColor, e.panelOpacity, left)
+  const right = blendHex(e.rightBgColor, e.rightBgOpacity, PAGE_BASE)
+  const c = leftColors(e)
+  const list: Omit<ContrastIssue,'ratio'>[] = [
+    { key: 'yearColor', label: '「年活動」', fg: c.year, bg: left, min: 4.5 },
+    { key: 'title1Color', label: '主標題', fg: c.title1, bg: left, min: 3 },
+    { key: 'title2Color', label: '副標題', fg: c.title2, bg: left, min: 3 },
+    { key: 'monthNumColor', label: '月份數字', fg: c.monthNum, bg: left, min: 3 },
+    { key: 'monthLabelColor', label: '「月份活動表」', fg: c.monthLabel, bg: left, min: 3 },
+    { key: 'leftTextColor', label: '左欄內文', fg: e.leftTextColor, bg: left, min: 4.5 },
+    { key: 'courseTextColor', label: '課程列文字', fg: e.courseTextColor, bg: right, min: 4.5 },
+    { key: 'footerTextColor', label: '底部文字', fg: e.footerTextColor, bg: e.footerBgColor, min: 4.5 },
+  ]
+  const issues = list.map(i => ({ ...i, ratio: contrastRatio(i.fg, i.bg) })).filter(i => i.ratio < i.min)
+  // 底圖清楚可見、左欄又沒有底板時，實際對比取決於圖片內容，無法精準計算
+  const imageWarning = !!e.bgImage && e.bgOpacity > 0.3 && e.panelStyle === 'none' && e.leftBgOpacity < 0.75
+  return { issues, imageWarning }
+}
+
+// ── 從底圖取色 ───────────────────────────────────────────────────
+async function extractPalette(src: string, count = 6): Promise<string[]> {
+  const img = await new Promise<HTMLImageElement>((res, rej) => {
+    const i = new Image(); i.crossOrigin = 'anonymous'
+    i.onload = () => res(i); i.onerror = () => rej(new Error('load failed')); i.src = src
+  })
+  const S = 64
+  const cv = document.createElement('canvas'); cv.width = S; cv.height = S
+  const cx = cv.getContext('2d')!
+  cx.drawImage(img, 0, 0, S, S)
+  const data = cx.getImageData(0, 0, S, S).data // 跨網域且沒開 CORS 的圖會在這裡丟錯
+  const buckets = new Map<number, { r: number; g: number; b: number; n: number }>()
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i+3] < 128) continue
+    const key = ((data[i] >> 4) << 8) | ((data[i+1] >> 4) << 4) | (data[i+2] >> 4)
+    const bk = buckets.get(key) || { r: 0, g: 0, b: 0, n: 0 }
+    bk.r += data[i]; bk.g += data[i+1]; bk.b += data[i+2]; bk.n++
+    buckets.set(key, bk)
+  }
+  const toHex = (v: number) => Math.round(v).toString(16).padStart(2, '0')
+  const sorted = Array.from(buckets.values()).sort((a, b) => b.n - a.n)
+    .map(bk => `#${toHex(bk.r/bk.n)}${toHex(bk.g/bk.n)}${toHex(bk.b/bk.n)}`)
+  const dist = (a: string, b: string) => {
+    const p = (h: string, i: number) => parseInt(h.slice(i, i+2), 16)
+    return Math.hypot(p(a,1)-p(b,1), p(a,3)-p(b,3), p(a,5)-p(b,5))
+  }
+  const out: string[] = []
+  for (const c of sorted) {
+    if (out.every(o => dist(o, c) > 48)) out.push(c)
+    if (out.length >= count) break
+  }
+  return out
+}
+// 由色盤推一組可讀的配色：最鮮豔的當主題色、最深的當品牌列／底部、最淺的當左欄底
+function themeFromPalette(pal: string[], e: EditorState): ThemeValues {
+  const info = pal.map(c => ({ c, ...hexToHsl(c) }))
+  const vivid = [...info].sort((a, b) => (b.s * (1 - Math.abs(b.l - 45) / 55)) - (a.s * (1 - Math.abs(a.l - 45) / 55)))[0]
+  const dark = [...info].sort((a, b) => a.l - b.l)[0]
+  const light = [...info].sort((a, b) => b.l - a.l)[0]
+  const accent = hslToHex(vivid.h, Math.max(45, Math.min(85, vivid.s)), Math.min(48, Math.max(32, vivid.l)))
+  const deep = hslToHex(dark.h, Math.min(45, dark.s), 14)
+  const pale = hslToHex(light.h, Math.min(60, light.s), 96)
+  return {
+    accentColor: accent, brandBgColor: deep, footerBgColor: deep, footerTextColor: '#ffffff',
+    leftBgColor: pale, gradientFrom: hslToHex(vivid.h, Math.min(70, vivid.s), 86), gradientTo: pale,
+    panelColor: pale, patternColor: '',
+    leftTextColor: contrastPrimary(pale), courseTextColor: contrastPrimary(e.rightBgColor),
+    yearColor: '', title1Color: '', title2Color: '', monthNumColor: '', monthLabelColor: '',
+  }
+}
+
 // 左欄標題各行實際使用的顏色（沒有個別設定時沿用原本的主題色／左欄文字色）
 function leftColors(e: EditorState) {
   return {
@@ -514,13 +698,16 @@ function PreviewPage({
         {e.bgImage && (
       <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundImage: `url(${e.bgImage})`, backgroundSize: 'cover', backgroundPosition: orientation === 'portrait' ? `${e.bgPositionXP}% ${e.bgPositionYP}%` : `${e.bgPositionX}% ${e.bgPositionY}%`, opacity: e.bgOpacity }} />
       )}
+        {e.bgImage && e.bgOverlayOpacity > 0 && (
+          <div style={{ position: 'absolute', inset: 0, background: hexToRgba(e.bgOverlayColor, e.bgOverlayOpacity) }} />
+        )}
       </div>
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
         {/* 品牌列 */}
         <div style={{ background: e.brandBgColor, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 22px', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 3, height: 14, background: e.accentColor, borderRadius: 2 }} />
-            <span style={{ color: contrastPrimary(e.brandBgColor), fontWeight: 800, fontSize: 13, letterSpacing: '0.1em' }}>XINDIAN · YANGBEI SOCIAL HOUSING</span>
+            <span style={{ color: contrastPrimary(e.brandBgColor), fontWeight: 800, fontSize: 13, letterSpacing: '0.1em' }}>{e.brandText}</span>
           </div>
           {totalPages > 1 && <span style={{ color: contrastTertiary(e.brandBgColor), fontSize: 12 }}>{pageIdx+1} / {totalPages}</span>}
         </div>
@@ -538,20 +725,20 @@ function PreviewPage({
             {isL && (
               <div style={{ position: 'relative', zIndex: 3, display: 'flex', flexDirection: 'column', flex: 1, ...(panelCss ? { margin: 12, padding: '16px 14px 14px', ...panelCss } : { padding: '18px 20px 16px' }) }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', marginBottom: 8, alignSelf: 'flex-start' }}>
-                  <span style={{ color: c.year, fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', lineHeight: 1 }}>{year} 年活動</span>
+                  <span style={{ color: c.year, fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', lineHeight: 1 }}>{year} {e.yearSuffix}</span>
                 </div>
                 <p style={{ margin: '0 0 2px', fontSize: e.titleFontSize, fontWeight: 900, color: c.title1, lineHeight: 1.25 }}>{e.titleLine1}</p>
                 <p style={{ margin: '4px 0 8px', fontSize: e.subtitleFontSize, fontWeight: 900, color: c.title2, lineHeight: 1.25 }}>{e.titleLine2}</p>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
                   <span style={{ fontSize: e.monthFontSize, fontWeight: 900, color: c.monthNum, lineHeight: 1 }}>{rocMonth}</span>
-                  <span style={{ fontSize: 18, fontWeight: 700, color: c.monthLabel }}>月份活動表</span>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: c.monthLabel }}>{e.monthLabelText}</span>
                 </div>
-                <p style={{ margin: '0 0 2px', fontSize: 12, color: e.leftTextColor, lineHeight: 1.5 }}>各項活動皆歡迎居民們踴躍報名！</p>
-                <p style={{ margin: 0, fontSize: 11, color: e.leftTextColor }}>（數量有限，額滿為止）</p>
+                {e.introLine1 && <p style={{ margin: '0 0 2px', fontSize: 12, color: e.leftTextColor, lineHeight: 1.5 }}>{e.introLine1}</p>}
+                {e.introLine2 && <p style={{ margin: 0, fontSize: 11, color: e.leftTextColor }}>{e.introLine2}</p>}
                 <div style={{ height: e.gapTitleToQr }} />
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <QrBox label="活動報名" color={e.accentColor} imgSrc={e.registrationQrMode === 'upload' && e.registrationQrUpload ? e.registrationQrUpload : QR_API(SITE_URL,200)} sub="線上報名" />
-                  <QrBox label="種子社區大學" color={e.accentColor} imgSrc={e.communityQr} sub="加入社群" />
+                  <QrBox label={e.qr1Label} color={e.accentColor} imgSrc={e.registrationQrMode === 'upload' && e.registrationQrUpload ? e.registrationQrUpload : QR_API(SITE_URL,200)} sub={e.qr1Sub} />
+                  <QrBox label={e.qr2Label} color={e.accentColor} imgSrc={e.communityQr} sub={e.qr2Sub} />
                 </div>
                 <div style={{ height: e.gapQrToContact }} />
                 <div style={{ marginTop: 'auto' }}>
@@ -565,13 +752,13 @@ function PreviewPage({
               <div style={{ position: 'relative', zIndex: 3, display: 'flex', alignItems: 'center', gap: 24, ...(panelCss ? { margin: '14px 18px', padding: '14px 20px', height: 240 - 28, boxSizing: 'border-box', ...panelCss } : { padding: '28px 32px' }) }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'inline-block', marginBottom: 6 }}>
-                    <span style={{ color: c.year, fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', lineHeight: 1.4 }}>{year} 年活動</span>
+                    <span style={{ color: c.year, fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', lineHeight: 1.4 }}>{year} {e.yearSuffix}</span>
                   </div>
                   <p style={{ margin: '0 0 1px', fontSize: e.pTitleFontSize, fontWeight: 900, color: c.title1, lineHeight: 1.2 }}>{e.titleLine1}</p>
                   <p style={{ margin: '0 0 4px', fontSize: e.pSubtitleFontSize, fontWeight: 900, color: c.title2, lineHeight: 1.2 }}>{e.titleLine2}</p>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginBottom: e.pGapMonth }}>
                     <span style={{ fontSize: e.pMonthFontSize, fontWeight: 900, color: c.monthNum, lineHeight: 1 }}>{rocMonth}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: c.monthLabel }}>月份活動表</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: c.monthLabel }}>{e.monthLabelText}</span>
                   </div>
                   {contactItems.map((item,i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginBottom: 2 }}>
@@ -581,15 +768,19 @@ function PreviewPage({
                   ))}
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                 <QrBox label="活動報名" color={e.accentColor} imgSrc={e.registrationQrMode === 'upload' && e.registrationQrUpload ? e.registrationQrUpload : QR_API(SITE_URL,200)} sub="線上報名" />
-                  <QrBox label="種子社區大學" color={e.accentColor} imgSrc={e.communityQr} sub="加入社群" />
+                 <QrBox label={e.qr1Label} color={e.accentColor} imgSrc={e.registrationQrMode === 'upload' && e.registrationQrUpload ? e.registrationQrUpload : QR_API(SITE_URL,200)} sub={e.qr1Sub} />
+                  <QrBox label={e.qr2Label} color={e.accentColor} imgSrc={e.communityQr} sub={e.qr2Sub} />
                 </div>
               </div>
             )}
           </div>
           
           {/* 右側課表 */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: rightBg, backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', minWidth: 0, minHeight: 0 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: rightBg, backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', minWidth: 0, minHeight: 0,
+            ...(e.rightPanelEnabled ? {
+              margin: isL ? '12px 12px 12px 0' : '0 18px 14px', borderRadius: e.panelRadius, overflow: 'hidden',
+              border: '1px solid rgba(255,255,255,0.55)', boxShadow: '0 8px 28px rgba(0,0,0,0.14)',
+            } : {}) }}>
             <div style={{ display: 'grid', gridTemplateColumns: gridCols, background: e.accentColor, flexShrink: 0 }}>
               {colDefs.map(col => (
                 <div key={col.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: contrastPrimary(e.accentColor), fontWeight: 700, fontSize: 14, padding: '13px 6px', textAlign: 'center' }}>{col.label}</div>
@@ -621,7 +812,7 @@ function PreviewPage({
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 6px', textAlign: 'center' }}><span style={{ fontSize: fsLocation, fontWeight: 700, color: e.courseTextColor, lineHeight: 1.4 }}>{course.location}</span></div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', textAlign: 'center' }}><span style={{ fontSize: Math.max(9, fsLocation - 1), fontWeight: 700, color: e.courseTextColor, lineHeight: 1.4 }}>{course.suitable_age||'全年齡'}</span></div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px' }}><span style={{ fontSize: fsFee, fontWeight: 800, color: e.courseTextColor, lineHeight: 1 }}>免費</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px' }}><span style={{ fontSize: fsFee, fontWeight: 800, color: e.courseTextColor, lineHeight: 1 }}>{e.feeText}</span></div>
                   </div>
                 )
               })}
@@ -749,6 +940,9 @@ interface PanelProps {
   handleImgUpload: (key: keyof EditorState) => (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
   activeTab: PanelTab
   setActiveTab: (t: PanelTab) => void
+  customThemes: ThemePreset[]
+  onSaveTheme: (name: string) => void
+  onDeleteTheme: (name: string) => void
 }
 
 // 分頁列（桌機側欄 / 手機底部抽屜共用）
@@ -899,8 +1093,23 @@ function FontSlider({ label, val, min, max, onChange }: { label: string; val: nu
   )
 }
 
-function PanelContent({ editor, set, setEditor, handleImgUpload, activeTab, setActiveTab }: PanelProps): React.ReactElement {
+function PanelContent({ editor, set, setEditor, handleImgUpload, activeTab, setActiveTab, customThemes, onSaveTheme, onDeleteTheme }: PanelProps): React.ReactElement {
   const e = editor
+  const [palette, setPalette] = useState<string[]>([])
+  const [paletteState, setPaletteState] = useState<'idle'|'loading'|'error'>('idle')
+  const contrast = checkContrast(e)
+  const runPalette = async () => {
+    if (!e.bgImage) return
+    setPaletteState('loading')
+    try { setPalette(await extractPalette(e.bgImage)); setPaletteState('idle') }
+    catch { setPalette([]); setPaletteState('error') }
+  }
+  const fixAllContrast = () => setEditor(prev => {
+    const { issues } = checkContrast(prev)
+    const next = { ...prev } as any
+    for (const i of issues) next[i.key] = contrastPrimary(i.bg)
+    return next
+  })
   const layoutTab: 0 | 1 = ((e as any)._layoutTab ?? 0) as 0 | 1 // 0=橫式 1=直式（主視覺字級用）
   const courseLayoutTab: 0 | 1 = ((e as any)._courseLayoutTab ?? 0) as 0 | 1 // 0=橫式 1=直式（課程資訊字級用）
   const mainPreset = (e as any)._mainPreset ?? 'standard'
@@ -936,7 +1145,24 @@ function PanelContent({ editor, set, setEditor, handleImgUpload, activeTab, setA
         </div>
 
         <div>
-          <p className="text-[13px] font-bold text-stone-400 mb-1">2. 主視覺字級</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[13px] font-bold text-stone-400">2. 其他文字</p>
+            <button onClick={() => setEditor(prev => ({ ...prev, ...DEFAULT_COPY }))} className="text-[11px] text-orange-500 hover:text-orange-600">↺ 恢復預設文字</button>
+          </div>
+          <div className="space-y-2">
+            {COPY_FIELDS.map(f => (
+              <div key={f.key}>
+                <label className="block text-xs text-stone-400 mb-1">{f.label}</label>
+                <input value={e[f.key]} onChange={ev => set(f.key, ev.target.value)} placeholder={DEFAULT_COPY[f.key]}
+                  className="w-full border border-stone-200 rounded-lg px-3 py-1.5 text-xs text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300" />
+              </div>
+            ))}
+            <p className="text-[11px] text-stone-400">說明文字留空就不顯示</p>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[13px] font-bold text-stone-400 mb-1">3. 主視覺字級</p>
           <p className="text-[11px] text-stone-400 mb-2">左欄標題與月份資訊</p>
           <div className="flex gap-1 p-1 bg-stone-100 rounded-lg mb-3">
             {(['橫式','直式'] as const).map((t, ti) => (
@@ -966,7 +1192,7 @@ function PanelContent({ editor, set, setEditor, handleImgUpload, activeTab, setA
         </div>
 
         <div>
-          <p className="text-[13px] font-bold text-stone-400 mb-1">3. 課程資訊字級</p>
+          <p className="text-[13px] font-bold text-stone-400 mb-1">4. 課程資訊字級</p>
           <p className="text-[11px] text-stone-400 mb-2">表格內各欄位文字</p>
           <div className="flex gap-1 p-1 bg-stone-100 rounded-lg mb-3">
             {(['橫式','直式'] as const).map((t, ti) => (
@@ -999,7 +1225,7 @@ function PanelContent({ editor, set, setEditor, handleImgUpload, activeTab, setA
         </div>
 
         <div>
-          <p className="text-[13px] font-bold text-stone-400 mb-3">4. 間距</p>
+          <p className="text-[13px] font-bold text-stone-400 mb-3">5. 間距</p>
           {[
             { key:'gapTitleToQr' as const, label:'標題 → QR Code', val:e.gapTitleToQr, min:0, max:60 },
             { key:'gapQrToContact' as const, label:'QR Code → 聯繫資訊', val:e.gapQrToContact, min:0, max:40 },
@@ -1016,7 +1242,64 @@ function PanelContent({ editor, set, setEditor, handleImgUpload, activeTab, setA
       {/* ══════════ 色彩 Tab ══════════ */}
       {activeTab === '色彩' && (<>
         <div>
-          <p className="text-[13px] font-bold text-stone-400 mb-1">1. 顏色</p>
+          <p className="text-[13px] font-bold text-stone-400 mb-1">1. 主題組合</p>
+          <p className="text-[11px] text-stone-400 mb-2">一鍵換整組配色、圖樣與底板；不會改到標題文字、QR 與 Logo</p>
+          <div className="grid grid-cols-2 gap-1.5">
+            {[...BUILTIN_THEMES, ...customThemes].map(t => {
+              const v = applyTheme(e, t)
+              return (
+                <div key={(t.builtin ? 'b:' : 'c:') + t.name} className="relative group">
+                  <button onClick={() => setEditor(prev => applyTheme(prev, t))}
+                    className="w-full flex items-center gap-1.5 rounded-lg border border-stone-200 hover:border-orange-300 px-2 py-1.5 text-left">
+                    <span className="flex shrink-0">
+                      {[v.brandBgColor, v.accentColor, v.leftBgColor].map((col, i) => (
+                        <span key={i} style={{ width: 10, height: 18, background: col, borderRadius: i === 0 ? '4px 0 0 4px' : i === 2 ? '0 4px 4px 0' : 0, border: '1px solid rgba(0,0,0,0.06)' }} />
+                      ))}
+                    </span>
+                    <span className="text-[11px] text-stone-600 truncate">{t.name}</span>
+                  </button>
+                  {!t.builtin && (
+                    <button onClick={() => { if (confirm(`刪除主題「${t.name}」？`)) onDeleteTheme(t.name) }} title="刪除"
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-stone-500 text-white text-[10px] leading-4 text-center opacity-100 md:opacity-0 md:group-hover:opacity-100">×</button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          <button onClick={() => { const n = prompt('幫這組樣式取個名字（例如：12 月聖誕）')?.trim(); if (n) onSaveTheme(n) }}
+            className="mt-2 w-full border border-dashed border-stone-300 hover:border-orange-300 rounded-lg py-1.5 text-xs text-stone-500">
+            ＋ 把目前樣式存成主題
+          </button>
+        </div>
+
+        <div>
+          <p className="text-[13px] font-bold text-stone-400 mb-2">2. 對比度檢查</p>
+          {contrast.issues.length === 0 && !contrast.imageWarning ? (
+            <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-2.5 py-2 text-[11px] text-emerald-700">✓ 各區文字與底色的對比都夠清楚</div>
+          ) : (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-2.5 py-2 space-y-1.5">
+              {contrast.issues.map(i => (
+                <div key={i.key} className="flex items-center gap-2">
+                  <span style={{ width: 22, height: 16, borderRadius: 4, background: i.bg, color: i.fg, fontSize: 10, fontWeight: 800, lineHeight: '16px', textAlign: 'center', border: '1px solid rgba(0,0,0,0.1)' }}>字</span>
+                  <span className="flex-1 text-[11px] text-amber-800">{i.label} 對比 {i.ratio.toFixed(1)}（建議 ≥ {i.min}）</span>
+                  <button onClick={() => set(i.key, contrastPrimary(i.bg))} className="text-[11px] font-bold text-orange-600">修正</button>
+                </div>
+              ))}
+              {contrast.issues.length > 1 && (
+                <button onClick={fixAllContrast} className="w-full mt-1 py-1 rounded-md bg-white border border-amber-300 text-[11px] font-bold text-orange-600">全部自動修正</button>
+              )}
+              {contrast.imageWarning && (
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <span className="text-[11px] text-amber-800">底圖清楚可見又沒有底板，左欄文字可能被圖案干擾</span>
+                  <button onClick={() => set('panelStyle', 'glass')} className="text-[11px] font-bold text-orange-600 whitespace-nowrap">加毛玻璃</button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <p className="text-[13px] font-bold text-stone-400 mb-1">3. 顏色</p>
           <p className="text-[11px] text-stone-400 mb-2">「左欄文字色」「課程列文字色」是各自區塊統一使用的單一文字顏色，換底色時記得一起調整</p>
           <div className="space-y-2.5">
             {[
@@ -1032,7 +1315,7 @@ function PanelContent({ editor, set, setEditor, handleImgUpload, activeTab, setA
         </div>
 
         <div>
-          <p className="text-[13px] font-bold text-stone-400 mb-3">2. 欄位透明度</p>
+          <p className="text-[13px] font-bold text-stone-400 mb-3">4. 欄位透明度</p>
           {[
             { key:'leftBgOpacity' as const, label:'左欄', val:e.leftBgOpacity },
             { key:'rightBgOpacity' as const, label:'右欄', val:e.rightBgOpacity },
@@ -1046,7 +1329,7 @@ function PanelContent({ editor, set, setEditor, handleImgUpload, activeTab, setA
         </div>
 
         <div>
-          <p className="text-[13px] font-bold text-stone-400 mb-1">3. 左欄文字底板</p>
+          <p className="text-[13px] font-bold text-stone-400 mb-1">5. 文字底板與卡片</p>
           <p className="text-[11px] text-stone-400 mb-2">放了底圖或花紋後文字看不清楚時，在文字後面墊一塊毛玻璃或色塊</p>
           <div className="flex gap-1 p-1 bg-stone-100 rounded-lg mb-3">
             {([['none','無'],['glass','毛玻璃'],['solid','純色']] as const).map(([v, label]) => (
@@ -1070,14 +1353,20 @@ function PanelContent({ editor, set, setEditor, handleImgUpload, activeTab, setA
                 {e.panelStyle === 'glass' && (
                   <RangeRow label="模糊程度" value={e.panelBlur} display={`${e.panelBlur}px`} min={0} max={30} step={1} onChange={v => set('panelBlur', v)} />
                 )}
-                <RangeRow label="圓角" value={e.panelRadius} display={`${e.panelRadius}px`} min={0} max={32} step={1} onChange={v => set('panelRadius', v)} />
               </div>
             </div>
+          )}
+          <label className="flex items-center justify-between mt-2 mb-2 cursor-pointer">
+            <span className="text-xs text-stone-500">右側課表也做成圓角卡片</span>
+            <input type="checkbox" checked={e.rightPanelEnabled} onChange={ev => set('rightPanelEnabled', ev.target.checked)} className="accent-orange-500 w-4 h-4" />
+          </label>
+          {(e.panelStyle !== 'none' || e.rightPanelEnabled) && (
+            <RangeRow label="圓角" value={e.panelRadius} display={`${e.panelRadius}px`} min={0} max={32} step={1} onChange={v => set('panelRadius', v)} />
           )}
         </div>
 
         <div>
-          <p className="text-[13px] font-bold text-stone-400 mb-1">4. 左欄標題文字色</p>
+          <p className="text-[13px] font-bold text-stone-400 mb-1">6. 左欄標題文字色</p>
           <p className="text-[11px] text-stone-400 mb-2">每一行可以各自設定，不跟著主題色變動；沒設定時沿用預設</p>
           <div className="space-y-2">
             <OptionalColorPicker label="「○○ 年活動」" value={e.yearColor} fallback={e.accentColor} fallbackLabel="主題色" onChange={v => set('yearColor', v)} />
@@ -1089,7 +1378,7 @@ function PanelContent({ editor, set, setEditor, handleImgUpload, activeTab, setA
         </div>
 
         <div>
-          <p className="text-[13px] font-bold text-stone-400 mb-3">5. 左欄 Pattern</p>
+          <p className="text-[13px] font-bold text-stone-400 mb-3">7. 左欄 Pattern</p>
           <div className="grid grid-cols-5 gap-1.5 mb-3">
             {([{ id: 'none', label: '無' }, ...PATTERNS, { id: 'custom', label: '自訂' }] as { id: PatternType; label: string }[]).map(p => {
               const def = PATTERNS.find(d => d.id === p.id)
@@ -1143,7 +1432,7 @@ function PanelContent({ editor, set, setEditor, handleImgUpload, activeTab, setA
 
         <div>
           <div className="flex items-center justify-between mb-3">
-            <p className="text-[13px] font-bold text-stone-400">6. 左欄漸層</p>
+            <p className="text-[13px] font-bold text-stone-400">8. 左欄漸層</p>
             <button onClick={() => set('gradientEnabled', !e.gradientEnabled)}
               className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${e.gradientEnabled?'bg-orange-500':'bg-stone-200'}`}>
               <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${e.gradientEnabled?'translate-x-5':'translate-x-0.5'}`} />
@@ -1193,6 +1482,40 @@ function PanelContent({ editor, set, setEditor, handleImgUpload, activeTab, setA
             <input type="range" min="0" max="1" step="0.05" value={e.bgOpacity}
               onChange={ev => set('bgOpacity', parseFloat(ev.target.value))} className="w-full accent-orange-500" />
           </div>
+          {e.bgImage && (
+            <div className="mt-2.5">
+              <p className="text-xs text-stone-500 font-medium mb-1.5">底圖遮罩（讓整張海報文字更好讀）</p>
+              <div className="flex gap-1 p-1 bg-stone-100 rounded-lg mb-2">
+                {([['#000000','暗化'],['#ffffff','淡化']] as const).map(([col, label]) => (
+                  <button key={col} onClick={() => set('bgOverlayColor', col)}
+                    className={`flex-1 py-1 rounded-md text-xs font-medium transition-colors ${e.bgOverlayColor === col ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400'}`}>{label}</button>
+                ))}
+              </div>
+              <ColorPicker label="遮罩顏色" value={e.bgOverlayColor} onChange={v => set('bgOverlayColor', v)} />
+              <div className="pt-2">
+                <RangeRow label="遮罩強度" value={e.bgOverlayOpacity} display={`${Math.round(e.bgOverlayOpacity*100)}%`} min={0} max={0.8} step={0.05} onChange={v => set('bgOverlayOpacity', v)} />
+              </div>
+              <p className="text-xs text-stone-500 font-medium mt-2 mb-1.5">從底圖取色</p>
+              <button onClick={runPalette} disabled={paletteState === 'loading'}
+                className="w-full border border-stone-200 hover:border-orange-300 rounded-lg py-1.5 text-xs text-stone-600">
+                {paletteState === 'loading' ? '分析中…' : palette.length ? '重新取色' : '🎨 分析底圖顏色'}
+              </button>
+              {paletteState === 'error' && <p className="mt-1 text-[11px] text-red-500">這張圖無法讀取顏色（可能是外部網址不允許跨網域），請改用上傳的圖片</p>}
+              {palette.length > 0 && (
+                <div className="mt-2 space-y-2">
+                  <div className="flex gap-1.5">
+                    {palette.map(col => (
+                      <button key={col} onClick={() => set('accentColor', col)} title={`設為主題色 ${col}`}
+                        style={{ flex: 1, height: 26, borderRadius: 6, background: col, border: e.accentColor === col ? '2px solid #f97316' : '1px solid rgba(0,0,0,0.1)' }} />
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-stone-400">點色塊設為主題色，或一鍵套用整組推薦配色</p>
+                  <button onClick={() => setEditor(prev => ({ ...prev, ...themeFromPalette(palette, prev) }))}
+                    className="w-full py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold">套用推薦配色</button>
+                </div>
+              )}
+            </div>
+          )}
           <div className="mt-3 space-y-3">
             <div>
               <p className="text-xs text-stone-500 font-medium mb-1.5">橫式位置</p>
@@ -1326,6 +1649,69 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
   const [saving, setSaving] = useState(false)
   const [savedOk, setSavedOk] = useState(false)
   const [editor, setEditor] = useState<EditorState>(DEFAULT_EDITOR)
+  const [customThemes, setCustomThemes] = useState<ThemePreset[]>(() => {
+    try { const arr = JSON.parse(ss.schedule_theme_presets || '[]'); return Array.isArray(arr) ? arr.filter(t => t && t.name && t.values) : [] }
+    catch { return [] }
+  })
+
+  // ── 復原／重做：編輯停下 350ms 記一筆快照（底線開頭的是面板 UI 狀態，不列入）──
+  const histRef = useRef<{ stack: EditorState[]; idx: number; skip: boolean }>({ stack: [], idx: -1, skip: false })
+  const [, setHistTick] = useState(0)
+  const stripUi = (st: EditorState) => JSON.stringify(Object.fromEntries(Object.entries(st).filter(([k]) => !k.startsWith('_'))))
+  useEffect(() => {
+    if (step !== 'editor') return
+    const h = histRef.current
+    if (h.skip) { h.skip = false; return }
+    const t = setTimeout(() => {
+      const cur = h.stack[h.idx]
+      if (cur && stripUi(cur) === stripUi(editor)) return
+      h.stack = h.stack.slice(0, h.idx + 1)
+      h.stack.push(editor)
+      if (h.stack.length > 80) h.stack.shift()
+      h.idx = h.stack.length - 1
+      setHistTick(x => x + 1)
+    }, 350)
+    return () => clearTimeout(t)
+  }, [editor, step])
+  const canUndo = histRef.current.idx > 0
+  const canRedo = histRef.current.idx < histRef.current.stack.length - 1
+  const jumpHistory = useCallback((delta: number) => {
+    const h = histRef.current
+    const next = h.idx + delta
+    if (next < 0 || next >= h.stack.length) return
+    h.idx = next; h.skip = true
+    const snap = h.stack[next]
+    setEditor(prev => ({ ...snap, ...Object.fromEntries(Object.entries(prev).filter(([k]) => k.startsWith('_'))) }))
+    setHistTick(x => x + 1)
+  }, [])
+  useEffect(() => {
+    if (step !== 'editor') return
+    const onKey = (ev: KeyboardEvent) => {
+      const tag = (ev.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if (!(ev.metaKey || ev.ctrlKey)) return
+      const k = ev.key.toLowerCase()
+      if (k === 'z' && !ev.shiftKey) { ev.preventDefault(); jumpHistory(-1) }
+      else if ((k === 'z' && ev.shiftKey) || k === 'y') { ev.preventDefault(); jumpHistory(1) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [step, jumpHistory])
+  // 恢復預設樣式：外觀與字級回到預設，保留標題／文案、QR、Logo、聯絡資訊與底圖（可再按復原）
+  const resetStyle = () => {
+    if (!confirm('把配色、圖樣、底板與字級恢復成預設值？\n（標題文字、QR、Logo、聯絡資訊與底圖會保留，之後也可以按「復原」）')) return
+    const keep: (keyof EditorState)[] = ['bgImage','bgPositionX','bgPositionY','bgPositionXP','bgPositionYP','communityQr',
+      'logo1','logo1Name','logo2','logo2Name','logo3','logo3Name','phone','contact','hours','titleLine1','titleLine2',
+      'registrationQrMode','registrationQrUpload', ...(Object.keys(DEFAULT_COPY) as CopyKey[])]
+    setEditor(prev => {
+      const next: any = { ...DEFAULT_EDITOR }
+      for (const k of keep) next[k] = prev[k]
+      for (const [k, v] of Object.entries(prev)) if (k.startsWith('_')) next[k] = v
+      next.leftTextColor = contrastPrimary(next.leftBgColor)
+      next.courseTextColor = contrastPrimary(next.rightBgColor)
+      return next
+    })
+  }
   const [showMobilePanel, setShowMobilePanel] = useState(false)
   const [activePanelTab, setActivePanelTab] = useState<PanelTab>('文字')
   const [exportScale, setExportScale] = useState<2 | 3>(3)
@@ -1429,6 +1815,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
   const totalPages = Math.ceil(monthCourses.length / rowsPerPage) || 1
 
   const initEditor = () => {
+    histRef.current = { stack: [], idx: -1, skip: false }
     // 0 也是合法值（例如圓角 0、模糊 0），不能用 `|| 預設值`
     const num = (v: string | undefined, d: number) => (v == null || v === '' || isNaN(Number(v))) ? d : Number(v)
     const initLeftBg = ss.schedule_left_bg_color || '#fff7ed'
@@ -1459,6 +1846,10 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
       title2Color: ss.schedule_title2_color || '',
       monthNumColor: ss.schedule_month_num_color || '',
       monthLabelColor: ss.schedule_month_label_color || '',
+      bgOverlayColor: ss.schedule_bg_overlay_color || '#000000',
+      bgOverlayOpacity: num(ss.schedule_bg_overlay_opacity, 0),
+      rightPanelEnabled: ss.schedule_right_panel === 'true',
+      ...Object.fromEntries(COPY_FIELDS.map(f => [f.key, ss[f.ss] !== undefined && ss[f.ss] !== null ? ss[f.ss] : DEFAULT_COPY[f.key]])),
       gradientEnabled: ss.schedule_gradient_enabled !== 'false',
       gradientDir: (ss.schedule_gradient_dir as GradientDir) || 'to-b',
       gradientFrom: ss.schedule_gradient_from || '#fed7aa',
@@ -1522,6 +1913,29 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
     }
   }, [set, supabase])
 
+  const postScheduleSettings = async (toSave: Record<string, string>) => {
+    const raw = localStorage.getItem('admin_auth')
+    const token = raw ? JSON.parse(raw).token : ''
+    const res = await fetch('/api/admin/save-schedule-settings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+      body: JSON.stringify({ settings: Object.entries(toSave).map(([key,value]) => ({ key, value })) }),
+    })
+    if (!res.ok) throw new Error(`save failed: ${res.status}`)
+  }
+
+  // 自訂主題直接寫進 site_settings（不必再按儲存），所有管理員共用
+  const persistThemes = async (list: ThemePreset[]) => {
+    setCustomThemes(list)
+    try { await postScheduleSettings({ schedule_theme_presets: JSON.stringify(list.map(({ name, values }) => ({ name, values }))) }) }
+    catch (err) { console.error(err); alert('主題儲存失敗，請稍後再試') }
+  }
+  const saveTheme = (name: string) => {
+    const exists = customThemes.some(t => t.name === name)
+    if (exists && !confirm(`已經有「${name}」，要覆蓋嗎？`)) return
+    persistThemes([...customThemes.filter(t => t.name !== name), { name, values: pickTheme(editor) }])
+  }
+  const deleteTheme = (name: string) => persistThemes(customThemes.filter(t => t.name !== name))
+
   const saveSettings = async () => {
     setSaving(true)
     const toSave: Record<string,string> = {
@@ -1537,6 +1951,9 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
       schedule_year_color: editor.yearColor, schedule_title1_color: editor.title1Color,
       schedule_title2_color: editor.title2Color, schedule_month_num_color: editor.monthNumColor,
       schedule_month_label_color: editor.monthLabelColor,
+      schedule_bg_overlay_color: editor.bgOverlayColor, schedule_bg_overlay_opacity: String(editor.bgOverlayOpacity),
+      schedule_right_panel: String(editor.rightPanelEnabled),
+      ...Object.fromEntries(COPY_FIELDS.map(f => [f.ss, editor[f.key]])),
       schedule_gradient_enabled: String(editor.gradientEnabled), schedule_gradient_dir: editor.gradientDir,
       schedule_gradient_from: editor.gradientFrom, schedule_gradient_to: editor.gradientTo,
       schedule_gradient_opacity: String(editor.gradientOpacity),
@@ -1581,12 +1998,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
       schedule_course_text_color: editor.courseTextColor,
     }
 
-    const raw = localStorage.getItem('admin_auth')
-    const token = raw ? JSON.parse(raw).token : ''
-    await fetch('/api/admin/save-schedule-settings', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-      body: JSON.stringify({ settings: Object.entries(toSave).map(([key,value]) => ({ key, value })) }),
-    })
+    try { await postScheduleSettings(toSave) }
+    catch (err) { console.error(err); setSaving(false); alert('儲存失敗，請稍後再試'); return }
     setSaving(false); setSavedOk(true); setTimeout(() => setSavedOk(false), 2500)
   }
   
@@ -1698,6 +2111,10 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         ctx.globalAlpha = 1
         ctx.restore()
       } catch {}
+      if (e.bgOverlayOpacity > 0) {
+        ctx.fillStyle = hexToRgba(e.bgOverlayColor, e.bgOverlayOpacity)
+        ctx.fillRect(0, 0, W, H)
+      }
     }
 
     // ── 左欄背景 ──
@@ -1788,8 +2205,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         e.hours ? `時間：${e.hours}` : '',
       ].filter(Boolean)
       const qrItems = [
-        { label: '活動報名', color: e.accentColor, src: e.registrationQrMode === 'upload' && e.registrationQrUpload ? e.registrationQrUpload : `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(SITE_URL)}`, sub: '線上報名' },
-        { label: '種子社區大學', color: e.accentColor, src: e.communityQr, sub: '加入社群' },
+        { label: e.qr1Label, color: e.accentColor, src: e.registrationQrMode === 'upload' && e.registrationQrUpload ? e.registrationQrUpload : `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(SITE_URL)}`, sub: e.qr1Sub },
+        { label: e.qr2Label, color: e.accentColor, src: e.communityQr, sub: e.qr2Sub },
       ]
 
       if (isLandscape) {
@@ -1797,7 +2214,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         let cy = leftTop + 18
 
         ctx.font = font(10, 800); ctx.fillStyle = lc.year
-        ctx.fillText(`${rocYear} 年活動`, PAD_X, cy + 10); cy += 24
+        ctx.fillText(`${rocYear} ${e.yearSuffix}`, PAD_X, cy + 10); cy += 24
 
         ctx.font = font(e.titleFontSize, 900); ctx.fillStyle = lc.title1
         const title1Lines = wrapText(ctx, e.titleLine1, LEFT_W - PAD_X * 2)
@@ -1818,13 +2235,13 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         const monthW = ctx.measureText(monthStr).width
         ctx.fillText(monthStr, PAD_X, cy + e.monthFontSize)
         ctx.font = font(18, 700); ctx.fillStyle = lc.monthLabel
-        ctx.fillText('月份活動表', PAD_X + monthW + 6, cy + e.monthFontSize)
+        ctx.fillText(e.monthLabelText, PAD_X + monthW + 6, cy + e.monthFontSize)
         cy += e.monthFontSize * 1.2
 
         ctx.font = font(12, 400); ctx.fillStyle = e.leftTextColor
-        ctx.fillText('各項活動皆歡迎居民們踴躍報名！', PAD_X, cy + 14); cy += 20
+        if (e.introLine1) { ctx.fillText(e.introLine1, PAD_X, cy + 14); cy += 20 }
         ctx.font = font(11, 400); ctx.fillStyle = e.leftTextColor
-        ctx.fillText('（數量有限，額滿為止）', PAD_X, cy + 13); cy += 20
+        if (e.introLine2) { ctx.fillText(e.introLine2, PAD_X, cy + 13); cy += 20 }
 
         cy += e.gapTitleToQr
 
@@ -1876,7 +2293,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
 
         // 左側文字區
         ctx.font = font(9, 800); ctx.fillStyle = lc.year
-        ctx.fillText(`${rocYear} 年活動`, PAD_X, cy + 9); cy += 20
+        ctx.fillText(`${rocYear} ${e.yearSuffix}`, PAD_X, cy + 9); cy += 20
 
         ctx.font = font(e.pTitleFontSize, 900); ctx.fillStyle = lc.title1
         ctx.fillText(e.titleLine1, PAD_X, cy + e.pTitleFontSize); cy += e.pTitleFontSize * 1.3
@@ -1890,7 +2307,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         const monthW = ctx.measureText(monthStr).width
         ctx.fillText(monthStr, PAD_X, cy + e.pMonthFontSize)
         ctx.font = font(12, 700); ctx.fillStyle = lc.monthLabel
-        ctx.fillText('月份活動表', PAD_X + monthW + 4, cy + e.pMonthFontSize)
+        ctx.fillText(e.monthLabelText, PAD_X + monthW + 4, cy + e.pMonthFontSize)
         cy += e.pMonthFontSize * 1.2 + e.pGapMonth
 
         for (const item of contactItems) {
@@ -2028,7 +2445,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
           ctx.fillText(course.suitable_age || '全年齡', col.x + col.w/2, cy + 5)
         } else if (ci === 6) {
           ctx.font = font(fsFee, 800); ctx.fillStyle = e.courseTextColor
-          ctx.fillText('免費', col.x + col.w/2, cy + 5)
+          ctx.fillText(e.feeText, col.x + col.w/2, cy + 5)
         }
         ctx.textAlign = 'left'
       }
@@ -2041,7 +2458,7 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
     ctx.fillRect(22, (BRAND_H-14)/2, 3, 14)
     ctx.font = font(13, 800); ctx.fillStyle = contrastPrimary(e.brandBgColor)
     ctx.letterSpacing = '0.1em'
-    ctx.fillText('XINDIAN · YANGBEI SOCIAL HOUSING', 38, BRAND_H/2 + 5)
+    ctx.fillText(e.brandText, 38, BRAND_H/2 + 5)
     ctx.letterSpacing = '0'
     if (totalPgs > 1) {
       ctx.font = font(12, 400); ctx.fillStyle = contrastTertiary(e.brandBgColor)
@@ -2230,6 +2647,20 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
         <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center rounded-xl border border-stone-200 overflow-hidden">
+            <button onClick={() => jumpHistory(-1)} disabled={!canUndo} title="復原（Ctrl/⌘+Z）" aria-label="復原"
+              className="p-2 text-stone-600 hover:bg-stone-100 disabled:text-stone-300 disabled:hover:bg-transparent">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+            </button>
+            <button onClick={() => jumpHistory(1)} disabled={!canRedo} title="重做（Ctrl/⌘+Shift+Z）" aria-label="重做"
+              className="p-2 text-stone-600 hover:bg-stone-100 disabled:text-stone-300 disabled:hover:bg-transparent border-l border-stone-200">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>
+            </button>
+            <button onClick={resetStyle} title="恢復預設樣式" aria-label="恢復預設樣式"
+              className="p-2 text-stone-600 hover:bg-stone-100 border-l border-stone-200">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+            </button>
+          </div>
           <button onClick={saveSettings} disabled={saving}
             className="flex items-center gap-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 px-3 py-2 rounded-xl text-sm font-medium border border-stone-200 transition-colors">
             {saving
@@ -2260,7 +2691,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
           className="hidden md:flex md:flex-col w-64 bg-white border-r border-stone-200"
           style={{ flex: '0 0 256px', alignSelf: 'stretch', minHeight: 0 }}
         >
-          <PanelContent editor={editor} set={set} setEditor={setEditor} handleImgUpload={handleImgUpload} activeTab={activePanelTab} setActiveTab={setActivePanelTab} />
+          <PanelContent editor={editor} set={set} setEditor={setEditor} handleImgUpload={handleImgUpload} activeTab={activePanelTab} setActiveTab={setActivePanelTab}
+            customThemes={customThemes} onSaveTheme={saveTheme} onDeleteTheme={deleteTheme} />
         </div>
         <div className="flex-1 relative bg-stone-100" style={{ minWidth: 0 }}>
           {/* 外層 flex + 內層 m-auto：放大超過畫面時仍可完整捲動到上/左邊緣，不會像 justify-center 那樣被裁掉 */}
@@ -2305,7 +2737,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
             <div className="flex items-center justify-center pt-2 pb-1 shrink-0">
               <div className="w-9 h-1 rounded-full bg-stone-200" />
             </div>
-            <PanelContent editor={editor} set={set} setEditor={setEditor} handleImgUpload={handleImgUpload} activeTab={activePanelTab} setActiveTab={setActivePanelTab} />
+            <PanelContent editor={editor} set={set} setEditor={setEditor} handleImgUpload={handleImgUpload} activeTab={activePanelTab} setActiveTab={setActivePanelTab}
+            customThemes={customThemes} onSaveTheme={saveTheme} onDeleteTheme={deleteTheme} />
             <div className="flex gap-3 px-4 pt-3 pb-4 border-t border-stone-200 shrink-0">
               <button onClick={saveSettings} disabled={saving}
                 className="flex-1 flex items-center justify-center gap-1.5 bg-orange-50 border-[1.5px] border-orange-500 text-orange-600 font-bold py-2.5 rounded-xl text-sm">
