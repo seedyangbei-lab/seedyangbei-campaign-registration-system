@@ -112,7 +112,12 @@ function contrastTertiary(bgHex: string): string {
 }
 
 type Orientation = 'landscape'|'portrait'
-type PatternType = 'none'|'dots'|'lines'|'grid'|'waves'|'diamonds'
+type PatternType =
+  | 'none' | 'dots' | 'polka' | 'lines' | 'stripes' | 'grid' | 'crosses' | 'plaid' | 'checker'
+  | 'waves' | 'zigzag' | 'diamonds' | 'triangles' | 'hexagons' | 'circles' | 'scales'
+  | 'bricks' | 'sparkles' | 'confetti' | 'custom'
+// 左欄文字底板：none=無、glass=毛玻璃、solid=純色（皆可調透明度與圓角）
+type PanelStyle = 'none'|'glass'|'solid'
 type GradientDir = 'to-b'|'to-r'|'to-br'
 
 interface EditorState {
@@ -120,6 +125,14 @@ interface EditorState {
   accentColor: string; brandBgColor: string
   leftBgColor: string; leftBgOpacity: number
   patternType: PatternType; patternOpacity: number
+  patternColor: string        // '' = 跟隨主題色
+  patternScale: number        // 圖樣縮放倍率
+  patternCustom: string       // 自訂圖樣（上傳圖片網址／貼上的 SVG data URI）
+  panelStyle: PanelStyle; panelColor: string; panelOpacity: number
+  panelBlur: number; panelRadius: number
+  // 左欄標題各自的文字色，'' = 沿用預設（主題色或左欄文字色）
+  yearColor: string; title1Color: string; title2Color: string
+  monthNumColor: string; monthLabelColor: string
   gradientEnabled: boolean; gradientDir: GradientDir
   gradientFrom: string; gradientTo: string; gradientOpacity: number
   rightBgColor: string; rightBgOpacity: number
@@ -168,6 +181,9 @@ const DEFAULT_EDITOR: EditorState = {
   accentColor: '#f97316', brandBgColor: '#1c1917',
   leftBgColor: '#fff7ed', leftBgOpacity: 0.95,
   patternType: 'dots', patternOpacity: 0.12,
+  patternColor: '', patternScale: 1, patternCustom: '',
+  panelStyle: 'glass', panelColor: '#ffffff', panelOpacity: 0.6, panelBlur: 12, panelRadius: 16,
+  yearColor: '', title1Color: '', title2Color: '', monthNumColor: '', monthLabelColor: '',
   gradientEnabled: true, gradientDir: 'to-b',
   gradientFrom: '#fed7aa', gradientTo: '#fff7ed', gradientOpacity: 0.6,
   rightBgColor: '#ffffff', rightBgOpacity: 0.92,
@@ -286,18 +302,127 @@ function ColorPicker({ value, onChange, label }: { value: string; onChange: (v: 
   )
 }
 
-function getSvgPattern(type: PatternType, color: string, opacity: number): string {
-  if (type === 'none') return ''
-  const c = encodeURIComponent(color)
-  const o = opacity
-  const patterns: Record<Exclude<PatternType,'none'>, string> = {
-    dots:     `<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='2' fill='${c}' opacity='${o}'/></svg>`,
-    lines:    `<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><line x1='0' y1='0' x2='20' y2='20' stroke='${c}' stroke-width='1.2' opacity='${o}'/></svg>`,
-    grid:     `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24'><path d='M 24 0 L 0 0 0 24' fill='none' stroke='${c}' stroke-width='0.8' opacity='${o}'/></svg>`,
-    waves:    `<svg xmlns='http://www.w3.org/2000/svg' width='40' height='16'><path d='M0 8 Q10 0 20 8 Q30 16 40 8' fill='none' stroke='${c}' stroke-width='1.2' opacity='${o}'/></svg>`,
-    diamonds: `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24'><rect x='12' y='0' width='8.5' height='8.5' transform='rotate(45 12 4.25)' fill='none' stroke='${c}' stroke-width='0.8' opacity='${o}'/></svg>`,
+// 可「跟隨預設色」的色盤：沒設定時顯示預設色，按「重設」回到跟隨
+function OptionalColorPicker({ value, fallback, fallbackLabel, onChange, label }: {
+  value: string; fallback: string; fallbackLabel: string; onChange: (v: string) => void; label: string
+}) {
+  return (
+    <div>
+      <ColorPicker label={label} value={value || fallback} onChange={onChange} />
+      <div className="flex justify-end -mt-0.5">
+        {value
+          ? <button onClick={() => onChange('')} className="text-[11px] text-orange-500 hover:text-orange-600">↺ 改回跟隨{fallbackLabel}</button>
+          : <span className="text-[11px] text-stone-400">目前跟隨{fallbackLabel}</span>}
+      </div>
+    </div>
+  )
+}
+
+function RangeRow({ label, value, display, min, max, step, onChange }: {
+  label: string; value: number; display: string; min: number; max: number; step: number; onChange: (v: number) => void
+}) {
+  return (
+    <div className="mb-2.5">
+      <label className="text-xs text-stone-400">{label} {display}</label>
+      <input type="range" min={min} max={max} step={step} value={value}
+        onChange={ev => onChange(parseFloat(ev.target.value))} className="w-full accent-orange-500" />
+    </div>
+  )
+}
+
+// ── 左欄圖樣（Pattern）──────────────────────────────────────────────
+// 每個圖樣是一塊可無縫重複的 SVG 小磚（tile），預覽（CSS 背景）與備援 canvas 匯出共用同一份定義，
+// 不會再出現預覽和下載長得不一樣的狀況。c = 圖樣顏色（未編碼的 hex）
+interface PatternDef { id: Exclude<PatternType,'none'|'custom'>; label: string; w: number; h: number; body: (c: string) => string }
+const PATTERNS: PatternDef[] = [
+  { id: 'dots',      label: '圓點',   w: 20, h: 20, body: c => `<circle cx='10' cy='10' r='2' fill='${c}'/>` },
+  { id: 'polka',     label: '交錯大圓點', w: 28, h: 28, body: c => `<circle cx='7' cy='7' r='3.2' fill='${c}'/><circle cx='21' cy='21' r='3.2' fill='${c}'/>` },
+  { id: 'lines',     label: '斜線',   w: 20, h: 20, body: c => `<path d='M-5 5L5-5M0 20L20 0M15 25L25 15' stroke='${c}' stroke-width='1.2'/>` },
+  { id: 'stripes',   label: '橫條紋', w: 20, h: 12, body: c => `<rect x='0' y='0' width='20' height='4' fill='${c}'/>` },
+  { id: 'grid',      label: '網格',   w: 24, h: 24, body: c => `<path d='M24 0.5H0.5V24' fill='none' stroke='${c}' stroke-width='0.8'/>` },
+  { id: 'crosses',   label: '十字',   w: 24, h: 24, body: c => `<path d='M12 7v10M7 12h10' stroke='${c}' stroke-width='1.6' stroke-linecap='round'/>` },
+  { id: 'plaid',     label: '格紋布', w: 40, h: 40, body: c => `<rect x='0' y='0' width='40' height='14' fill='${c}' opacity='0.45'/><rect x='0' y='0' width='14' height='40' fill='${c}' opacity='0.45'/><path d='M0 27H40M27 0V40' stroke='${c}' stroke-width='1'/>` },
+  { id: 'checker',   label: '棋盤格', w: 24, h: 24, body: c => `<rect x='0' y='0' width='12' height='12' fill='${c}'/><rect x='12' y='12' width='12' height='12' fill='${c}'/>` },
+  { id: 'waves',     label: '波浪',   w: 40, h: 16, body: c => `<path d='M0 8Q10 0 20 8T40 8' fill='none' stroke='${c}' stroke-width='1.2'/>` },
+  { id: 'zigzag',    label: '鋸齒',   w: 24, h: 12, body: c => `<path d='M0 10L6 2L12 10L18 2L24 10' fill='none' stroke='${c}' stroke-width='1.2' stroke-linejoin='round'/>` },
+  { id: 'diamonds',  label: '菱形',   w: 24, h: 24, body: c => `<path d='M12 2L22 12L12 22L2 12Z' fill='none' stroke='${c}' stroke-width='0.9'/>` },
+  { id: 'triangles', label: '三角',   w: 24, h: 22, body: c => `<path d='M12 4L20 18H4Z' fill='none' stroke='${c}' stroke-width='1' stroke-linejoin='round'/>` },
+  { id: 'hexagons',  label: '蜂巢',   w: 30, h: 17.32, body: c => `<path d='M0 8.66L5 0H15L20 8.66L15 17.32H5ZM20 8.66H30' fill='none' stroke='${c}' stroke-width='0.9'/>` },
+  { id: 'circles',   label: '圓圈',   w: 24, h: 24, body: c => `<circle cx='12' cy='12' r='6' fill='none' stroke='${c}' stroke-width='1'/>` },
+  { id: 'scales',    label: '魚鱗',   w: 24, h: 24, body: c => `<path d='M0 12a12 12 0 0 1 24 0M-12 24a12 12 0 0 1 24 0M12 24a12 12 0 0 1 24 0' fill='none' stroke='${c}' stroke-width='0.9'/>` },
+  { id: 'bricks',    label: '磚牆',   w: 32, h: 16, body: c => `<path d='M0 0.5H32M0 8.5H32M8 0.5V8.5M24 8.5V16' fill='none' stroke='${c}' stroke-width='0.9'/>` },
+  { id: 'sparkles',  label: '星光',   w: 36, h: 36, body: c => `<path d='M9 3L10.4 7.6L15 9L10.4 10.4L9 15L7.6 10.4L3 9L7.6 7.6Z' fill='${c}'/><circle cx='27' cy='26' r='1.6' fill='${c}'/><circle cx='28' cy='8' r='1' fill='${c}'/>` },
+  { id: 'confetti',  label: '彩屑',   w: 40, h: 40, body: c => `<rect x='5' y='6' width='6' height='2.4' rx='1' fill='${c}' transform='rotate(-25 8 7)'/><circle cx='30' cy='9' r='2' fill='${c}'/><rect x='24' y='27' width='6' height='2.4' rx='1' fill='${c}' transform='rotate(35 27 28)'/><path d='M9 28l3 5l-6 0z' fill='${c}'/>` },
+]
+
+function patternTileSvg(def: PatternDef, color: string, opacity: number, scale: number): string {
+  const w = +(def.w * scale).toFixed(2), h = +(def.h * scale).toFixed(2)
+  return `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${def.w} ${def.h}'><g opacity='${opacity}'>${def.body(color)}</g></svg>`
+}
+function patternDataUri(def: PatternDef, color: string, opacity: number, scale: number): string {
+  return `data:image/svg+xml,${encodeURIComponent(patternTileSvg(def, color, opacity, scale))}`
+}
+
+// 自訂圖樣：接受「圖片網址」「CSS 的 background-image: url(...)」（Hero Patterns 複製下來的格式）或「<svg> 原始碼」（pattern.monster 等）
+function parseCustomPattern(input: string): string {
+  const t = (input || '').trim()
+  if (!t) return ''
+  const m = t.match(/url\(\s*(['"]?)([\s\S]*?)\1\s*\)/)
+  if (m) return m[2]
+  if (t.startsWith('<svg')) return `data:image/svg+xml,${encodeURIComponent(t)}`
+  return t
+}
+// SVG 類的自訂圖樣，把裡面寫死的顏色換成目前選的圖樣色（點陣圖無法換色）
+function recolorSvgDataUri(uri: string, color: string): string {
+  if (!uri.startsWith('data:image/svg+xml')) return uri
+  const enc = encodeURIComponent(color)
+  return uri
+    .replace(/((?:fill|stroke)(?:=|%3D)(?:'|"|%27|%22))(?:%23|#)[0-9a-fA-F]{3,8}/g, `$1${enc}`)
+    .replace(/((?:fill|stroke)\s*:\s*)(?:%23|#)[0-9a-fA-F]{3,8}/g, `$1${enc}`)
+}
+const CUSTOM_PATTERN_BASE = 80 // 自訂圖樣的磚寬（px），再乘上縮放倍率
+
+// 回傳 CSS 背景設定（預覽用）
+function getPatternCss(e: Pick<EditorState,'patternType'|'patternColor'|'patternOpacity'|'patternScale'|'patternCustom'|'accentColor'>): React.CSSProperties | null {
+  if (e.patternType === 'none') return null
+  const color = e.patternColor || e.accentColor
+  if (e.patternType === 'custom') {
+    if (!e.patternCustom) return null
+    return {
+      backgroundImage: `url("${recolorSvgDataUri(e.patternCustom, color)}")`, backgroundRepeat: 'repeat',
+      backgroundSize: `${Math.round(CUSTOM_PATTERN_BASE * e.patternScale)}px auto`, opacity: e.patternOpacity,
+    }
   }
-  return `url("data:image/svg+xml,${patterns[type as Exclude<PatternType,'none'>]}")`
+  const def = PATTERNS.find(p => p.id === e.patternType)
+  if (!def) return null
+  return { backgroundImage: `url("${patternDataUri(def, color, e.patternOpacity, e.patternScale)}")`, backgroundRepeat: 'repeat' }
+}
+
+// 左欄標題各行實際使用的顏色（沒有個別設定時沿用原本的主題色／左欄文字色）
+function leftColors(e: EditorState) {
+  return {
+    year: e.yearColor || e.accentColor,
+    title1: e.title1Color || e.accentColor,
+    title2: e.title2Color || e.leftTextColor,
+    monthNum: e.monthNumColor || e.leftTextColor,
+    monthLabel: e.monthLabelColor || e.accentColor,
+  }
+}
+
+// 左欄文字底板：放了底圖之後文字常被圖案吃掉，墊一塊毛玻璃／半透明色塊讓內容讀得清楚
+function getPanelCss(e: EditorState): React.CSSProperties | null {
+  if (e.panelStyle === 'none') return null
+  const glass = e.panelStyle === 'glass'
+  return {
+    background: hexToRgba(e.panelColor, e.panelOpacity),
+    borderRadius: e.panelRadius,
+    border: `1px solid ${glass ? 'rgba(255,255,255,0.55)' : hexToRgba(e.panelColor, Math.min(1, e.panelOpacity + 0.1))}`,
+    boxShadow: glass ? '0 8px 28px rgba(0,0,0,0.14)' : '0 4px 16px rgba(0,0,0,0.08)',
+    ...(glass && e.panelBlur > 0 ? {
+      backdropFilter: `blur(${e.panelBlur}px) saturate(140%)`,
+      WebkitBackdropFilter: `blur(${e.panelBlur}px) saturate(140%)`,
+    } : {}),
+  }
 }
 
 const GRADIENT_CSS: Record<GradientDir, string> = {
@@ -350,7 +475,9 @@ function PreviewPage({
 
   const leftBg = hexToRgba(e.leftBgColor, e.leftBgOpacity)
   const rightBg = hexToRgba(e.rightBgColor, e.rightBgOpacity)
-  const patternBg = getSvgPattern(e.patternType, e.accentColor, e.patternOpacity)
+  const patternCss = getPatternCss(e)
+  const c = leftColors(e)
+  const panelCss = getPanelCss(e)
   const gradBg = e.gradientEnabled ? `linear-gradient(${GRADIENT_CSS[e.gradientDir]}, ${hexToRgba(e.gradientFrom, e.gradientOpacity)}, ${hexToRgba(e.gradientTo, e.gradientOpacity)})` : ''
 
   const colDefs = [
@@ -403,21 +530,21 @@ function PreviewPage({
           {/* 左欄 */}
           <div style={{ width: isL?290:'100%', flexShrink: 0, position: 'relative', overflow: 'hidden', background: leftBg, ...(isL ? { display: 'flex', flexDirection: 'column' } : { height: 240, flexShrink: 0 }) }}>
             {gradBg && <div style={{ position: 'absolute', inset: 0, background: gradBg, zIndex: 0 }} />}
-            {patternBg && <div style={{ position: 'absolute', inset: 0, backgroundImage: patternBg, backgroundRepeat: 'repeat', zIndex: 1 }} />}
+            {patternCss && <div style={{ position: 'absolute', inset: 0, ...patternCss, zIndex: 1 }} />}
             {isL && <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 3, background: `linear-gradient(to bottom,${e.accentColor}00,${e.accentColor}60,${e.accentColor}00)`, zIndex: 2 }} />}
             {!isL && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: `linear-gradient(to right,${e.accentColor}00,${e.accentColor}60,${e.accentColor}00)`, zIndex: 2 }} />}
 
             {/* 橫式左欄內容 */}
             {isL && (
-              <div style={{ position: 'relative', zIndex: 3, padding: '18px 20px 16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+              <div style={{ position: 'relative', zIndex: 3, display: 'flex', flexDirection: 'column', flex: 1, ...(panelCss ? { margin: 12, padding: '16px 14px 14px', ...panelCss } : { padding: '18px 20px 16px' }) }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', marginBottom: 8, alignSelf: 'flex-start' }}>
-                  <span style={{ color: e.accentColor, fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', lineHeight: 1 }}>{year} 年活動</span>
+                  <span style={{ color: c.year, fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', lineHeight: 1 }}>{year} 年活動</span>
                 </div>
-                <p style={{ margin: '0 0 2px', fontSize: e.titleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.25 }}>{e.titleLine1}</p>
-                <p style={{ margin: '4px 0 8px', fontSize: e.subtitleFontSize, fontWeight: 900, color: e.leftTextColor, lineHeight: 1.25 }}>{e.titleLine2}</p>
+                <p style={{ margin: '0 0 2px', fontSize: e.titleFontSize, fontWeight: 900, color: c.title1, lineHeight: 1.25 }}>{e.titleLine1}</p>
+                <p style={{ margin: '4px 0 8px', fontSize: e.subtitleFontSize, fontWeight: 900, color: c.title2, lineHeight: 1.25 }}>{e.titleLine2}</p>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
-                  <span style={{ fontSize: e.monthFontSize, fontWeight: 900, color: e.leftTextColor, lineHeight: 1 }}>{rocMonth}</span>
-                  <span style={{ fontSize: 18, fontWeight: 700, color: e.accentColor }}>月份活動表</span>
+                  <span style={{ fontSize: e.monthFontSize, fontWeight: 900, color: c.monthNum, lineHeight: 1 }}>{rocMonth}</span>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: c.monthLabel }}>月份活動表</span>
                 </div>
                 <p style={{ margin: '0 0 2px', fontSize: 12, color: e.leftTextColor, lineHeight: 1.5 }}>各項活動皆歡迎居民們踴躍報名！</p>
                 <p style={{ margin: 0, fontSize: 11, color: e.leftTextColor }}>（數量有限，額滿為止）</p>
@@ -435,16 +562,16 @@ function PreviewPage({
 
             {/* 直式左欄內容 */}
             {!isL && (
-              <div style={{ position: 'relative', zIndex: 3, display: 'flex', alignItems: 'center', padding: '28px 32px', gap: 24 }}>
+              <div style={{ position: 'relative', zIndex: 3, display: 'flex', alignItems: 'center', gap: 24, ...(panelCss ? { margin: '14px 18px', padding: '14px 20px', height: 240 - 28, boxSizing: 'border-box', ...panelCss } : { padding: '28px 32px' }) }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'inline-block', marginBottom: 6 }}>
-                    <span style={{ color: e.accentColor, fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', lineHeight: 1.4 }}>{year} 年活動</span>
+                    <span style={{ color: c.year, fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', lineHeight: 1.4 }}>{year} 年活動</span>
                   </div>
-                  <p style={{ margin: '0 0 1px', fontSize: e.pTitleFontSize, fontWeight: 900, color: e.accentColor, lineHeight: 1.2 }}>{e.titleLine1}</p>
-                  <p style={{ margin: '0 0 4px', fontSize: e.pSubtitleFontSize, fontWeight: 900, color: e.leftTextColor, lineHeight: 1.2 }}>{e.titleLine2}</p>
+                  <p style={{ margin: '0 0 1px', fontSize: e.pTitleFontSize, fontWeight: 900, color: c.title1, lineHeight: 1.2 }}>{e.titleLine1}</p>
+                  <p style={{ margin: '0 0 4px', fontSize: e.pSubtitleFontSize, fontWeight: 900, color: c.title2, lineHeight: 1.2 }}>{e.titleLine2}</p>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginBottom: e.pGapMonth }}>
-                    <span style={{ fontSize: e.pMonthFontSize, fontWeight: 900, color: e.leftTextColor, lineHeight: 1 }}>{rocMonth}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: e.accentColor }}>月份活動表</span>
+                    <span style={{ fontSize: e.pMonthFontSize, fontWeight: 900, color: c.monthNum, lineHeight: 1 }}>{rocMonth}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: c.monthLabel }}>月份活動表</span>
                   </div>
                   {contactItems.map((item,i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginBottom: 2 }}>
@@ -919,27 +1046,104 @@ function PanelContent({ editor, set, setEditor, handleImgUpload, activeTab, setA
         </div>
 
         <div>
-          <p className="text-[13px] font-bold text-stone-400 mb-3">3. 左欄 Pattern</p>
-          <div className="relative mb-3">
-            <select value={e.patternType} onChange={ev => set('patternType', ev.target.value as PatternType)}
-              className="w-full appearance-none border border-stone-200 rounded-lg pl-3 pr-9 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300">
-              <option value="none">無</option><option value="dots">圓點</option><option value="lines">斜線</option>
-              <option value="grid">網格</option><option value="waves">波浪</option><option value="diamonds">菱形</option>
-            </select>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400"><polyline points="6 9 12 15 18 9"/></svg>
+          <p className="text-[13px] font-bold text-stone-400 mb-1">3. 左欄文字底板</p>
+          <p className="text-[11px] text-stone-400 mb-2">放了底圖或花紋後文字看不清楚時，在文字後面墊一塊毛玻璃或色塊</p>
+          <div className="flex gap-1 p-1 bg-stone-100 rounded-lg mb-3">
+            {([['none','無'],['glass','毛玻璃'],['solid','純色']] as const).map(([v, label]) => (
+              <button key={v} onClick={() => set('panelStyle', v)}
+                className={`flex-1 py-1 rounded-md text-xs font-medium transition-colors ${e.panelStyle === v ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400'}`}>
+                {label}
+              </button>
+            ))}
           </div>
+          {e.panelStyle !== 'none' && (
+            <div className="space-y-1">
+              <div className="flex gap-1.5 mb-2">
+                {['#ffffff','#fff7ed','#f5f5f4','#18120a','#000000'].map(col => (
+                  <button key={col} onClick={() => set('panelColor', col)} title={col}
+                    style={{ width: 24, height: 24, borderRadius: 6, background: col, border: e.panelColor === col ? '2px solid #f97316' : '1px solid #d6d3d1' }} />
+                ))}
+              </div>
+              <ColorPicker label="底板顏色" value={e.panelColor} onChange={v => set('panelColor', v)} />
+              <div className="pt-2">
+                <RangeRow label="不透明度" value={e.panelOpacity} display={`${Math.round(e.panelOpacity*100)}%`} min={0} max={1} step={0.05} onChange={v => set('panelOpacity', v)} />
+                {e.panelStyle === 'glass' && (
+                  <RangeRow label="模糊程度" value={e.panelBlur} display={`${e.panelBlur}px`} min={0} max={30} step={1} onChange={v => set('panelBlur', v)} />
+                )}
+                <RangeRow label="圓角" value={e.panelRadius} display={`${e.panelRadius}px`} min={0} max={32} step={1} onChange={v => set('panelRadius', v)} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <p className="text-[13px] font-bold text-stone-400 mb-1">4. 左欄標題文字色</p>
+          <p className="text-[11px] text-stone-400 mb-2">每一行可以各自設定，不跟著主題色變動；沒設定時沿用預設</p>
+          <div className="space-y-2">
+            <OptionalColorPicker label="「○○ 年活動」" value={e.yearColor} fallback={e.accentColor} fallbackLabel="主題色" onChange={v => set('yearColor', v)} />
+            <OptionalColorPicker label="主標題（第 1 行）" value={e.title1Color} fallback={e.accentColor} fallbackLabel="主題色" onChange={v => set('title1Color', v)} />
+            <OptionalColorPicker label="副標題（第 2 行）" value={e.title2Color} fallback={e.leftTextColor} fallbackLabel="左欄文字色" onChange={v => set('title2Color', v)} />
+            <OptionalColorPicker label="月份數字" value={e.monthNumColor} fallback={e.leftTextColor} fallbackLabel="左欄文字色" onChange={v => set('monthNumColor', v)} />
+            <OptionalColorPicker label="「月份活動表」" value={e.monthLabelColor} fallback={e.accentColor} fallbackLabel="主題色" onChange={v => set('monthLabelColor', v)} />
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[13px] font-bold text-stone-400 mb-3">5. 左欄 Pattern</p>
+          <div className="grid grid-cols-5 gap-1.5 mb-3">
+            {([{ id: 'none', label: '無' }, ...PATTERNS, { id: 'custom', label: '自訂' }] as { id: PatternType; label: string }[]).map(p => {
+              const def = PATTERNS.find(d => d.id === p.id)
+              const color = e.patternColor || e.accentColor
+              const thumb = def ? `url("${patternDataUri(def, color, 0.9, 0.8)}")`
+                : p.id === 'custom' && e.patternCustom ? `url("${recolorSvgDataUri(e.patternCustom, color)}")` : undefined
+              const active = e.patternType === p.id
+              return (
+                <button key={p.id} onClick={() => set('patternType', p.id)} title={p.label}
+                  className={`flex flex-col items-center gap-0.5 rounded-lg p-1 border transition-colors ${active ? 'border-orange-500 bg-orange-50' : 'border-stone-200 hover:border-orange-300'}`}>
+                  <span className="block w-full h-8 rounded-md bg-white flex items-center justify-center text-[10px] text-stone-400"
+                    style={{ backgroundImage: thumb, backgroundRepeat: 'repeat', backgroundSize: p.id === 'custom' ? '32px auto' : undefined }}>
+                    {p.id === 'none' ? '∅' : p.id === 'custom' && !e.patternCustom ? '+' : ''}
+                  </span>
+                  <span className={`text-[10px] leading-tight ${active ? 'text-orange-600 font-bold' : 'text-stone-500'}`}>{p.label}</span>
+                </button>
+              )
+            })}
+          </div>
+          {e.patternType === 'custom' && (
+            <div className="mb-3 space-y-2 rounded-lg bg-stone-50 border border-stone-200 p-2.5">
+              <p className="text-[11px] text-stone-500 leading-relaxed">
+                可從開源圖樣網站挑選後貼上：
+                <a href="https://heropatterns.com" target="_blank" rel="noreferrer" className="text-orange-500 underline mx-0.5">Hero Patterns</a>（複製 CSS）、
+                <a href="https://pattern.monster" target="_blank" rel="noreferrer" className="text-orange-500 underline mx-0.5">Pattern Monster</a>（複製 SVG）、
+                <a href="https://www.magicpattern.design/tools/css-backgrounds" target="_blank" rel="noreferrer" className="text-orange-500 underline mx-0.5">Magic Pattern</a>。
+                SVG 圖樣會自動換成下方選的顏色。
+              </p>
+              <textarea rows={3} placeholder={'貼上 background-image: url(...)、<svg>…</svg> 或圖片網址'}
+                defaultValue="" onChange={ev => { const v = parseCustomPattern(ev.target.value); if (v) set('patternCustom', v) }}
+                className="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-[11px] font-mono text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-300" />
+              <div className="flex items-center gap-2">
+                <label className="flex-1 flex items-center justify-center gap-1.5 border border-dashed border-stone-300 hover:border-orange-300 rounded-lg py-1.5 cursor-pointer text-xs text-stone-500">
+                  上傳圖樣圖檔（PNG／SVG）
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload('patternCustom')} />
+                </label>
+                {e.patternCustom && <button onClick={() => set('patternCustom', '')} className="text-xs text-red-400 hover:text-red-600">清除</button>}
+              </div>
+            </div>
+          )}
           {e.patternType !== 'none' && (
-            <div>
-              <label className="text-xs text-stone-400">濃度 {Math.round(e.patternOpacity*100)}%</label>
-              <input type="range" min="0.02" max="0.5" step="0.02" value={e.patternOpacity}
-                onChange={ev => set('patternOpacity', parseFloat(ev.target.value))} className="w-full accent-orange-500" />
+            <div className="space-y-1">
+              <OptionalColorPicker label="圖樣顏色" value={e.patternColor} fallback={e.accentColor} fallbackLabel="主題色" onChange={v => set('patternColor', v)} />
+              <div className="pt-2">
+                <RangeRow label="濃度" value={e.patternOpacity} display={`${Math.round(e.patternOpacity*100)}%`} min={0.02} max={0.6} step={0.02} onChange={v => set('patternOpacity', v)} />
+                <RangeRow label="大小" value={e.patternScale} display={`${Math.round(e.patternScale*100)}%`} min={0.5} max={3} step={0.1} onChange={v => set('patternScale', v)} />
+              </div>
             </div>
           )}
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-3">
-            <p className="text-[13px] font-bold text-stone-400">4. 左欄漸層</p>
+            <p className="text-[13px] font-bold text-stone-400">6. 左欄漸層</p>
             <button onClick={() => set('gradientEnabled', !e.gradientEnabled)}
               className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${e.gradientEnabled?'bg-orange-500':'bg-stone-200'}`}>
               <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${e.gradientEnabled?'translate-x-5':'translate-x-0.5'}`} />
@@ -975,6 +1179,12 @@ function PanelContent({ editor, set, setEditor, handleImgUpload, activeTab, setA
             <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload('bgImage')} />
           </label>
           {e.bgImage && <img src={e.bgImage} alt="" className="mt-2 w-full h-14 object-cover rounded-lg border border-stone-200" />}
+          {e.bgImage && e.panelStyle === 'none' && (
+            <div className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-amber-50 border border-amber-200 px-2.5 py-1.5">
+              <span className="text-[11px] text-amber-700">底圖可能讓左欄文字不易閱讀</span>
+              <button onClick={() => set('panelStyle', 'glass')} className="text-[11px] font-bold text-orange-600 whitespace-nowrap">加上毛玻璃底板</button>
+            </div>
+          )}
           <div className="mt-2.5">
             <div className="flex items-center justify-between mb-1">
               <label className="text-xs text-stone-400">透明度 {Math.round(e.bgOpacity*100)}%</label>
@@ -1219,6 +1429,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
   const totalPages = Math.ceil(monthCourses.length / rowsPerPage) || 1
 
   const initEditor = () => {
+    // 0 也是合法值（例如圓角 0、模糊 0），不能用 `|| 預設值`
+    const num = (v: string | undefined, d: number) => (v == null || v === '' || isNaN(Number(v))) ? d : Number(v)
     const initLeftBg = ss.schedule_left_bg_color || '#fff7ed'
     const initRightBg = ss.schedule_right_bg_color || '#ffffff'
     setEditor(prev => ({
@@ -1234,6 +1446,19 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
       courseTextColor: ss.schedule_course_text_color || contrastPrimary(initRightBg),
       patternType: (ss.schedule_pattern_type as PatternType) || 'dots',
       patternOpacity: parseFloat(ss.schedule_pattern_opacity||'') || 0.12,
+      patternColor: ss.schedule_pattern_color || '',
+      patternScale: num(ss.schedule_pattern_scale, 1),
+      patternCustom: ss.schedule_pattern_custom || '',
+      panelStyle: (['none','glass','solid'].includes(ss.schedule_panel_style) ? ss.schedule_panel_style : 'glass') as PanelStyle,
+      panelColor: ss.schedule_panel_color || '#ffffff',
+      panelOpacity: num(ss.schedule_panel_opacity, 0.6),
+      panelBlur: num(ss.schedule_panel_blur, 12),
+      panelRadius: num(ss.schedule_panel_radius, 16),
+      yearColor: ss.schedule_year_color || '',
+      title1Color: ss.schedule_title1_color || '',
+      title2Color: ss.schedule_title2_color || '',
+      monthNumColor: ss.schedule_month_num_color || '',
+      monthLabelColor: ss.schedule_month_label_color || '',
       gradientEnabled: ss.schedule_gradient_enabled !== 'false',
       gradientDir: (ss.schedule_gradient_dir as GradientDir) || 'to-b',
       gradientFrom: ss.schedule_gradient_from || '#fed7aa',
@@ -1304,6 +1529,14 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
       schedule_accent_color: editor.accentColor, schedule_brand_bg: editor.brandBgColor,
       schedule_left_bg_color: editor.leftBgColor, schedule_left_bg_opacity: String(editor.leftBgOpacity),
       schedule_pattern_type: editor.patternType, schedule_pattern_opacity: String(editor.patternOpacity),
+      schedule_pattern_color: editor.patternColor, schedule_pattern_scale: String(editor.patternScale),
+      schedule_pattern_custom: editor.patternCustom,
+      schedule_panel_style: editor.panelStyle, schedule_panel_color: editor.panelColor,
+      schedule_panel_opacity: String(editor.panelOpacity), schedule_panel_blur: String(editor.panelBlur),
+      schedule_panel_radius: String(editor.panelRadius),
+      schedule_year_color: editor.yearColor, schedule_title1_color: editor.title1Color,
+      schedule_title2_color: editor.title2Color, schedule_month_num_color: editor.monthNumColor,
+      schedule_month_label_color: editor.monthLabelColor,
       schedule_gradient_enabled: String(editor.gradientEnabled), schedule_gradient_dir: editor.gradientDir,
       schedule_gradient_from: editor.gradientFrom, schedule_gradient_to: editor.gradientTo,
       schedule_gradient_opacity: String(editor.gradientOpacity),
@@ -1485,21 +1718,52 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
     }
 
     if (e.patternType !== 'none') {
-      const patCanvas = document.createElement('canvas')
-      const patSize = e.patternType === 'waves' ? 40 : 24
-      patCanvas.width = patSize; patCanvas.height = patSize
-      const pc = patCanvas.getContext('2d')!
-      pc.globalAlpha = e.patternOpacity
-      pc.strokeStyle = e.accentColor
-      pc.fillStyle = e.accentColor
-      pc.lineWidth = 1.2
-      if (e.patternType === 'dots') { pc.beginPath(); pc.arc(patSize/2, patSize/2, 2, 0, Math.PI*2); pc.fill() }
-      else if (e.patternType === 'lines') { pc.beginPath(); pc.moveTo(0,0); pc.lineTo(patSize,patSize); pc.stroke() }
-      else if (e.patternType === 'grid') { pc.beginPath(); pc.moveTo(0,0); pc.lineTo(patSize,0); pc.moveTo(0,0); pc.lineTo(0,patSize); pc.stroke() }
-      else if (e.patternType === 'waves') { pc.beginPath(); pc.moveTo(0,patSize/2); pc.quadraticCurveTo(10,0,20,patSize/2); pc.quadraticCurveTo(30,patSize,40,patSize/2); pc.stroke() }
-      else if (e.patternType === 'diamonds') { pc.beginPath(); pc.moveTo(patSize/2,2); pc.lineTo(patSize-2,patSize/2); pc.lineTo(patSize/2,patSize-2); pc.lineTo(2,patSize/2); pc.closePath(); pc.stroke() }
-      const pat = ctx.createPattern(patCanvas, 'repeat')
-      if (pat) { ctx.save(); ctx.fillStyle = pat; ctx.fillRect(0, leftTop, LEFT_W, LEFT_H); ctx.restore() }
+      try {
+        const color = e.patternColor || e.accentColor
+        let tile: HTMLCanvasElement | null = null
+        if (e.patternType === 'custom') {
+          if (e.patternCustom) {
+            const img = await loadImage(recolorSvgDataUri(e.patternCustom, color))
+            const tw = Math.max(4, Math.round(CUSTOM_PATTERN_BASE * e.patternScale))
+            const th = Math.max(4, Math.round(tw * (img.height / img.width || 1)))
+            tile = document.createElement('canvas'); tile.width = tw; tile.height = th
+            const tc = tile.getContext('2d')!
+            tc.globalAlpha = e.patternOpacity
+            tc.drawImage(img, 0, 0, tw, th)
+          }
+        } else {
+          const def = PATTERNS.find(p => p.id === e.patternType)
+          if (def) {
+            const img = await loadImage(patternDataUri(def, color, e.patternOpacity, e.patternScale))
+            tile = document.createElement('canvas')
+            tile.width = Math.max(1, Math.round(def.w * e.patternScale)); tile.height = Math.max(1, Math.round(def.h * e.patternScale))
+            tile.getContext('2d')!.drawImage(img, 0, 0, tile.width, tile.height)
+          }
+        }
+        const pat = tile && ctx.createPattern(tile, 'repeat')
+        if (pat) { ctx.save(); ctx.fillStyle = pat; ctx.fillRect(0, leftTop, LEFT_W, LEFT_H); ctx.restore() }
+      } catch {}
+    }
+
+    // 左欄文字底板（毛玻璃：把底下已畫好的畫面模糊後貼回圓角區塊，再蓋一層半透明色）
+    if (e.panelStyle !== 'none') {
+      const px = isLandscape ? 12 : 18, py = leftTop + (isLandscape ? 12 : 14)
+      const pw = LEFT_W - px * 2, ph = LEFT_H - (isLandscape ? 24 : 28)
+      ctx.save()
+      ctx.beginPath(); ctx.roundRect(px, py, pw, ph, e.panelRadius); ctx.clip()
+      if (e.panelStyle === 'glass' && e.panelBlur > 0) {
+        const snap = document.createElement('canvas'); snap.width = canvas.width; snap.height = canvas.height
+        snap.getContext('2d')!.drawImage(canvas, 0, 0)
+        ctx.filter = `blur(${e.panelBlur}px) saturate(140%)`
+        ctx.drawImage(snap, 0, 0, W, H)
+        ctx.filter = 'none'
+      }
+      ctx.fillStyle = hexToRgba(e.panelColor, e.panelOpacity)
+      ctx.fillRect(px, py, pw, ph)
+      ctx.restore()
+      ctx.strokeStyle = e.panelStyle === 'glass' ? 'rgba(255,255,255,0.55)' : hexToRgba(e.panelColor, Math.min(1, e.panelOpacity + 0.1))
+      ctx.lineWidth = 1
+      ctx.beginPath(); ctx.roundRect(px + 0.5, py + 0.5, pw - 1, ph - 1, e.panelRadius); ctx.stroke()
     }
 
     // 左欄邊線
@@ -1515,7 +1779,8 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
 
    // ── 左欄文字 ──
     const drawLeftContent = async () => {
-      const PAD_X = 22
+      const PAD_X = e.panelStyle !== 'none' ? 28 : 22
+      const lc = leftColors(e)
       const qrSize = isLandscape ? 88 : e.pQrSize
       const contactItems = [
         e.phone ? `洽詢專線：${e.phone}` : '',
@@ -1531,28 +1796,28 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         // ── 橫式左欄 ──
         let cy = leftTop + 18
 
-        ctx.font = font(10, 800); ctx.fillStyle = e.accentColor
+        ctx.font = font(10, 800); ctx.fillStyle = lc.year
         ctx.fillText(`${rocYear} 年活動`, PAD_X, cy + 10); cy += 24
 
-        ctx.font = font(e.titleFontSize, 900); ctx.fillStyle = e.accentColor
+        ctx.font = font(e.titleFontSize, 900); ctx.fillStyle = lc.title1
         const title1Lines = wrapText(ctx, e.titleLine1, LEFT_W - PAD_X * 2)
         title1Lines.forEach((line, li) => {
           ctx.fillText(line, PAD_X, cy + e.titleFontSize + li * e.titleFontSize * 1.2)
         })
         cy += e.titleFontSize * 1.2 * title1Lines.length + 4
 
-        ctx.font = font(e.subtitleFontSize, 900); ctx.fillStyle = e.leftTextColor
+        ctx.font = font(e.subtitleFontSize, 900); ctx.fillStyle = lc.title2
         const title2Lines = wrapText(ctx, e.titleLine2, LEFT_W - PAD_X * 2)
         title2Lines.forEach((line, li) => {
           ctx.fillText(line, PAD_X, cy + e.subtitleFontSize + li * e.subtitleFontSize * 1.2)
         })
         cy += e.subtitleFontSize * 1.2 * title2Lines.length + 6
         // 月份大字
-        ctx.font = font(e.monthFontSize, 900); ctx.fillStyle = e.leftTextColor
+        ctx.font = font(e.monthFontSize, 900); ctx.fillStyle = lc.monthNum
         const monthStr = String(rocMonth)
         const monthW = ctx.measureText(monthStr).width
         ctx.fillText(monthStr, PAD_X, cy + e.monthFontSize)
-        ctx.font = font(18, 700); ctx.fillStyle = e.accentColor
+        ctx.font = font(18, 700); ctx.fillStyle = lc.monthLabel
         ctx.fillText('月份活動表', PAD_X + monthW + 6, cy + e.monthFontSize)
         cy += e.monthFontSize * 1.2
 
@@ -1610,21 +1875,21 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
         let cy = leftTop + 28
 
         // 左側文字區
-        ctx.font = font(9, 800); ctx.fillStyle = e.accentColor
+        ctx.font = font(9, 800); ctx.fillStyle = lc.year
         ctx.fillText(`${rocYear} 年活動`, PAD_X, cy + 9); cy += 20
 
-        ctx.font = font(e.pTitleFontSize, 900); ctx.fillStyle = e.accentColor
+        ctx.font = font(e.pTitleFontSize, 900); ctx.fillStyle = lc.title1
         ctx.fillText(e.titleLine1, PAD_X, cy + e.pTitleFontSize); cy += e.pTitleFontSize * 1.3
 
-        ctx.font = font(e.pSubtitleFontSize, 900); ctx.fillStyle = e.leftTextColor
+        ctx.font = font(e.pSubtitleFontSize, 900); ctx.fillStyle = lc.title2
         ctx.fillText(e.titleLine2, PAD_X, cy + e.pSubtitleFontSize); cy += e.pSubtitleFontSize * 1.3
 
         // 月份大字
-        ctx.font = font(e.pMonthFontSize, 900); ctx.fillStyle = e.leftTextColor
+        ctx.font = font(e.pMonthFontSize, 900); ctx.fillStyle = lc.monthNum
         const monthStr = String(rocMonth)
         const monthW = ctx.measureText(monthStr).width
         ctx.fillText(monthStr, PAD_X, cy + e.pMonthFontSize)
-        ctx.font = font(12, 700); ctx.fillStyle = e.accentColor
+        ctx.font = font(12, 700); ctx.fillStyle = lc.monthLabel
         ctx.fillText('月份活動表', PAD_X + monthW + 4, cy + e.pMonthFontSize)
         cy += e.pMonthFontSize * 1.2 + e.pGapMonth
 
@@ -2096,3 +2361,4 @@ export default function CourseScheduleExporter({ courses, scheduleSettings: ss, 
     </div>
   )
 }
+
