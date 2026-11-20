@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto'
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
+import { isAuthorizedCron } from '@/lib/cronAuth'
 import {
   buildReminderText,
   groupByRecipient,
@@ -19,7 +20,13 @@ import {
 //   test — 只發給 LINE_REMINDER_TEST_USER_IDS（逗號分隔的 LINE 使用者 ID），其他人一律略過
 //   live — 正式發給所有隔天有報名的學員
 // 需要環境變數：CRON_SECRET、LINE_MESSAGING_CHANNEL_ACCESS_TOKEN；
-// 選填：LINE_REMINDER_ADMIN_USER_IDS（逗號分隔，額度剩不到 LOW_QUOTA_THRESHOLD 時通知這些管理員）
+// 選填：LINE_REMINDER_ADMIN_USER_IDS（逗號分隔，額度剩不到 LOW_QUOTA_THRESHOLD 時通知這些管理員，每月最多一次）
+//
+// 節省額度／防濫用：
+// - 只有帶正確 CRON_SECRET 的請求能觸發（見 lib/cronAuth.ts）；按很多次 Run 也不會重複發（每人每天一筆紀錄）
+// - 發送前先查是否為官方帳號好友（查詢不算訊息則數），沒加好友或已封鎖的人不發，記 skipped_not_friend
+// - 正式模式略過不公開（is_active=false）的課程；同一人一天最多一則，不論報了幾堂、用了幾個報名
+// - 保留 LINE_REMINDER_RESERVE 則（預設 5）不給提醒用，留給管理員通知或臨時公告
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -27,6 +34,9 @@ export const maxDuration = 60
 const SITE_URL = 'https://yangbei-campaign.vercel.app'
 const LINE_API = 'https://api.line.me/v2/bot'
 const LOW_QUOTA_THRESHOLD = 30
+const LINE_USER_ID_RE = /^U[0-9a-f]{32}$/
+// 這些狀態下次排程重跑時可以再試（例如當天才加好友、月初額度恢復）
+const RETRYABLE = new Set(['skipped_not_friend', 'skipped_quota'])
 
 type LineResult = { ok: true } | { ok: false; error: string }
 
@@ -54,6 +64,16 @@ async function remainingQuota(token: string): Promise<number | null> {
   }
 }
 
+/** 是否為官方帳號好友（未加好友或已封鎖會回 404）。查不到時當作是，交給 push 決定。 */
+async function isFriend(token: string, userId: string): Promise<boolean> {
+  try {
+    const res = await lineFetch(`/profile/${userId}`, token)
+    return res.status !== 404
+  } catch {
+    return true
+  }
+}
+
 async function pushText(token: string, to: string, text: string): Promise<LineResult> {
   try {
     const res = await lineFetch('/message/push', token, {
@@ -69,7 +89,7 @@ async function pushText(token: string, to: string, text: string): Promise<LineRe
 }
 
 export async function GET(request: Request) {
-  if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isAuthorizedCron(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -78,14 +98,18 @@ export async function GET(request: Request) {
   const dateParam = url.searchParams.get('date')
   // 指定日期只開放給 dry run，避免誤發非隔天的提醒
   const courseDate = dryRun && dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : tomorrowInTaipei()
+  const mode = process.env.LINE_REMINDER_MODE || 'off'
 
   const supabase = createServerClient()
-  const { data: courses, error: courseErr } = await supabase
+  let courseQuery = supabase
     .from('courses')
     .select('id, title, date, time_start, time_end, location')
     .eq('date', courseDate)
+  // 正式模式只提醒公開中的課程；測試模式允許不公開的測試課
+  if (mode !== 'test') courseQuery = courseQuery.eq('is_active', true)
+  const { data: courses, error: courseErr } = await courseQuery
   if (courseErr) return NextResponse.json({ ok: false, error: courseErr.message }, { status: 500 })
-  if (!courses?.length) return NextResponse.json({ ok: true, courseDate, recipients: 0, note: 'no courses' })
+  if (!courses?.length) return NextResponse.json({ ok: true, mode, courseDate, recipients: 0, note: 'no courses' })
 
   const { data: regs, error: regErr } = await supabase
     .from('registrations')
@@ -99,13 +123,14 @@ export async function GET(request: Request) {
     .filter(r => !r.is_walk_in)
     .map(r => {
       const u = (Array.isArray(r.users) ? r.users[0] : r.users) as { name: string | null; line_id: string | null } | null
+      const lineUserId = u?.line_id || r.resident_line_id || null
       return {
-        lineUserId: u?.line_id || r.resident_line_id || null,
+        // 格式不對的 ID 一定發不出去，直接略過
+        lineUserId: lineUserId && LINE_USER_ID_RE.test(lineUserId) ? lineUserId : null,
         name: u?.name || r.resident_name || null,
         course: courseById.get(r.course_id)!,
       }
     })
-  const mode = process.env.LINE_REMINDER_MODE || 'off'
   const testIds = new Set((process.env.LINE_REMINDER_TEST_USER_IDS || '').split(',').map(x => x.trim()).filter(Boolean))
   const allRecipients = groupByRecipient(rows)
   const recipients = mode === 'test' ? allRecipients.filter(r => testIds.has(r.lineUserId)) : allRecipients
@@ -133,29 +158,49 @@ export async function GET(request: Request) {
   const token = process.env.LINE_MESSAGING_CHANNEL_ACCESS_TOKEN
   if (!token) return NextResponse.json({ ok: false, error: 'LINE_MESSAGING_CHANNEL_ACCESS_TOKEN not set' }, { status: 500 })
 
-  // 已經處理過的人（重跑排程時）直接跳過
-  const { data: done } = await supabase
+  // 已發過、發送中、發送失敗的人跳過；沒加好友／額度不足而略過的人，這次可以再試
+  const { data: existing } = await supabase
     .from('line_reminder_logs')
-    .select('line_user_id')
+    .select('line_user_id, status')
     .eq('course_date', courseDate)
-  const doneIds = new Set((done ?? []).map(d => d.line_user_id))
-  const pending = recipients.filter(r => !doneIds.has(r.lineUserId))
+  const existingStatus = new Map((existing ?? []).map(e => [e.line_user_id, e.status as string]))
+  const pending = recipients.filter(r => {
+    const st = existingStatus.get(r.lineUserId)
+    return st === undefined || RETRYABLE.has(st)
+  })
 
-  let remaining = await remainingQuota(token)
-  const result = { sent: 0, failed: 0, skippedQuota: 0, alreadyDone: recipients.length - pending.length }
+  const reserve = Math.max(0, Number(process.env.LINE_REMINDER_RESERVE ?? 5) || 0)
+  const quota = await remainingQuota(token)
+  let budget = quota === null ? Infinity : quota - reserve
+  const result = {
+    sent: 0, failed: 0, skippedNotFriend: 0, skippedQuota: 0,
+    alreadyDone: recipients.length - pending.length,
+  }
 
   for (const rec of pending) {
     const courseIds = rec.courses.map(c => c.id)
-    const quotaOut = remaining !== null && remaining <= 0
-    // 佔位：unique (line_user_id, course_date)，同時跑兩次也只有一邊能插入
-    const { error: claimErr } = await supabase.from('line_reminder_logs').insert({
-      course_date: courseDate,
-      line_user_id: rec.lineUserId,
-      course_ids: courseIds,
-      status: quotaOut ? 'skipped_quota' : 'sending',
-    })
-    if (claimErr) { result.alreadyDone++; continue }
-    if (quotaOut) { result.skippedQuota++; continue }
+    const prev = existingStatus.get(rec.lineUserId)
+
+    // 先確認是好友（不耗額度），沒加好友的人不浪費一則
+    let status: 'sending' | 'skipped_not_friend' | 'skipped_quota' = 'sending'
+    if (!(await isFriend(token, rec.lineUserId))) status = 'skipped_not_friend'
+    else if (budget <= 0) status = 'skipped_quota'
+
+    // 佔位：新的一筆用 insert（unique 擋重複）；重試的一筆只在狀態仍是可重試時才改成 sending
+    if (prev === undefined) {
+      const { error } = await supabase.from('line_reminder_logs').insert({
+        course_date: courseDate, line_user_id: rec.lineUserId, course_ids: courseIds, status,
+      })
+      if (error) { result.alreadyDone++; continue }
+    } else {
+      const { data: claimed } = await supabase.from('line_reminder_logs')
+        .update({ status, course_ids: courseIds, error: null })
+        .eq('course_date', courseDate).eq('line_user_id', rec.lineUserId).eq('status', prev)
+        .select('id')
+      if (!claimed?.length) { result.alreadyDone++; continue }
+    }
+    if (status === 'skipped_not_friend') { result.skippedNotFriend++; continue }
+    if (status === 'skipped_quota') { result.skippedQuota++; continue }
 
     const r = await pushText(token, rec.lineUserId, buildReminderText(rec, SITE_URL))
     await supabase
@@ -165,20 +210,27 @@ export async function GET(request: Request) {
       .eq('course_date', courseDate)
     if (r.ok) {
       result.sent++
-      if (remaining !== null) remaining--
+      budget--
     } else {
       result.failed++
     }
   }
 
-  // 額度快用完時通知管理員（這則本身也會用掉額度，所以只在真的偏低時發）
-  const adminIds = (process.env.LINE_REMINDER_ADMIN_USER_IDS || '').split(',').map(s => s.trim()).filter(Boolean)
-  if (adminIds.length && remaining !== null && remaining !== Infinity && remaining < LOW_QUOTA_THRESHOLD && remaining > 0) {
+  // 額度偏低時通知管理員，每位管理員每月只通知一次（用 line_reminder_logs 記在當月 1 號）
+  const remaining = quota === null ? null : quota - result.sent
+  const adminIds = (process.env.LINE_REMINDER_ADMIN_USER_IDS || '').split(',').map(s => s.trim()).filter(id => LINE_USER_ID_RE.test(id))
+  if (adminIds.length && remaining !== null && remaining !== Infinity && remaining > 0 && remaining < LOW_QUOTA_THRESHOLD) {
+    const monthKey = `${courseDate.slice(0, 7)}-01`
     const note = result.skippedQuota
-      ? `【報名系統】本月 LINE 訊息額度已用完，明天的課程提醒有 ${result.skippedQuota} 人沒發出去。`
-      : `【報名系統】本月 LINE 訊息額度剩約 ${remaining - adminIds.length} 則，額度用完後課程提醒會暫停發送。`
-    for (const id of adminIds.slice(0, remaining)) await pushText(token, id, note)
+      ? `【報名系統】本月 LINE 訊息額度不足，明天的課程提醒有 ${result.skippedQuota} 人沒發出去。下個月額度恢復後會自動繼續。`
+      : `【報名系統】本月 LINE 訊息額度剩約 ${remaining} 則，額度用完後課程提醒會暫停發送，下個月自動恢復。`
+    for (const id of adminIds.slice(0, remaining)) {
+      const { error } = await supabase.from('line_reminder_logs').insert({
+        course_date: monthKey, line_user_id: `admin:${id}`, course_ids: [], status: 'admin_alert',
+      })
+      if (!error) await pushText(token, id, note)
+    }
   }
 
-  return NextResponse.json({ ok: true, mode, courseDate, recipients: recipients.length, remaining, ...result })
+  return NextResponse.json({ ok: true, mode, courseDate, recipients: recipients.length, remaining, reserve, ...result })
 }
