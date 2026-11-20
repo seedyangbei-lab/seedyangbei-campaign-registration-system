@@ -74,6 +74,6 @@ export function buildReminderText(rec: ReminderRecipient, siteUrl: string): stri
   return [
     intro,
     rec.courses.map(courseBlock).join('\n\n'),
-    `若無法出席，請到報名網站取消報名，把名額留給其他鄰居，謝謝！\n${siteUrl}`,
+    `若無法出席，請點下方連結取消報名，把名額留給其他鄰居，謝謝！\n${siteUrl}/profile?from=line_reminder`,
   ].join('\n\n')
 }

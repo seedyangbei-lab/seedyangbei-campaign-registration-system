@@ -11,6 +11,41 @@ import { ResidentFeedbackForm } from '@/components/CourseFeedbackForm'
 import { getResidentToken, getStoredLineUser } from '@/lib/resident-auth'
 import { courseStartAt, feedbackWindow } from '@/lib/courseFeedback'
 
+// 從 LINE 上課提醒點進來（/profile?from=line_reminder）時，沒登入就直接走 LINE 登入、登入完回到這頁，
+// 不要把人彈回首頁。LINE 內建瀏覽器的 LINE 登入不用輸入帳密，幾乎是一閃而過。
+const FROM_REMINDER = 'line_reminder'
+const LINE_CHANNEL_ID = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2010077816'
+const LINE_CALLBACK_URL = process.env.NEXT_PUBLIC_LINE_CALLBACK_URL || 'https://yangbei-campaign.vercel.app/api/auth/line/callback'
+
+function startLineLoginBackToProfile() {
+  const statePayload = JSON.stringify({ url: `${window.location.origin}/profile`, nonce: Math.random().toString(36).slice(2) })
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: LINE_CHANNEL_ID,
+    redirect_uri: LINE_CALLBACK_URL,
+    state: statePayload,
+    scope: 'profile openid email',
+    bot_prompt: 'aggressive',
+  })
+  window.location.href = `https://access.line.me/oauth2/v2.1/authorize?${params}`
+}
+
+/** LINE 登入完導回這頁時網址會帶 ?line_user=…，先存起來（導覽列在登入前不會渲染，不能等它處理） */
+function consumeLoginParam(): boolean {
+  const params = new URLSearchParams(window.location.search)
+  const lu = params.get('line_user')
+  if (!lu) return false
+  try {
+    let user
+    try { user = JSON.parse(lu) } catch { user = JSON.parse(decodeURIComponent(lu)) }
+    localStorage.setItem('line_user', JSON.stringify(user))
+  } catch { /* 格式不對就當沒登入 */ }
+  const url = new URL(window.location.href)
+  ;['line_user', 'error', 'detail'].forEach(k => url.searchParams.delete(k))
+  window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
+  return true
+}
+
 const isMobileViewport = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
 
 // 課程開始後就移到「已結束」分頁，同時開放填寫回饋問卷（講師通常在課程尾聲帶大家一起填）
@@ -93,9 +128,17 @@ function ProfileContent() {
 
   useEffect(() => {
     try {
-      // 登入已過期就直接回首頁（getStoredLineUser 會一併清掉本機登入狀態）
+      const params = new URLSearchParams(window.location.search)
+      const fromReminder = params.get('from') === FROM_REMINDER && !params.get('error')
+      consumeLoginParam()
+      // 登入已過期就直接回首頁（getStoredLineUser 會一併清掉本機登入狀態）；
+      // 從提醒點進來的則直接帶去 LINE 登入（網址帶 error 代表登入失敗，就不再自動重試，避免繞圈）
       const user = getStoredLineUser()
-      if (!user) { router.push('/'); return }
+      if (!user) {
+        if (fromReminder) startLineLoginBackToProfile()
+        else router.push('/')
+        return
+      }
       setLineUser(user)
       fetchHistory()
       fetchFeedbackStatus()
