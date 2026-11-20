@@ -14,6 +14,10 @@ import {
 // - 每人每天只發一次：先在 line_reminder_logs 佔位（unique line_user_id + course_date），重跑不會重複發
 // - 發送前查 LINE 當月剩餘額度，不夠就只發得完的部分，其餘記 skipped_quota（免費方案超量只會發不出去，不會扣款）
 // 測試：GET ?dry=1（可加 &date=YYYY-MM-DD）只回傳會發給誰、內容是什麼，不會真的發送。
+// 發送模式 LINE_REMINDER_MODE（沒設定＝off，什麼都不發，合併上線也安全）：
+//   off  — 不發送
+//   test — 只發給 LINE_REMINDER_TEST_USER_IDS（逗號分隔的 LINE 使用者 ID），其他人一律略過
+//   live — 正式發給所有隔天有報名的學員
 // 需要環境變數：CRON_SECRET、LINE_MESSAGING_CHANNEL_ACCESS_TOKEN；
 // 選填：LINE_REMINDER_ADMIN_USER_IDS（逗號分隔，額度剩不到 LOW_QUOTA_THRESHOLD 時通知這些管理員）
 
@@ -101,13 +105,18 @@ export async function GET(request: Request) {
         course: courseById.get(r.course_id)!,
       }
     })
-  const recipients = groupByRecipient(rows)
+  const mode = process.env.LINE_REMINDER_MODE || 'off'
+  const testIds = new Set((process.env.LINE_REMINDER_TEST_USER_IDS || '').split(',').map(x => x.trim()).filter(Boolean))
+  const allRecipients = groupByRecipient(rows)
+  const recipients = mode === 'test' ? allRecipients.filter(r => testIds.has(r.lineUserId)) : allRecipients
 
   if (dryRun) {
     return NextResponse.json({
       ok: true,
       dryRun: true,
+      mode,
       courseDate,
+      allRecipients: allRecipients.length,
       recipients: recipients.length,
       preview: recipients.map(r => ({
         lineUserId: `${r.lineUserId.slice(0, 6)}…`,
@@ -115,6 +124,10 @@ export async function GET(request: Request) {
         text: buildReminderText(r, SITE_URL),
       })),
     })
+  }
+
+  if (mode !== 'test' && mode !== 'live') {
+    return NextResponse.json({ ok: true, mode, courseDate, note: 'reminders disabled (LINE_REMINDER_MODE is not test/live)' })
   }
 
   const token = process.env.LINE_MESSAGING_CHANNEL_ACCESS_TOKEN
@@ -167,5 +180,5 @@ export async function GET(request: Request) {
     for (const id of adminIds.slice(0, remaining)) await pushText(token, id, note)
   }
 
-  return NextResponse.json({ ok: true, courseDate, recipients: recipients.length, remaining, ...result })
+  return NextResponse.json({ ok: true, mode, courseDate, recipients: recipients.length, remaining, ...result })
 }
