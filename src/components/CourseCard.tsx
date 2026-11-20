@@ -151,8 +151,6 @@ function getLineLoginUrl(courseIds: string) {
     redirect_uri: LINE_CALLBACK_URL,
     state: statePayload,
     scope: 'profile openid email',
-    // 登入時一併邀請加入官方帳號「央北跨世代共居」好友，才收得到上課前一天的提醒
-    bot_prompt: 'aggressive',
   })
   return `https://access.line.me/oauth2/v2.1/authorize?${params}`
 }
