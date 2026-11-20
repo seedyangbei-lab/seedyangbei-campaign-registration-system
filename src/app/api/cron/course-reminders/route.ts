@@ -20,7 +20,7 @@ import {
 //   test — 只發給 LINE_REMINDER_TEST_USER_IDS（逗號分隔的 LINE 使用者 ID），其他人一律略過
 //   live — 正式發給所有隔天有報名的學員
 // 需要環境變數：CRON_SECRET、LINE_MESSAGING_CHANNEL_ACCESS_TOKEN；
-// 選填：LINE_REMINDER_ADMIN_USER_IDS（逗號分隔，額度剩不到 LOW_QUOTA_THRESHOLD 時通知這些管理員，每月最多一次）
+// 選填：LINE_REMINDER_ADMIN_USER_IDS（逗號分隔的管理員 LINE ID；額度快用完、額度不足時各通知一次，每月最多兩則）
 //
 // 節省額度／防濫用：
 // - 只有帶正確 CRON_SECRET 的請求能觸發（見 lib/cronAuth.ts）；按很多次 Run 也不會重複發（每人每天一筆紀錄）
@@ -216,19 +216,30 @@ export async function GET(request: Request) {
     }
   }
 
-  // 額度偏低時通知管理員，每位管理員每月只通知一次（用 line_reminder_logs 記在當月 1 號）
+  // 通知管理員，每月最多兩次（各記一筆在當月 1 號，所以不會重複）：
+  //   low — 剩不到 LOW_QUOTA_THRESHOLD 則，提早一週左右示警
+  //   out — 額度不足、有人沒收到提醒
+  // 這兩則從保留額度支出，不會擠掉學員的提醒
   const remaining = quota === null ? null : quota - result.sent
   const adminIds = (process.env.LINE_REMINDER_ADMIN_USER_IDS || '').split(',').map(s => s.trim()).filter(id => LINE_USER_ID_RE.test(id))
-  if (adminIds.length && remaining !== null && remaining !== Infinity && remaining > 0 && remaining < LOW_QUOTA_THRESHOLD) {
-    const monthKey = `${courseDate.slice(0, 7)}-01`
-    const note = result.skippedQuota
-      ? `【報名系統】本月 LINE 訊息額度不足，明天的課程提醒有 ${result.skippedQuota} 人沒發出去。下個月額度恢復後會自動繼續。`
-      : `【報名系統】本月 LINE 訊息額度剩約 ${remaining} 則，額度用完後課程提醒會暫停發送，下個月自動恢復。`
-    for (const id of adminIds.slice(0, remaining)) {
+  const alerts: { kind: string; text: string }[] = []
+  if (remaining !== null && remaining !== Infinity) {
+    if (result.skippedQuota > 0) {
+      alerts.push({ kind: 'out', text: `【報名系統】本月 LINE 訊息額度不足，${courseDate.slice(5).replace('-', '/')} 的課程提醒有 ${result.skippedQuota} 人沒收到。下個月額度恢復後會自動繼續，必要時請人工通知。` })
+    } else if (remaining < LOW_QUOTA_THRESHOLD) {
+      alerts.push({ kind: 'low', text: `【報名系統】本月 LINE 訊息額度剩約 ${remaining} 則，用完後課程提醒會暫停到下個月。這段期間請避免從官方帳號群發訊息。` })
+    }
+  }
+  let alertBudget = remaining === null ? 0 : remaining
+  for (const alert of alerts) {
+    for (const id of adminIds) {
+      if (alertBudget <= 0) break
       const { error } = await supabase.from('line_reminder_logs').insert({
-        course_date: monthKey, line_user_id: `admin:${id}`, course_ids: [], status: 'admin_alert',
+        course_date: `${courseDate.slice(0, 7)}-01`, line_user_id: `admin-${alert.kind}:${id}`, course_ids: [], status: 'admin_alert',
       })
-      if (!error) await pushText(token, id, note)
+      if (error) continue // 這個月已經通知過
+      const r = await pushText(token, id, alert.text)
+      if (r.ok) alertBudget--
     }
   }
 
