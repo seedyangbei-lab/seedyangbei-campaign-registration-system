@@ -5,6 +5,7 @@ import { isAuthorizedCron } from '@/lib/cronAuth'
 import {
   buildReminderText,
   groupByRecipient,
+  nowInTaipei,
   tomorrowInTaipei,
   type ReminderRegistration,
 } from '@/lib/lineReminder'
@@ -19,6 +20,9 @@ import {
 //   off  — 不發送
 //   test — 只發給 LINE_REMINDER_TEST_USER_IDS（逗號分隔的 LINE 使用者 ID），其他人一律略過
 //   live — 正式發給所有隔天有報名的學員
+// 一次性發送 LINE_REMINDER_ONE_OFF_COURSE_ID（選填）：填課程 ID 時，若那堂課是「今天」且還沒開始，
+//   這次執行只發這堂課的「今天」提醒給它的報名者（仍受 test/live 模式限制），不做平常的明天提醒。
+//   一過開課時間就自動失效、恢復平常流程，所以不用記得刪掉。
 // 需要環境變數：CRON_SECRET、LINE_MESSAGING_CHANNEL_ACCESS_TOKEN；
 // 選填：LINE_REMINDER_ADMIN_USER_IDS（逗號分隔的管理員 LINE ID；額度快用完、額度不足時各通知一次，每月最多兩則）
 //
@@ -97,19 +101,32 @@ export async function GET(request: Request) {
   const dryRun = url.searchParams.get('dry') === '1'
   const dateParam = url.searchParams.get('date')
   // 指定日期只開放給 dry run，避免誤發非隔天的提醒
-  const courseDate = dryRun && dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : tomorrowInTaipei()
   const mode = process.env.LINE_REMINDER_MODE || 'off'
-
   const supabase = createServerClient()
+
+  // 一次性發送：指定的課程是今天、而且還沒開始，才改成只發這堂課
+  const oneOffId = (process.env.LINE_REMINDER_ONE_OFF_COURSE_ID || '').trim()
+  let oneOff = false
+  if (/^[0-9a-f-]{36}$/.test(oneOffId)) {
+    const now = nowInTaipei()
+    const { data: c } = await supabase.from('courses').select('date, time_start').eq('id', oneOffId).maybeSingle()
+    oneOff = !!c && c.date === now.date && (c.time_start ?? '00:00:00') > now.time
+  }
+  const when: 'today' | 'tomorrow' = oneOff ? 'today' : 'tomorrow'
+  const courseDate = oneOff
+    ? nowInTaipei().date
+    : dryRun && dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : tomorrowInTaipei()
+
   let courseQuery = supabase
     .from('courses')
     .select('id, title, date, time_start, time_end, location')
     .eq('date', courseDate)
+  if (oneOff) courseQuery = courseQuery.eq('id', oneOffId)
   // 正式模式只提醒公開中的課程；測試模式允許不公開的測試課
   if (mode !== 'test') courseQuery = courseQuery.eq('is_active', true)
   const { data: courses, error: courseErr } = await courseQuery
   if (courseErr) return NextResponse.json({ ok: false, error: courseErr.message }, { status: 500 })
-  if (!courses?.length) return NextResponse.json({ ok: true, mode, courseDate, recipients: 0, note: 'no courses' })
+  if (!courses?.length) return NextResponse.json({ ok: true, mode, oneOff, courseDate, recipients: 0, note: 'no courses' })
 
   const { data: regs, error: regErr } = await supabase
     .from('registrations')
@@ -140,13 +157,14 @@ export async function GET(request: Request) {
       ok: true,
       dryRun: true,
       mode,
+      oneOff,
       courseDate,
       allRecipients: allRecipients.length,
       recipients: recipients.length,
       preview: recipients.map(r => ({
         lineUserId: `${r.lineUserId.slice(0, 6)}…`,
         courses: r.courses.map(c => c.title),
-        text: buildReminderText(r, SITE_URL),
+        text: buildReminderText(r, SITE_URL, when),
       })),
     })
   }
@@ -202,7 +220,7 @@ export async function GET(request: Request) {
     if (status === 'skipped_not_friend') { result.skippedNotFriend++; continue }
     if (status === 'skipped_quota') { result.skippedQuota++; continue }
 
-    const r = await pushText(token, rec.lineUserId, buildReminderText(rec, SITE_URL))
+    const r = await pushText(token, rec.lineUserId, buildReminderText(rec, SITE_URL, when))
     await supabase
       .from('line_reminder_logs')
       .update(r.ok ? { status: 'sent' } : { status: 'failed', error: r.error })
@@ -243,5 +261,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, mode, courseDate, recipients: recipients.length, remaining, reserve, ...result })
+  return NextResponse.json({ ok: true, mode, oneOff, courseDate, recipients: recipients.length, remaining, reserve, ...result })
 }
