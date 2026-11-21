@@ -6,7 +6,7 @@ import { hasValidInstructorToken } from '@/lib/instructor-auth'
 import { getInstructorCourseFeedback, proxyFillCourseFeedback, updateProxyCourseFeedback } from '@/lib/instructorCoursesApi'
 import { FeedbackSummaryPanel, FeedbackResponseList, type FeedbackDetail } from '@/components/CourseFeedbackReport'
 import { FeedbackQuestions, useFeedbackDraft, feedbackToAnswers, MISSING_ANSWERS_MESSAGE } from '@/components/CourseFeedbackForm'
-import { canProxyFillAnyone, formatDeadline } from '@/lib/courseFeedback'
+import { formatDeadline } from '@/lib/courseFeedback'
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock'
 
 function BackArrowIcon() {
@@ -19,7 +19,7 @@ function BackArrowIcon() {
 
 type Participant = FeedbackDetail['participants'][number]
 
-// 講師代填：沒有 LINE 帳號的學員（多為現場報名）無法自己登入，由講師口頭詢問後代為填寫
+// 講師代填：沒有 LINE 帳號、或無法自己填寫的學員（例如兒童課程只有小朋友參加），由講師詢問後代為填寫
 // participant.feedback 有值＝修改先前的代填內容（期限內可改）
 function ProxyFillModal({ courseId, participant, onClose, onDone }: {
   courseId: string; participant: Participant; onClose: () => void; onDone: () => void
@@ -153,7 +153,7 @@ function FeedbackPageInner() {
           <p className="text-xs text-stone-500">已超過填寫期限，無法再代填。</p>
         )}
         <FeedbackResponseList participants={detail.participants} onProxyFill={canProxy ? setProxyTarget : undefined}
-          onEditProxy={detail.window !== 'closed' ? setProxyTarget : undefined} proxyAnyone={canProxyFillAnyone(detail.course.id)} />
+          onEditProxy={detail.window !== 'closed' ? setProxyTarget : undefined} />
 
         <FeedbackSummaryPanel summary={detail.summary} />
       </div>

@@ -280,7 +280,7 @@ type InstructorCourseCardProps = {
   onCopy?: () => void
   onReport?: () => void
   reportStatus?: 'due' | 'submitted' | 'overdue'
-  // 課程開始後才傳：學員回饋（講師可查看、幫沒有 LINE 的學員代填）。
+  // 課程開始後才傳：學員回饋（講師可查看、幫學員代填）。
   // 開課中的課一開始就把「製作海報」換成「學員回饋」（講師通常在課程尾聲帶大家填問卷）
   onFeedback?: () => void
   feedbackCount?: { responded: number; attended: number }
