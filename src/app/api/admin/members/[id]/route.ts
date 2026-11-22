@@ -13,8 +13,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = await req.json()
   const supabase = createServerClient()
 
+  // 本名（users.name）：空字串不覆寫，避免把既有姓名清掉
+  const realName = typeof body.real_name === 'string' ? body.real_name.trim() : ''
+
   if (body.table === 'users') {
-    const { error } = await supabase.from('users').update({ room_number: body.room_number ?? null }).eq('id', id)
+    const { error } = await supabase.from('users').update({
+      room_number: body.room_number ?? null,
+      ...(realName ? { name: realName } : {}),
+    }).eq('id', id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ ok: true })
   }
@@ -27,6 +33,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       notes: body.notes ?? null,
     }).eq('id', id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (realName) {
+      // 本名存在對應的 users 紀錄（用 line_id 對應）；還沒報名過的 LINE 會員沒有 users 紀錄，就不動
+      const { data: member } = await supabase.from('line_members').select('line_user_id').eq('id', id).maybeSingle()
+      if (member?.line_user_id) {
+        const { error: nameErr } = await supabase.from('users').update({ name: realName }).eq('line_id', member.line_user_id)
+        if (nameErr) return NextResponse.json({ error: nameErr.message }, { status: 500 })
+      }
+    }
     return NextResponse.json({ ok: true })
   }
 

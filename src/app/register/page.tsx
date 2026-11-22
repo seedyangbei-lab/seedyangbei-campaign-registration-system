@@ -123,8 +123,9 @@ function RegisterForm() {
 
     if (user) {
       setLineUser(user)
-      setForm(f => ({ ...f, name: user.displayName || '' }))
-      prefillUserData()
+      // 姓名欄位存的是「本名」，不再預填 LINE 名稱：預填的話居民看到有字就直接送出，
+      // 後台就會出現一堆暱稱，現場報到用本名搜不到人而重複建檔。上次填過的本名會由 prefillUserData 帶入
+      prefillUserData(user.displayName || '')
     }
 
     if (errParam === 'line_denied') setError('LINE 登入已取消')
@@ -153,7 +154,7 @@ function RegisterForm() {
 
   // 身份由伺服器從 resident token 解出，不再用 anon key 依 localStorage 自稱的 lineUserId 查 users。
   // 沒有 token（舊登入）就只是不預填，送出報名時 /api/register 會再請居民重新登入
-  const prefillUserData = async () => {
+  const prefillUserData = async (lineDisplayName: string) => {
     setPrefilling(true)
     const token = getResidentToken()
     const user = token
@@ -186,7 +187,8 @@ function RegisterForm() {
 
       setForm(f => ({
         ...f,
-        name: user.name || f.name,
+        // 舊資料的姓名多半是當初預填的 LINE 名稱，跟 LINE 名稱一模一樣就不帶入，請居民補填一次本名，之後就會一直帶入
+        name: user.name && user.name !== lineDisplayName ? user.name : f.name,
         phone: user.phone || f.phone,
         age_group: user.age_group || f.age_group,
         other_community: isSocial ? f.other_community : (user.other_community || f.other_community),
@@ -324,10 +326,11 @@ function RegisterForm() {
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-stone-200 p-6 md:p-[25px] space-y-5 md:space-y-4 shadow-sm">
           <div>
-            <label className="block text-base md:text-lg font-medium text-stone-700 mb-2"><span className="text-orange-500">* </span>姓名</label>
+            <label className="block text-base md:text-lg font-medium text-stone-700 mb-2"><span className="text-orange-500">* </span>本名</label>
             <input required type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})}
-              placeholder="請輸入您的姓名"
+              placeholder="例：王小明"
               className="w-full border border-stone-300 rounded-xl px-4 py-3 text-base md:text-lg focus:outline-none focus:ring-2 focus:ring-orange-300" />
+            <p className="text-xs md:text-sm text-stone-400 mt-1.5">請填寫本名，現場報到時工作人員比較好找到您；填寫一次，之後報名會自動帶入</p>
           </div>
 
           <div>

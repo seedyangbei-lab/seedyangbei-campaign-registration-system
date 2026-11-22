@@ -33,5 +33,29 @@ export async function GET(req: NextRequest) {
   if (userRes.error) console.error('search-members users error:', userRes.error)
   if (memberRes.error) console.error('search-members line_members error:', memberRes.error)
 
-  return NextResponse.json({ users: userRes.data || [], lineMembers: memberRes.data || [] })
+  // 「本名（LINE 名稱）」：用 LINE 名稱搜到、但其實已經有 users 紀錄（填過本名）的人，改用 users 紀錄回傳，
+  // 現場就會看到本名；反過來用本名搜到的人，補上 LINE 名稱。兩邊都要對得上，種子戶才認得出是誰
+  const users: { id: string; name: string; room_number: string; line_id: string | null; line_name?: string | null }[] = [...(userRes.data || [])]
+  const memberRows = memberRes.data || []
+  const matchedLineIds = memberRows.map(m => m.line_user_id).filter(Boolean)
+  if (matchedLineIds.length > 0) {
+    const { data: linked } = await supabase
+      .from('users').select('id, name, room_number, line_id').in('line_id', matchedLineIds)
+    const have = new Set(users.map(u => u.id))
+    for (const u of linked || []) if (!have.has(u.id)) users.push(u)
+  }
+
+  const userLineIds = users.map(u => u.line_id).filter((x): x is string => !!x)
+  const lineNameById = new Map<string, string | null>(memberRows.map(m => [m.line_user_id, m.display_name]))
+  const missing = userLineIds.filter(id => !lineNameById.has(id))
+  if (missing.length > 0) {
+    const { data: extra } = await supabase.from('line_members').select('line_user_id, display_name').in('line_user_id', missing)
+    for (const m of extra || []) lineNameById.set(m.line_user_id, m.display_name)
+  }
+  for (const u of users) u.line_name = u.line_id ? (lineNameById.get(u.line_id) ?? null) : null
+
+  const linkedSet = new Set(userLineIds)
+  const lineMembers = memberRows.filter(m => !linkedSet.has(m.line_user_id))
+
+  return NextResponse.json({ users, lineMembers })
 }

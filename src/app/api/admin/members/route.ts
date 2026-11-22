@@ -18,18 +18,25 @@ export async function GET(req: NextRequest) {
   const [lineRes, userRes, linkedRes] = await Promise.all([
     supabase.from('line_members').select('*').order('created_at', { ascending: false }),
     supabase.from('users').select('id, name, room_number, created_at').is('line_id', null).order('created_at', { ascending: false }),
-    supabase.from('users').select('line_id, room_number').not('line_id', 'is', null),
+    supabase.from('users').select('id, line_id, room_number, name').not('line_id', 'is', null),
   ])
 
   if (lineRes.error) return NextResponse.json({ error: lineRes.error.message }, { status: 500 })
   if (userRes.error) return NextResponse.json({ error: userRes.error.message }, { status: 500 })
 
-  const roomByLineId = new Map((linkedRes.data || []).map(u => [u.line_id, u.room_number]))
-  const lineMembers = (lineRes.data || []).map(m => ({
-    ...m,
-    source: 'line' as const,
-    user_room_number: roomByLineId.get(m.line_user_id) ?? null,
-  }))
+  // real_name：居民在報名表填的本名（users.name），後台顯示成「本名（LINE 名稱）」；
+  // user_id 為 null 代表這位 LINE 會員還沒報名過，沒有本名可以編輯
+  const userByLineId = new Map((linkedRes.data || []).map(u => [u.line_id, u]))
+  const lineMembers = (lineRes.data || []).map(m => {
+    const u = userByLineId.get(m.line_user_id)
+    return {
+      ...m,
+      source: 'line' as const,
+      user_room_number: u?.room_number ?? null,
+      user_id: u?.id ?? null,
+      real_name: u?.name ?? null,
+    }
+  })
   const unboundMembers = (userRes.data || []).map(u => ({
     id: u.id,
     source: 'unbound' as const,

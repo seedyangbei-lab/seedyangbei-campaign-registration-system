@@ -19,12 +19,13 @@ export function deleteRegistration(id: string) {
   return adminFetch(`/api/admin/registrations/${id}`, { method: 'DELETE' })
 }
 
-export function updateUserRoomNumber(id: string, room_number: string | null) {
-  return adminFetch(`/api/admin/members/${id}`, { method: 'PATCH', body: JSON.stringify({ table: 'users', room_number }) })
+export function updateUserRoomNumber(id: string, room_number: string | null, real_name?: string) {
+  return adminFetch(`/api/admin/members/${id}`, { method: 'PATCH', body: JSON.stringify({ table: 'users', room_number, real_name }) })
 }
 
 export function updateLineMember(id: string, payload: {
   building: string | null; unit_number: string | null; floor_number: string | null; notes: string | null
+  real_name?: string
 }) {
   return adminFetch(`/api/admin/members/${id}`, { method: 'PATCH', body: JSON.stringify({ table: 'line_members', ...payload }) })
 }

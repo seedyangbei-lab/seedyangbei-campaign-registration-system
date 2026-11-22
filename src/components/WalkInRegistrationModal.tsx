@@ -14,6 +14,10 @@ type CreatedReg = { id: string; status: string; is_walk_in: boolean; users: Exis
 // 不然講師會以為「搜不到這個人」
 type Candidate = { key: string; name: string; roomNumber: string; lineId?: string | null; source: 'user' | 'line_member'; inCourse?: boolean }
 
+// 本名跟 LINE 名稱不一樣時顯示「本名（LINE 名稱）」，種子戶才認得出是誰
+const withLineName = (name: string, lineName?: string | null) =>
+  lineName && lineName.trim() && lineName.trim() !== name?.trim() ? `${name}（${lineName}）` : name
+
 // 注音輸入法組字中（手機最常見），輸入框裡會暫時是「ㄨㄤˊ」這種注音符號，拿去查一定查不到，等選完字再查
 const BOPOMOFO_RE = /[\u3100-\u312F\u31A0-\u31BFˊˇˋ˙]/
 
@@ -90,7 +94,7 @@ export default function WalkInRegistrationModal({
     // 曾報名過的居民（users）跟 LINE 會員（line_members）都含個資，一律走驗證過的 API（後台或講師 token），
     // 才能同時搜到「是 LINE 會員但沒報名過活動」的人
     type SearchResult = {
-      users: { id: string; name: string; room_number: string; line_id: string | null }[]
+      users: { id: string; name: string; room_number: string; line_id: string | null; line_name?: string | null }[]
       lineMembers: { line_user_id: string; display_name: string | null; building: string | null; unit_number: string | null; floor_number: string | null }[]
     }
     const { users: userRows, lineMembers: memberRows } = await fetch(`/api/search-members?q=${encodeURIComponent(q)}`, { headers: staffAuthHeaders() })
@@ -99,7 +103,7 @@ export default function WalkInRegistrationModal({
     if (seq !== searchSeq.current) return
     const userLineIds = new Set((userRows || []).map(u => u.line_id).filter(Boolean))
     const userCandidates: Candidate[] = (userRows || []).map(u => ({
-      key: u.id, name: u.name, roomNumber: u.room_number, lineId: u.line_id, source: 'user',
+      key: u.id, name: withLineName(u.name, u.line_name), roomNumber: u.room_number, lineId: u.line_id, source: 'user',
     }))
     // line_members 若已經有對應的 users 紀錄，會在上面查到，這裡排除掉避免同一個人出現兩次
     const memberCandidates: Candidate[] = (memberRows || [])
@@ -266,7 +270,7 @@ export default function WalkInRegistrationModal({
                   <input
                     value={query}
                     onChange={e => setQuery(e.target.value)}
-                    placeholder="輸入姓名搜尋既有紀錄，或直接新增"
+                    placeholder="輸入本名或 LINE 名稱搜尋，或直接新增"
                     className="w-full border border-stone-200 rounded-md pl-3 pr-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 placeholder:text-stone-400"
                   />
                   <SearchIcon className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400" />

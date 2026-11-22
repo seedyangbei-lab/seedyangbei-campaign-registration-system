@@ -20,6 +20,24 @@ type Member = {
   created_at: string
   room_number?: string | null
   user_room_number?: string | null  // LINE 會員對應 users 紀錄的房號（編輯表單預填用）
+  user_id?: string | null           // LINE 會員對應的 users 紀錄；null 代表還沒報名過
+  real_name?: string | null         // 報名表填的本名（users.name）
+}
+
+// 名單上顯示「本名（LINE 名稱）」；本名跟 LINE 名稱一樣或還沒填本名，就只顯示一個
+function memberLabel(m: Member) {
+  if (m.source !== 'line') return m.display_name
+  const real = m.real_name?.trim()
+  if (!real || real === m.display_name?.trim()) return m.display_name
+  return `${real}（${m.display_name}）`
+}
+
+// 搜尋比對：本名、LINE 名稱、房號都比，英文忽略大小寫
+function memberMatches(m: Member, q: string) {
+  const loc = m.source === 'line'
+    ? `${m.building || ''}${m.unit_number || ''} ${m.user_room_number || ''}`
+    : (m.room_number || '')
+  return [m.display_name, m.real_name, loc].some(v => (v || '').toLowerCase().includes(q))
 }
 
 // 會員管理頁統計用的報名紀錄（精簡欄位，由 /api/admin/registrations?view=participation 提供）
@@ -70,7 +88,7 @@ function IdentityBadge({ source }: { source: 'line' | 'unbound' }) {
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([])
   const [editMember, setEditMember] = useState<Member | null>(null)
-  const [editForm, setEditForm] = useState({ building: '', unit_number: '', floor_number: '', notes: '', room_number: '' })
+  const [editForm, setEditForm] = useState({ building: '', unit_number: '', floor_number: '', notes: '', room_number: '', real_name: '' })
   const [saving, setSaving] = useState(false)
   const [historyMember, setHistoryMember] = useState<Member | null>(null)
   const [historyRegs, setHistoryRegs] = useState<any[]>([])
@@ -202,10 +220,7 @@ export default function MembersPage() {
   useEffect(() => {
     const q = searchQuery.trim().toLowerCase()
     if (!q) { setSearchSuggestions([]); return }
-    const matches = members.filter(m => {
-      const loc = m.source === 'line' ? `${m.building || ''}${m.unit_number || ''}` : (m.room_number || '')
-      return m.display_name?.toLowerCase().includes(q) || loc.toLowerCase().includes(q)
-    }).slice(0, 8)
+    const matches = members.filter(m => memberMatches(m, q)).slice(0, 8)
     setSearchSuggestions(matches)
   }, [searchQuery, members])
 
@@ -257,7 +272,7 @@ export default function MembersPage() {
   const openEdit = async (member: Member) => {
     setEditMember(member)
     if (member.source === 'unbound') {
-      setEditForm({ building: '', unit_number: '', floor_number: '', notes: '', room_number: member.room_number || '' })
+      setEditForm({ building: '', unit_number: '', floor_number: '', notes: '', room_number: member.room_number || '', real_name: member.display_name || '' })
       return
     }
     let building = member.building || ''
@@ -271,7 +286,7 @@ export default function MembersPage() {
         floor_number = match[3]
       }
     }
-    setEditForm({ building, unit_number, floor_number, notes: member.notes || '', room_number: '' })
+    setEditForm({ building, unit_number, floor_number, notes: member.notes || '', room_number: '', real_name: member.real_name || '' })
   }
 
   const handleSave = async () => {
@@ -279,11 +294,12 @@ export default function MembersPage() {
     setSaving(true)
     try {
       if (editMember.source === 'unbound') {
-        await updateUserRoomNumber(editMember.id, editForm.room_number || null)
+        await updateUserRoomNumber(editMember.id, editForm.room_number || null, editForm.real_name)
       } else {
         await updateLineMember(editMember.id, {
           building: editForm.building || null, unit_number: editForm.unit_number || null,
           floor_number: editForm.floor_number || null, notes: editForm.notes || null,
+          real_name: editMember.user_id ? editForm.real_name : undefined,
         })
       }
     } catch (e: any) {
@@ -297,13 +313,14 @@ export default function MembersPage() {
   const openMerge = (member: Member) => {
     setEditMember(null)
     setMergeSource(member)
+    // 現場建檔的姓名是本名，搜尋會同時比對 LINE 會員的本名、LINE 名稱跟房號
     setMergeQuery(member.display_name || '')
     setMergeTarget(null)
   }
 
   const handleMerge = async () => {
     if (!mergeSource || !mergeTarget) return
-    if (!confirm(`確定把「${mergeSource.display_name}」的報名紀錄併到 LINE 會員「${mergeTarget.display_name}」？\n合併後未綁定的這筆紀錄會刪除，無法復原。`)) return
+    if (!confirm(`確定把「${mergeSource.display_name}」的報名紀錄併到 LINE 會員「${memberLabel(mergeTarget)}」？\n合併後未綁定的這筆紀錄會刪除，無法復原。`)) return
     setMerging(true)
     try {
       const res = await mergeUnboundMember(mergeSource.id, mergeTarget.id)
@@ -330,7 +347,7 @@ export default function MembersPage() {
   }
 
   const mergeCandidates = mergeSource
-    ? members.filter(m => m.source === 'line' && (!mergeQuery.trim() || (m.display_name || '').toLowerCase().includes(mergeQuery.trim().toLowerCase()))).slice(0, 20)
+    ? members.filter(m => m.source === 'line' && (!mergeQuery.trim() || memberMatches(m, mergeQuery.trim().toLowerCase()))).slice(0, 20)
     : []
 
   const handleAddPoint = async () => {
@@ -409,8 +426,8 @@ export default function MembersPage() {
                 <button key={m.id + m.source} type="button" onClick={() => fetchPersonalChart(m)}
                   className="w-full text-left px-3 py-2.5 hover:bg-orange-50 transition-colors border-b border-stone-50 last:border-0 flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm text-stone-700 truncate">{m.display_name}</p>
-                    <p className="text-xs text-stone-400 truncate">{m.source === 'line' ? `${m.building || ''} ${m.unit_number || ''}` : (m.room_number || '')}</p>
+                    <p className="text-sm text-stone-700 truncate">{memberLabel(m)}</p>
+                    <p className="text-xs text-stone-400 truncate">{m.source === 'line' ? (m.user_room_number || `${m.building || ''} ${m.unit_number || ''}`) : (m.room_number || '')}</p>
                   </div>
                   <IdentityBadge source={m.source} />
                 </button>
@@ -426,7 +443,7 @@ export default function MembersPage() {
           <div className="flex items-center gap-2">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
             <span className="font-semibold text-stone-700 text-sm">
-              {selectedMemberForChart ? `${selectedMemberForChart.display_name} 的參與走勢` : '參與走勢圖'}
+              {selectedMemberForChart ? `${memberLabel(selectedMemberForChart)} 的參與走勢` : '參與走勢圖'}
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -452,7 +469,7 @@ export default function MembersPage() {
                   {isMobile !== true && <YAxis tick={{ fontSize: 12, fill: '#78716c' }} allowDecimals={false} />}
                   <Tooltip
                     contentStyle={{ borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: 12 }}
-                    formatter={(v: any) => [`${v} 次`, selectedMemberForChart.display_name]}
+                    formatter={(v: any) => [`${v} 次`, memberLabel(selectedMemberForChart)]}
                   />
                   <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2.5} dot={{ fill: '#3b82f6', r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
@@ -609,7 +626,7 @@ export default function MembersPage() {
                 }
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                    <p className="text-stone-800 font-semibold text-base">{member.display_name}</p>
+                    <p className="text-stone-800 font-semibold text-base">{memberLabel(member)}</p>
                     <button onClick={() => openEdit(member)} className="flex items-center justify-center size-6 rounded-full border border-stone-200 bg-white text-stone-400 hover:text-stone-600 hover:bg-stone-50 transition-colors">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                     </button>
@@ -672,7 +689,7 @@ export default function MembersPage() {
                   : <div className={`w-10 h-10 rounded-full flex items-center justify-center ${historyMember.source === 'line' ? 'bg-green-100' : 'bg-stone-200'}`}><span className={`font-bold ${historyMember.source === 'line' ? 'text-green-600' : 'text-stone-500'}`}>{historyMember.display_name?.[0]}</span></div>
                 }
                 <div>
-                  <h3 className="font-bold text-stone-800">{historyMember.display_name}</h3>
+                  <h3 className="font-bold text-stone-800">{memberLabel(historyMember)}</h3>
                   <p className="text-stone-400 text-xs">課程參與記錄</p>
                 </div>
               </div>
@@ -726,7 +743,7 @@ export default function MembersPage() {
                   : <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center"><span className="text-green-600 font-bold text-sm">{addPointModal.display_name?.[0]}</span></div>
                 }
                 <div>
-                  <h3 className="font-bold text-stone-800 text-sm">{addPointModal.display_name}</h3>
+                  <h3 className="font-bold text-stone-800 text-sm">{memberLabel(addPointModal)}</h3>
                   <p className="text-stone-400 text-xs">目前 {addPointModal.points ?? 0} 點</p>
                 </div>
               </div>
@@ -792,9 +809,22 @@ export default function MembersPage() {
                 {editMember.picture_url ? <img src={editMember.picture_url} alt="" className="w-10 h-10 rounded-full" />
                   : <div className={`w-10 h-10 rounded-full flex items-center justify-center ${editMember.source === 'line' ? 'bg-green-100' : 'bg-stone-200'}`}><span className={`font-bold ${editMember.source === 'line' ? 'text-green-600' : 'text-stone-500'}`}>{editMember.display_name?.[0]}</span></div>}
                 <div>
-                  <p className="font-semibold text-stone-800 text-sm">{editMember.display_name}</p>
+                  <p className="font-semibold text-stone-800 text-sm">{memberLabel(editMember)}</p>
                   <p className="text-stone-400 text-xs">{editMember.source === 'line' ? editMember.line_user_id : '未綁定 LINE'}</p>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-stone-600 text-sm font-medium mb-1.5">本名</label>
+                {editMember.source === 'line' && !editMember.user_id ? (
+                  <p className="text-xs text-stone-400 bg-stone-50 rounded-xl px-4 py-2.5">這位還沒報名過活動，第一次報名時會自己填寫本名</p>
+                ) : (
+                  <>
+                    <input value={editForm.real_name} onChange={e => setEditForm({ ...editForm, real_name: e.target.value })} placeholder="例：王小明"
+                      className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                    {editMember.source === 'line' && <p className="text-xs text-stone-400 mt-1">LINE 名稱：{editMember.display_name}（登入時自動更新）</p>}
+                  </>
+                )}
               </div>
 
               {editMember.source === 'unbound' ? (
@@ -884,7 +914,7 @@ export default function MembersPage() {
               </button>
             </div>
             <div className="p-6 space-y-3 overflow-y-auto">
-              <input value={mergeQuery} onChange={e => { setMergeQuery(e.target.value); setMergeTarget(null) }} placeholder="搜尋 LINE 會員名稱"
+              <input value={mergeQuery} onChange={e => { setMergeQuery(e.target.value); setMergeTarget(null) }} placeholder="搜尋本名、LINE 名稱或房號"
                 className="w-full border border-stone-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
               <div className="space-y-2">
                 {mergeCandidates.length === 0 ? (
@@ -895,7 +925,7 @@ export default function MembersPage() {
                     {m.picture_url ? <img src={m.picture_url} alt="" className="w-8 h-8 rounded-full" />
                       : <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center"><span className="text-green-600 font-bold text-sm">{m.display_name?.[0]}</span></div>}
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-stone-700 truncate">{m.display_name}</p>
+                      <p className="text-sm font-medium text-stone-700 truncate">{memberLabel(m)}</p>
                       <p className="text-xs text-stone-400 truncate">{m.user_room_number || (m.building ? `${m.building} ${m.unit_number || ''}-${m.floor_number || ''}F` : '尚未報名過活動')}・{m.points ?? 0} 點</p>
                     </div>
                   </button>
@@ -905,7 +935,7 @@ export default function MembersPage() {
             <div className="p-6 border-t border-stone-100">
               <button onClick={handleMerge} disabled={!mergeTarget || merging}
                 className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
-                {merging ? '合併中...' : mergeTarget ? `合併到「${mergeTarget.display_name}」` : '請選擇 LINE 會員'}
+                {merging ? '合併中...' : mergeTarget ? `合併到「${memberLabel(mergeTarget)}」` : '請選擇 LINE 會員'}
               </button>
             </div>
           </div>
